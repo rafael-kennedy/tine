@@ -198,7 +198,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `step(p, n)` | Move by n steps of the current scale (diatonic transposition). |
 | `degrees(p)` | Treat numbers as 0-based scale steps: [0 2 4].degrees is [^1 ^3 ^5]. |
 | `key(root, scale) or p.key(root, scale)` | Make a key, or play p in a key. Degrees like ^3 resolve against it. |
-| `chord(root, quality)` | A chord: chord(c4, "maj7") is the same as c4@maj7. |
+| `chord(root, quality)` | A chord: chord(c4, "maj7") is the same as c4@maj7. With one text argument it reads a chord symbol: chord("Bb7#11"). |
 | `invert(p, n: 1)` | Chord inversion: move the lowest n notes up an octave. |
 | `arp(p, mode: "up")` | Spread each chord's notes across its length. Modes: up, down, updown, downup, out, random. |
 | `strum(p, spread: 1/48)` | Roll each chord's notes, low to high, `spread` bars apart. |
@@ -306,6 +306,24 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `str(x)` | Text form of a value. |
 | `type(x)` | The name of a value's type. |
 
+### Harmony
+
+| Function | Description |
+| --- | --- |
+| `changes(text, octave: 3)` | Chords from a lead sheet: changes("Dm7 G7 \| Cmaj7 %"). Bars are split by \|, chords in a bar share it, / holds a chord one more slot, % repeats the bar, N.C. is no chord. Loops over its bars. |
+| `root(p)` | The root of each chord (from its symbol, or named from its notes). Single notes pass through. Try changes(...).root.octave(-1) for a bass line. |
+| `bassnote(p)` | The bass note of each chord: the slash note of c@7/e, otherwise the root. |
+| `tones(chord)` | A chord's notes as a list, low to high. |
+| `name(x, bars: 1)` | Name a chord, or the chords of a pattern, as a chord symbol: name({e g c5}) is "C/E". |
+| `shell(p)` | Shell voicings: root, third and seventh, the bebop pianist's left hand. |
+| `guide(p)` | Guide tones: just the third and seventh of each chord. Add .voicelead to hear them move by step. |
+| `rootless(p, form: "a")` | Rootless voicings: four notes without the root (3-5-7-9, dominants use the 13th for the 5th). Form "a" starts on the third, "b" on the seventh. |
+| `drop2(p)` | Drop-2 voicings: close position, with the second voice from the top dropped an octave. |
+| `drop3(p)` | Drop-3 voicings: close position, with the third voice from the top dropped an octave. |
+| `drop24(p)` | Drop-2-and-4 voicings: the second and fourth voices from the top dropped an octave. |
+| `voicelead(p, around: e4)` | Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: the chain is replayed from bar 0. |
+| `interval(a, b, long: false)` | The interval between two pitches by size: interval(c4, e4) is "M3"; with long: true, "major 3rd". Tine counts semitones, so C-F# and C-Gb are both TT (tritone). |
+
 ## Scales
 
 | Name | Steps (semitones) |
@@ -328,48 +346,61 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `chromatic` | 0 1 2 3 4 5 6 7 8 9 10 11 |
 | `hirajoshi` | 0 2 3 7 8 |
 | `double_harmonic` | 0 1 4 5 7 8 11 |
+| `altered` | 0 1 3 4 6 8 10 |
+| `lydian_dominant` | 0 2 4 6 7 9 10 |
+| `lydian_augmented` | 0 2 4 6 8 9 11 |
+| `mixolydian_b6` | 0 2 4 5 7 8 10 |
+| `locrian_nat2` | 0 2 3 5 6 8 10 |
+| `dorian_b2` | 0 1 3 5 7 9 10 |
+| `phrygian_dominant` | 0 1 4 5 7 8 10 |
+| `half_whole` | 0 1 3 4 6 7 9 10 |
+| `whole_half` | 0 2 3 5 6 8 9 11 |
+| `augmented` | 0 3 4 7 8 11 |
+| `major_blues` | 0 2 3 4 7 9 |
+| `bebop_dominant` | 0 2 4 5 7 9 10 11 |
+| `bebop_major` | 0 2 4 5 7 8 9 11 |
+| `bebop_dorian` | 0 2 3 4 5 7 9 10 |
 | `just_major` | 0 2.04 3.86 4.98 7.02 8.84 10.88 |
 | `slendro` | 0 2.4 4.8 7.2 9.6 |
 | `bohlen_pierce` | 0 1.33 3.02 4.35 5.83 7.37 8.84 10.18 11.65 (period 19.02) |
 
 ## Chord qualities
 
-On a pitch: `c4@maj7`. On a degree, numbers count diatonic chord tones (`^5@7` is the seventh chord on the fifth degree) and names give a fixed quality (`^2@m7`).
+After `@` you write a chord symbol the way a lead sheet does: `c@maj7`, `g@7b9`, `f#@m7b5`, `bb@13#11`, `d@9sus4`, `eb@7alt`, and a slash bass with `c@7/e`. On a degree, plain numbers count diatonic chord tones (`^5@7` is the seventh chord on the fifth degree, `^2@3` a triad), symbols give a fixed quality (`^2@m7`), and on an altered degree a number names the quality (`^b7@7` is a dominant seventh). `changes("Dm7 G7 | Cmaj7")` reads whole lead sheets with the same symbols.
 
-| Quality | Semitones |
+Symbols are parsed, not looked up, so they combine freely. The grammar: a family (`m`, `maj`/`M`, `dim`/`o`, `aug`/`+`, `m7b5`, `mmaj`), then a number (`5 6 69 7 9 11 13`; 9, 11 and 13 include the seventh and the extensions below them, except 13 skips the 11 on major and dominant chords), then any of `sus2 sus4 sus`, `b5 #5 b9 #9 #11 b13`, `add2 add4 add9 add11 add13`, `no3 no5`, `alt` (b9, #9 and b13 with no fifth). Some examples:
+
+| Symbol | Semitones |
 | --- | --- |
-| `5` | 0 7 |
-| `6` | 0 4 7 9 |
-| `7` | 0 4 7 10 |
-| `9` | 0 4 7 10 14 |
-| `11` | 0 4 7 10 14 17 |
-| `13` | 0 4 7 10 14 21 |
-| `maj` | 0 4 7 |
-| `M` | 0 4 7 |
-| `min` | 0 3 7 |
+| `(none: major)` | 0 4 7 |
 | `m` | 0 3 7 |
-| `dim` | 0 3 6 |
-| `aug` | 0 4 8 |
-| `sus2` | 0 2 7 |
-| `sus4` | 0 5 7 |
-| `power` | 0 7 12 |
-| `m6` | 0 3 7 9 |
-| `dom7` | 0 4 7 10 |
+| `7` | 0 4 7 10 |
 | `maj7` | 0 4 7 11 |
-| `M7` | 0 4 7 11 |
 | `m7` | 0 3 7 10 |
-| `min7` | 0 3 7 10 |
-| `mmaj7` | 0 3 7 11 |
-| `dim7` | 0 3 6 9 |
 | `m7b5` | 0 3 6 10 |
-| `hdim` | 0 3 6 10 |
-| `aug7` | 0 4 8 10 |
+| `dim7` | 0 3 6 9 |
+| `mmaj7` | 0 3 7 11 |
+| `6` | 0 4 7 9 |
+| `69` | 0 4 7 9 14 |
+| `9` | 0 4 7 10 14 |
 | `maj9` | 0 4 7 11 14 |
 | `m9` | 0 3 7 10 14 |
-| `add9` | 0 4 7 14 |
+| `11` | 0 4 7 10 14 17 |
 | `m11` | 0 3 7 10 14 17 |
-| `otonal` | 0 3.86 7.02 9.69 |
-| `utonal` | 0 -3.86 -7.02 -9.69 |
+| `13` | 0 4 7 10 14 21 |
+| `m13` | 0 3 7 10 14 17 21 |
+| `7sus4` | 0 5 7 10 |
+| `9sus4` | 0 5 7 10 14 |
+| `7b9` | 0 4 7 10 13 |
+| `7#9` | 0 4 7 10 15 |
+| `7#11` | 0 4 7 10 18 |
+| `7b13` | 0 4 7 10 20 |
+| `7alt` | 0 4 10 13 15 20 |
+| `maj7#11` | 0 4 7 11 18 |
+| `aug` | 0 4 8 |
+| `7#5` | 0 4 8 10 |
+
+Also available by name: `5`, `6`, `7`, `9`, `11`, `13`, `maj`, `M`, `min`, `m`, `dim`, `aug`, `sus2`, `sus4`, `power`, `m6`, `dom7`, `maj7`, `M7`, `m7`, `min7`, `mmaj7`, `dim7`, `m7b5`, `hdim`, `aug7`, `maj9`, `m9`, `add9`, `m11`, `otonal`, `utonal` (including `otonal` and `utonal` for just intonation).
 
 ## Drums
 
@@ -422,4 +453,6 @@ On a pitch: `c4@maj7`. On a degree, numbers count diatonic chord tones (`^5@7` i
 | `bell` | FM bell with a long ring. |
 | `organ` | Drawbar-style additive organ. |
 | `lead` | Detuned square and saw lead. |
+| `upright` | Upright (acoustic) bass: a round plucked tone with a soft finger thump. For walking lines. |
+| `vibes` | Vibraphone: struck metal bars with a motor tremolo and a long ring. |
 | `kit` | Drum kit: plays General MIDI drum note numbers (kick, snare, hat, ...). |

@@ -24,6 +24,8 @@ export const INSTRUMENT_DOCS: Record<string, string> = {
   bell: "FM bell with a long ring.",
   organ: "Drawbar-style additive organ.",
   lead: "Detuned square and saw lead.",
+  upright: "Upright (acoustic) bass: a round plucked tone with a soft finger thump. For walking lines.",
+  vibes: "Vibraphone: struck metal bars with a motor tremolo and a long ring.",
   kit: "Drum kit: plays General MIDI drum note numbers (kick, snare, hat, ...).",
 };
 
@@ -78,6 +80,7 @@ function osc(kind: string, phase: number, dt: number): number {
 export function noteLength(spec: NoteSpec): number {
   const rel = Number(spec.params.release ?? defaultsFor(spec.inst).r);
   if (spec.inst === "kit") return drumLength(Math.round(spec.semi));
+  if (spec.inst === "vibes") return Math.min(8, spec.dur + rel + 0.1);
   if (spec.inst === "pluck" || spec.inst === "bell") return Math.min(8, spec.dur + rel + (spec.inst === "bell" ? 2.5 : 1.2));
   return Math.min(20, spec.dur + rel);
 }
@@ -89,6 +92,8 @@ function defaultsFor(inst: string) {
     case "organ": return { a: 0.01, d: 0.05, s: 1, r: 0.08 };
     case "keys": return { a: 0.002, d: 1.2, s: 0.35, r: 0.25 };
     case "lead": return { a: 0.01, d: 0.2, s: 0.7, r: 0.12 };
+    case "upright": return { a: 0.004, d: 0.9, s: 0, r: 0.07 };
+    case "vibes": return { a: 0.001, d: 1.8, s: 0, r: 0.45 };
     case "sine": case "tri": return { a: 0.005, d: 0.1, s: 0.85, r: 0.1 };
     default: return { a: 0.004, d: 0.15, s: 0.7, r: 0.1 };
   }
@@ -174,6 +179,36 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
         const v = 0.6 * osc("saw", ph, dt) + 0.6 * Math.sin(2 * Math.PI * ps);
         out[i] = lp.run(v, cutoff * (0.5 + 3 * fe), Math.max(res, 0.25), sr) * e * amp * 1.3;
         ph = (ph + dt) % 1; ps = (ps + dt / 2) % 1;
+      }
+      return out;
+    }
+    case "upright": {
+      // sine body, quickly fading 2nd and 3rd partials, a finger thump, and a closing filter
+      let ph = 0;
+      const cutoff = Number(p.cutoff ?? 1400);
+      for (let i = 0; i < len; i++) {
+        const t = i / sr;
+        const rel = t > held ? Math.max(0, 1 - (t - held) / Math.max(0.03, r)) : 1;
+        const e = Math.exp(-t / dc) * Math.min(1, t / 0.003) * rel;
+        const w = 2 * Math.PI * ph;
+        const v = 0.6 * Math.sin(w) + 0.33 * Math.sin(2 * w) * Math.exp(-t / 0.22) + 0.18 * Math.sin(3 * w) * Math.exp(-t / 0.09) + 0.15 * noise() * Math.exp(-t / 0.006);
+        out[i] = lp.run(v, cutoff * (0.7 + 1.6 * Math.exp(-t / 0.06)), 0.05, sr) * e * amp * 1.5;
+        ph = (ph + dt) % 1;
+      }
+      return out;
+    }
+    case "vibes": {
+      // fundamental plus the bar's 4th partial, motor tremolo, damper on release
+      let ph = 0;
+      const rate = Number(p.tremolo ?? 5.5);
+      for (let i = 0; i < len; i++) {
+        const t = i / sr;
+        const rel = t > held ? Math.max(0, 1 - (t - held) / Math.max(0.05, r)) : 1;
+        const trem = 1 - 0.3 * (0.5 - 0.5 * Math.cos(2 * Math.PI * rate * t));
+        const w = 2 * Math.PI * ph;
+        const v = Math.sin(w) + 0.3 * Math.sin(4 * w) * Math.exp(-t / 0.25) + 0.08 * Math.sin(10 * w) * Math.exp(-t / 0.03);
+        out[i] = v * Math.exp(-t / dc) * Math.min(1, t / 0.0015) * rel * trem * amp;
+        ph = (ph + dt) % 1;
       }
       return out;
     }

@@ -15,3 +15,4 @@ export * from "./render";
 export * from "./docs";
 export * from "./fx";
 export * from "./musicxml";
+export * from "./harmony";

@@ -27,6 +27,7 @@ const tineMode = StreamLanguage.define<{ inPhrase: number }>({
       if (w in SCALES || INSTRUMENTS.includes(w)) return "typeName";
       return "variableName";
     }
+    if (stream.match(/^@[A-Za-z0-9#+]+(?:\/[A-Ga-g](?:#|b)?\d?)?/)) return "operator";
     const ch = stream.next()!;
     if ("[{<".includes(ch)) { state.inPhrase++; return "bracket"; }
     if ("]}>".includes(ch)) { state.inPhrase = Math.max(0, state.inPhrase - 1); return "bracket"; }

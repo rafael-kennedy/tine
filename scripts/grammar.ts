@@ -23,7 +23,7 @@ const g = {
     { name: "support.constant.drum.tine", match: `\\b(${names(Object.keys(DRUMS))})\\b` },
     { name: "support.type.scale.tine", match: `\\b(${names([...Object.keys(SCALES), ...INSTRUMENTS])})\\b` },
     { name: "support.function.builtin.tine", match: `\\b(${names(builtinList().map(b => b.name))})\\b(?=\\s*\\(|)` },
-    { name: "keyword.operator.chord.tine", match: "@[A-Za-z0-9]+" },
+    { name: "keyword.operator.chord.tine", match: "@[A-Za-z0-9#+]+(/[A-Ga-g](#|b)?\\d?)?" },
     { name: "keyword.operator.arrow.tine", match: "=>" },
     { name: "keyword.operator.phrase.tine", match: "[|?!_]" },
     { name: "keyword.operator.tine", match: "\\*\\*|==|!=|<=|>=|\\.\\.|[-+*/%=]" },

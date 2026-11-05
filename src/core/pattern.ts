@@ -31,7 +31,11 @@ export type Params = Record<string, any>;
 export interface Ev { s: R; e: R; v: any; p: Params }
 
 export class Chord {
-  constructor(public notes: any[]) {}
+  // root and bass are optional metadata from chord symbols (c@7/e, changes("C7/E")),
+  // used by root(), bass(), name() and the voicing functions.
+  constructor(public notes: any[], public root?: any, public bass?: any) {}
+  // the same chord with each note (and its root/bass) mapped
+  map(f: (x: any) => any): Chord { return new Chord(this.notes.map(f), this.root === undefined ? undefined : f(this.root), this.bass === undefined ? undefined : f(this.bass)); }
   toString() { return `{${this.notes.map(String).join(" ")}}`; }
 }
 

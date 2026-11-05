@@ -3,7 +3,9 @@
 // next to the code it documents.
 
 import { R, ONE, ZERO } from "./rational";
-import { Pitch, Degree, Key, Scale, CHORDS, SCALES } from "./pitch";
+import { Pitch, Degree, Key, Scale, CHORDS, SCALES, parseNote } from "./pitch";
+import * as H from "./harmony";
+const parseQuality = H.parseQuality;
 import {
   Pat, Chord, Rest, REST, toPat, seq, stack, alt, fast, shift, rev, every, degrade, euclid, mapV, mapEv,
   setParam, signal, segment, sampleAt, perBar, perBarSelect, evolve, filterEv, evRand, withCtx, arrange, silence, Ev, Ctx,
@@ -44,17 +46,32 @@ const asFn = (call: CallInfo, f: any) => (p: Pat) => P(fnCall(call, f, [p]));
 const DIATONIC: Record<string, number[]> = { "3": [0, 2, 4], "5": [0, 2, 4], "6": [0, 2, 4, 5], "7": [0, 2, 4, 6], "9": [0, 2, 4, 6, 8], "11": [0, 2, 4, 6, 8, 10], "13": [0, 2, 4, 6, 8, 10, 12] };
 
 export function makeChord(root: any, q: string): Chord {
+  // a slash bass: c@7/e, g@m7/c3
+  const slash = q.match(/^(.*)\/([A-Ga-g](?:#|b)?\d?)$/);
+  if (slash) {
+    const c = makeChord(root, slash[1]);
+    const given = slash[2];
+    let b = parseNote(given);
+    if (!/\d$/.test(given)) {
+      // no octave given: the nearest such note below the chord
+      const lowest = root instanceof Pitch ? root.semi : 60;
+      let s = b.semi; while (s >= lowest) s -= 12; while (s + 12 < lowest) s += 12; b = new Pitch(s);
+    }
+    return new Chord([b, ...c.notes], c.root, b);
+  }
   if (root instanceof Degree) {
-    if (DIATONIC[q]) return new Chord(DIATONIC[q].map(k => new Degree(root.deg, root.acc, root.shift + k)));
-    const offs = CHORDS[q];
-    if (!offs) throw new Error(`unknown chord quality '${q}'`);
-    return new Chord(offs.map(o => new Degree(root.deg, root.acc + o, root.shift)));
+    // numbers on a degree count diatonic chord tones (^5@7 is "five seven"),
+    // except on an altered degree, where they name the quality (^b7@7 is a dominant seventh)
+    if (DIATONIC[q] && root.acc === 0) return new Chord(DIATONIC[q].map(k => new Degree(root.deg, root.acc, root.shift + k)), root);
+    const offs = parseQuality(q);
+    if (!offs) throw new Error(`unknown chord quality '${q}'; try maj7, m7, 7, m7b5, dim7, 7b9, 7alt, maj7#11, 9sus4`);
+    return new Chord(offs.map(o => new Degree(root.deg, root.acc + o, root.shift)), root);
   }
   const semi = root instanceof Pitch ? root.semi : isNum(root) ? num(root) : NaN;
   if (isNaN(semi)) throw new Error(`cannot build a chord on ${typeName(root)}`);
-  const offs = CHORDS[q];
-  if (!offs) throw new Error(`unknown chord quality '${q}'; try maj, m, 7, maj7, m7, dim, sus4, 9`);
-  return new Chord(offs.map(o => new Pitch(semi + o)));
+  const offs = parseQuality(q);
+  if (!offs) throw new Error(`unknown chord quality '${q}'; try maj7, m7, 7, m7b5, dim7, 7b9, 7alt, maj7#11, 9sus4`);
+  return new Chord(offs.map(o => new Pitch(semi + o)), new Pitch(semi));
 }
 
 function semisOf(v: any, key: Key): number[] {
@@ -112,7 +129,7 @@ def("ply", "ply(p, n)", "Repeat each event n times within its own length. n may 
     return out;
   });
 });
-def("swing", "swing(p, amount: 1/3, div: 8)", "Delay every second subdivision (eighths by default) by a fraction of a step.", cat.time, ([p, amount, div], named) => {
+def("swing", "swing(p, amount: 1/3, div: 8)", "Delay every second subdivision (eighths by default) by a fraction of a step. 1/3 gives triplet swing (long-short 2:1), 0.2 a lighter 3:2, 0 is straight.", cat.time, ([p, amount, div], named) => {
   const amt = N(named.amount ?? amount, 1 / 3), d = Math.round(N(named.div ?? div, 8));
   const grid = new R(1, d), q = P(p);
   return new Pat((a, b, ctx) => q.query(a.sub(grid), b, ctx).flatMap(ev => {
@@ -240,7 +257,7 @@ def("chance", "chance(prob)", "true with the given probability (seeded).", cat.r
 
 // ===== pitch =====
 function mapPitch(v: any, f: (x: any) => any): any {
-  if (v instanceof Chord) return new Chord(v.notes.map(f));
+  if (v instanceof Chord) return v.map(f);
   if (v instanceof Rest || v === null || v === undefined) return v;
   return f(v);
 }
@@ -278,7 +295,10 @@ def("key", "key(root, scale) or p.key(root, scale)", "Make a key, or play p in a
   if (!(args[0] instanceof Pitch)) throw new TypeError("key needs a root note, like key(d, dorian)");
   return new Key(args[0], args[1] ?? SCALES.major);
 });
-def("chord", "chord(root, quality)", "A chord: chord(c4, \"maj7\") is the same as c4@maj7.", cat.pitch, ([r, q]) => makeChord(r, String(q instanceof Pitch ? q.toString() : q)));
+def("chord", "chord(root, quality)", "A chord: chord(c4, \"maj7\") is the same as c4@maj7. With one text argument it reads a chord symbol: chord(\"Bb7#11\").", cat.pitch, ([r, q]) => {
+  if (typeof r === "string" && q === undefined) { const c = H.parseSymbol(r); return c ?? REST; }
+  return makeChord(r, String(q instanceof Pitch ? q.toString() : q));
+});
 def("invert", "invert(p, n: 1)", "Chord inversion: move the lowest n notes up an octave.", cat.pitch, ([p, n]) => {
   const k = Math.round(N(n, 1));
   const inv = (c: any, key: Key) => {
@@ -497,3 +517,82 @@ def("lerp", "lerp(a, b, t)", "Linear blend from a to b.", cat.math, ([a, b, t]) 
 def("print", "print(x, ...)", "Show values in the console.", cat.misc, (args, _n, call) => { call.interp.scene.prints.push(args.map(a => (typeof a === "string" ? a : show(a))).join(" ")); return args[0] ?? null; });
 def("str", "str(x)", "Text form of a value.", cat.misc, ([x]) => (typeof x === "string" ? x : show(x)));
 def("type", "type(x)", "The name of a value's type.", cat.misc, ([x]) => typeName(x));
+
+// ===== harmony =====
+const H_CAT = "harmony";
+const keyOf = (ev: Ev, ctx: Ctx): Key => ev.p.key ?? ctx.key;
+// apply f to every chord in p (a chord value, or the chords of a pattern)
+function chordMap(p: any, f: (c: Chord, key: Key) => any): any {
+  if (p instanceof Chord) return f(p, new Key(new Pitch(60), SCALES.major));
+  return mapEv(P(p), (ev, ctx) => (ev.v instanceof Chord ? { ...ev, v: f(ev.v, keyOf(ev, ctx)) } : ev));
+}
+const pitchOf = (x: any, d: number) => (x === undefined ? d : x instanceof Pitch ? x.semi : N(x));
+
+def("changes", "changes(text, octave: 3)", "Chords from a lead sheet: changes(\"Dm7 G7 | Cmaj7 %\"). Bars are split by |, chords in a bar share it, / holds a chord one more slot, % repeats the bar, N.C. is no chord. Loops over its bars.", H_CAT, ([t, oct], named) => {
+  const bars = H.parseChanges(String(t), Math.round(N(named.octave ?? oct, 3)));
+  const pats = bars.map(steps => seq(steps.map(st => ({ pat: st.chord ? toPat(st.chord) : toPat(REST), w: new R(st.w) }))));
+  return alt(pats);
+});
+def("root", "root(p)", "The root of each chord (from its symbol, or named from its notes). Single notes pass through. Try changes(...).root.octave(-1) for a bass line.", H_CAT, ([p]) => chordMap(p, (c, k) => new Pitch(H.rootOf(c, k))));
+def("bassnote", "bassnote(p)", "The bass note of each chord: the slash note of c@7/e, otherwise the root.", H_CAT, ([p]) => chordMap(p, (c, k) => new Pitch(H.bassOf(c, k))));
+def("tones", "tones(chord)", "A chord's notes as a list, low to high.", H_CAT, ([c]) => {
+  if (!(c instanceof Chord)) throw new TypeError(`tones needs a chord, got ${typeName(c)}`);
+  return list(H.chordSemis(c, new Key(new Pitch(60), SCALES.major)).map(x => new Pitch(x)));
+});
+def("name", "name(x, bars: 1)", "Name a chord, or the chords of a pattern, as a chord symbol: name({e g c5}) is \"C/E\".", H_CAT, ([x, bars], named, call) => {
+  const key = call.interp.scene.key as Key;
+  if (x instanceof Chord) return H.nameOf(H.chordSemis(x, key));
+  if (x instanceof Pat && x.items && !x.items.some(v => v instanceof Pat || v instanceof Chord)) return H.nameOf(x.items.flatMap(v => H.semisOfValue(v, key)));
+  const n = Math.max(1, Math.round(N(named.bars ?? bars, 1)));
+  const ctx: Ctx = { seed: call.interp.scene.seed, voice: 0, key, offset: ZERO, inputs: { cc: () => 0, held: () => [] } };
+  const out: string[] = [];
+  for (let b = 0; b < n; b++) {
+    const evs = P(x).query(new R(b), new R(b + 1), ctx).filter(e => e.s.ge(new R(b))).sort((u, v) => u.s.toNumber() - v.s.toNumber());
+    out.push(evs.map(e => (e.v instanceof Chord ? H.nameOf(H.chordSemis(e.v, keyOf(e, ctx))) : H.semisOfValue(e.v, keyOf(e, ctx)).map(s => H.pcName(s)).join(""))).filter(Boolean).join(" ") || "N.C.");
+  }
+  return out.join(" | ");
+});
+def("shell", "shell(p)", "Shell voicings: root, third and seventh, the bebop pianist's left hand.", H_CAT, ([p]) => chordMap(p, H.shellVoicing));
+def("guide", "guide(p)", "Guide tones: just the third and seventh of each chord. Add .voicelead to hear them move by step.", H_CAT, ([p]) => chordMap(p, H.guideVoicing));
+def("rootless", "rootless(p, form: \"a\")", "Rootless voicings: four notes without the root (3-5-7-9, dominants use the 13th for the 5th). Form \"a\" starts on the third, \"b\" on the seventh.", H_CAT, ([p, form], named) => {
+  const f = String(named.form ?? form ?? "a"); return chordMap(p, (c, k) => H.rootlessVoicing(c, k, f));
+});
+def("drop2", "drop2(p)", "Drop-2 voicings: close position, with the second voice from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => H.dropVoicing(c, k, [2])));
+def("drop3", "drop3(p)", "Drop-3 voicings: close position, with the third voice from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => H.dropVoicing(c, k, [3])));
+def("drop24", "drop24(p)", "Drop-2-and-4 voicings: the second and fourth voices from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => H.dropVoicing(c, k, [2, 4])));
+def("voicelead", "voicelead(p, around: e4)", "Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: the chain is replayed from bar 0.", H_CAT, ([p, around], named) => {
+  const q = P(p), center = pitchOf(named.around ?? around, 64);
+  type Chain = { upTo: number; voiced: Map<string, number[]>; prev: number[] | null };
+  const chains = new Map<string, Chain>();
+  const evKey = (s: R, semis: number[]) => `${s.toString()}:${semis.join(",")}`;
+  return new Pat((a, b, ctx) => {
+    const evs = q.query(a, b, ctx);
+    if (!evs.some(e => e.v instanceof Chord)) return evs;
+    const ck = `${ctx.seed}|${ctx.voice}|${ctx.offset.toString()}|${ctx.key.root.semi}|${ctx.key.scale.steps.join(",")}`;
+    let ch = chains.get(ck);
+    if (!ch) { ch = { upTo: 0, voiced: new Map(), prev: null }; chains.set(ck, ch); if (chains.size > 32) chains.delete(chains.keys().next().value!); }
+    const need = Math.min(b.ceil(), 100000);
+    while (ch.upTo < need) {
+      const bar = ch.upTo, lo = new R(bar);
+      const bevs = q.query(lo, new R(bar + 1), ctx).filter(e => e.v instanceof Chord && e.s.ge(lo)).sort((u, v) => u.s.toNumber() - v.s.toNumber());
+      for (const e of bevs) {
+        const semis = H.chordSemis(e.v, keyOf(e, ctx));
+        const v = H.leadTo(ch.prev, semis, center);
+        ch.voiced.set(evKey(e.s, semis), v); ch.prev = v;
+      }
+      ch.upTo++;
+    }
+    return evs.map(e => {
+      if (!(e.v instanceof Chord)) return e;
+      const key = keyOf(e, ctx), semis = H.chordSemis(e.v, key);
+      const v = ch!.voiced.get(evKey(e.s, semis)) ?? H.leadTo(null, semis, center);
+      return { ...e, v: new Chord(v.map(x => new Pitch(x)), new Pitch(H.rootOf(e.v, key)), e.v.bass) };
+    });
+  });
+});
+def("interval", "interval(a, b, long: false)", "The interval between two pitches by size: interval(c4, e4) is \"M3\"; with long: true, \"major 3rd\". Tine counts semitones, so C-F# and C-Gb are both TT (tritone).", H_CAT, ([a, b, long], named) => {
+  const k = new Key(new Pitch(60), SCALES.major);
+  const x = H.semisOfValue(a, k)[0], y = H.semisOfValue(b, k)[0];
+  if (x === undefined || y === undefined) throw new TypeError("interval needs two pitches, like interval(c4, g4)");
+  return H.intervalName(y - x, truthy(named.long ?? long ?? false));
+});

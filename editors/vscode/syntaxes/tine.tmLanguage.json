@@ -88,15 +88,15 @@
     },
     {
       "name": "support.type.scale.tine",
-      "match": "\\b(double_harmonic|harmonic_minor|melodic_minor|bohlen_pierce|mixolydian|major_pent|minor_pent|whole_tone|just_major|chromatic|hirajoshi|phrygian|aeolian|locrian|slendro|ionian|dorian|lydian|square|major|minor|blues|pluck|organ|keys|sine|bass|bell|lead|tri|saw|pad|kit)\\b"
+      "match": "\\b(phrygian_dominant|lydian_augmented|double_harmonic|lydian_dominant|harmonic_minor|bebop_dominant|melodic_minor|mixolydian_b6|bohlen_pierce|locrian_nat2|bebop_dorian|major_blues|bebop_major|mixolydian|major_pent|minor_pent|whole_tone|half_whole|whole_half|just_major|chromatic|hirajoshi|dorian_b2|augmented|phrygian|aeolian|locrian|altered|slendro|upright|ionian|dorian|lydian|square|major|minor|blues|pluck|organ|vibes|keys|sine|bass|bell|lead|tri|saw|pad|kit)\\b"
     },
     {
       "name": "support.function.builtin.tine",
-      "match": "\\b(palindrome|scala_file|sometimes|transpose|humanize|scramble|rand_int|weighted|note_num|arrange|per_bar|degrade|shuffle|degrees|release|sustain|program|euclid|evolve|rarely|chance|octave|invert|legato|cutoff|attack|reverb|sample|square|filter|concat|repeat|rotate|early|every|swing|stack|trunc|often|maybe|chord|strum|pitch|ratio|scale|cents|scala|decay|drive|delay|as_cc|noise|drift|range|floor|round|clamp|print|fast|slow|late|iter|echo|poly|loop|dice|walk|rand|pick|step|just|mode|gain|inst|midi|held|sine|fold|take|drop|ceil|sqrt|log2|lerp|type|rev|off|ply|cat|seq|key|arp|edo|vel|pan|res|hpf|lpf|dur|set|ctl|mpe|tri|saw|seg|run|len|map|sum|abs|sin|cos|exp|min|max|str|hz|cc|at)\\b(?=\\s*\\(|)"
+      "match": "\\b(palindrome|scala_file|sometimes|transpose|voicelead|humanize|scramble|rand_int|weighted|note_num|bassnote|rootless|interval|arrange|per_bar|degrade|shuffle|degrees|release|sustain|program|changes|euclid|evolve|rarely|chance|octave|invert|legato|cutoff|attack|reverb|sample|square|filter|concat|repeat|rotate|drop24|early|every|swing|stack|trunc|often|maybe|chord|strum|pitch|ratio|scale|cents|scala|decay|drive|delay|as_cc|noise|drift|range|floor|round|clamp|print|tones|shell|guide|drop2|drop3|fast|slow|late|iter|echo|poly|loop|dice|walk|rand|pick|step|just|mode|gain|inst|midi|held|sine|fold|take|drop|ceil|sqrt|log2|lerp|type|root|name|rev|off|ply|cat|seq|key|arp|edo|vel|pan|res|hpf|lpf|dur|set|ctl|mpe|tri|saw|seg|run|len|map|sum|abs|sin|cos|exp|min|max|str|hz|cc|at)\\b(?=\\s*\\(|)"
     },
     {
       "name": "keyword.operator.chord.tine",
-      "match": "@[A-Za-z0-9]+"
+      "match": "@[A-Za-z0-9#+]+(/[A-Ga-g](#|b)?\\d?)?"
     },
     {
       "name": "keyword.operator.arrow.tine",

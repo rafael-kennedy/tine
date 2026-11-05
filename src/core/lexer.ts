@@ -1,7 +1,7 @@
 import { TineError } from "./errors";
 
 export type TokType =
-  | "num" | "str" | "ident" | "kw" | "note" | "degree" | "op"
+  | "num" | "str" | "ident" | "kw" | "note" | "degree" | "op" | "chordq"
   | "newline" | "indent" | "dedent" | "eof";
 
 export interface Token {
@@ -21,6 +21,7 @@ export const KEYWORDS = new Set([
 
 // A bare word is a note name if it is a letter A-G, any number of # or b
 // accidentals, and an optional octave number. Such words cannot be variables.
+const CHORD_SYM = /^[A-Za-z0-9#+]+(?:\/[A-Ga-g](?:#|b)?\d?(?![A-Za-z0-9_#]))?/;
 export const NOTE_RE = /^[A-Ga-g](?:#|b)*\d?$/;
 
 const OPS = [
@@ -138,6 +139,11 @@ export function lex(src: string): Token[] {
     if (matched === "(" || matched === "[" || matched === "{") depth++;
     if (matched === ")" || matched === "]" || matched === "}") depth = Math.max(0, depth - 1);
     push({ type: "op", text: matched, start, end: i });
+    // A chord symbol straight after @ is one token: c@7#9, g@m7b5, c@maj7/e, ^5@7
+    if (matched === "@") {
+      const m = CHORD_SYM.exec(src.slice(i));
+      if (m) { push({ type: "chordq", text: m[0], start: i, end: i + m[0].length }); i += m[0].length; }
+    }
   }
   if (toks.length && toks[toks.length - 1].type !== "newline") push({ type: "newline", text: "\n", start: src.length, end: src.length });
   while (indents.length > 1) { indents.pop(); push({ type: "dedent", text: "", start: src.length, end: src.length }); }

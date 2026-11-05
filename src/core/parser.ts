@@ -293,7 +293,7 @@ class Parser {
     if (this.isOp("@")) {
       this.next();
       const q = this.tok;
-      if (q.type !== "ident" && q.type !== "num" && q.type !== "note") this.err("expected a chord quality after '@', like c4@maj7 or ^2@4");
+      if (q.type !== "ident" && q.type !== "num" && q.type !== "note" && q.type !== "chordq") this.err("expected a chord quality after '@', like c4@maj7 or ^2@4");
       this.next();
       const arg: Node = q.type === "num" ? this.numNode(q) : { t: "str", v: q.text, span: this.spanOf(q) };
       return this.postfix({ t: "mod", kind: "chord", e: base, arg, span: sp(base.span, this.spanOf(q)) }, false);
@@ -451,10 +451,11 @@ class Parser {
       if (this.isOp("@")) {
         this.next();
         const q = this.tok;
-        if (q.type !== "ident" && q.type !== "num" && q.type !== "note") this.err("expected a chord quality after '@'");
+        if (q.type !== "ident" && q.type !== "num" && q.type !== "note" && q.type !== "chordq") this.err("expected a chord quality after '@'");
         this.next();
         const arg: Node = q.type === "num" ? this.numNode(q) : { t: "str", v: q.text, span: this.spanOf(q) };
         node = { t: "mod", kind: "chord", e: node, arg, span: sp(node.span, arg.span) };
+        node = this.postfix(node, true); // c@maj7.drop2 inside a phrase
         continue;
       }
       break;

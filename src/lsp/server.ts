@@ -116,9 +116,10 @@ function completion(uri: string, p: Pos) {
   const off = posToOffset(src, p);
   const before = src.slice(Math.max(0, off - 40), off);
   const items: any[] = [];
-  if (/@[A-Za-z0-9]*$/.test(before)) {
+  if (/@[A-Za-z0-9#+]*$/.test(before)) {
     for (const q of Object.keys(CHORDS)) items.push({ label: q, kind: 12, detail: `chord ${CHORDS[q].map(x => Math.round(x * 100) / 100).join(" ")}` });
     for (const q of ["3", "7", "9", "11", "13"]) items.push({ label: q, kind: 12, detail: "diatonic chord on a degree" });
+    for (const q of ["7b9", "7#9", "7#11", "7b13", "7alt", "maj7#11", "9sus4", "13sus4", "69", "m69", "maj13", "m13", "mmaj7", "7#5", "7b5"]) if (!items.some(i => i.label === q)) items.push({ label: q, kind: 12, detail: "chord symbol" });
     return items;
   }
   const afterDot = /\.[A-Za-z_]*$/.test(before);

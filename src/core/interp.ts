@@ -37,7 +37,7 @@ export interface EvalOptions {
 }
 
 export const MAX_DEPTH = 400;
-export const INSTRUMENTS = ["keys", "sine", "tri", "saw", "square", "pluck", "bass", "pad", "bell", "organ", "kit", "lead"];
+export const INSTRUMENTS = ["keys", "sine", "tri", "saw", "square", "pluck", "bass", "pad", "bell", "organ", "kit", "lead", "upright", "vibes"];
 
 export class Interp {
   env: Env;
@@ -373,7 +373,7 @@ export class Interp {
 
 function liftUnary(v: any, f: (x: any) => any): any {
   if (v instanceof Pat) return mapV(v, x => (x instanceof Rest ? x : f(x)));
-  if (v instanceof Chord) return new Chord(v.notes.map(f));
+  if (v instanceof Chord) return v.map(f);
   return f(v);
 }
 
@@ -422,8 +422,8 @@ function equal(a: any, b: any): boolean {
 export function scalar(op: string, a: any, b: any, span?: Span): any {
   if (a instanceof Rest || b instanceof Rest) return REST;
   if (["==", "!=", "<", ">", "<=", ">="].includes(op)) return compare(op, a, b);
-  if (a instanceof Chord) return new Chord(a.notes.map(x => scalar(op, x, b, span)));
-  if (b instanceof Chord && isNum(a)) return new Chord(b.notes.map(x => scalar(op, a, x, span)));
+  if (a instanceof Chord) return a.map(x => scalar(op, x, b, span));
+  if (b instanceof Chord && isNum(a)) return b.map(x => scalar(op, a, x, span));
   if (a instanceof Pitch) {
     if (isNum(b)) {
       if (op === "+") return new Pitch(a.semi + num(b));
