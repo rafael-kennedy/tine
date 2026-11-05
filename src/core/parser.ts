@@ -224,6 +224,7 @@ class Parser {
       return { t: "if", c, a, b, span: sp(this.spanOf(s), b.span) };
     }
     // lambda: x => ...
+    if (this.tok.type === "note" && this.isOp("=>", this.peek())) this.err(`'${this.tok.text}' is a note name and cannot be a parameter`, this.tok, "try a longer name, like x or p");
     if (this.tok.type === "ident" && this.isOp("=>", this.peek())) {
       const s = this.next(); this.next();
       const body = this.expr();

@@ -1,0 +1,11 @@
+-- polyrhythm.tine: rhythm without a grid.
+meter 7/8
+tempo 252
+key a phrygian
+
+voice pulse   = [kick . . kick . snare .]
+voice clave   = rim.euclid(5, 7, rot: 1).vel(.6)
+voice threes  = [^1 ^b2 ^5].poly(4).inst(pluck)            -- 3 against 4 steps
+voice fives   = [^8 ^7 ^5 ^4 ^2].poly(7).inst(bell).vel(.4) -- cycles every 5 bars
+voice tuplets = <[^1 [^3 ^4 ^5] ^1 .] [[^5 ^4 ^3 ^2 ^1] _ . .]>.octave(-1).inst(bass)
+voice swirl   = [hat*7].vel(saw(3).range(.2, .8)).ply(<1 1 2>)

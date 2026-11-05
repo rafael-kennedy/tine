@@ -1,0 +1,33 @@
+-- song.tine: a finished arrangement with sections and a form.
+-- Render: tine render examples/song.tine    MIDI: tine midi examples/song.tine
+seed 77
+tempo 100
+key c major
+
+let groove = {[kick . . kick . . snare .] [hat*8].vel([.8 .45])}
+let progression = <^1@7 ^6@7 ^2@7 ^5@7>
+
+section intro 4
+  voice keys = progression.strum.inst(keys).vel(.5)
+  voice air  = [^5 _ _ _ ^3 _ ^2 _].inst(bell).vel(.3).slow(2)
+
+section verse 8
+  voice drums = groove
+  voice keys  = progression.strum.inst(keys).vel(.5)
+  voice bass  = [^1 . ^1 ^5 . ^1 . .].octave(-2).inst(bass)
+  voice tune  = [^3 ^4 ^5 _ ^5 ^4 ^3 ^2]
+    .every(2, x => x.step(-1))
+    .inst(pluck)
+
+section chorus 8
+  tempo 104
+  voice drums = groove.every(4, x => x.fast(2))
+  voice keys  = <^4@9 ^5@7 ^3@7 ^6@7>.arp("updown").fast(2).inst(keys).vel(.55)
+  voice bass  = [^4 ^4 . ^5 ^5 . ^1 .].octave(-2).inst(bass)
+  voice tune  = [^8 _ ^7 ^5 ^6 _ ^5 .].inst(lead).vel(.5).echo(times: 2, time: 3/16)
+
+section outro 4
+  tempo 92
+  voice keys = progression.strum(1/16).slow(2).inst(keys).vel(.4)
+
+form intro verse chorus verse chorus outro

@@ -1,0 +1,17 @@
+-- generative.tine: a piece that writes itself, the same way every time.
+-- Remove the seed line to hear a new version on each run; the run prints
+-- its seed so you can keep the one you like.
+seed 2026
+tempo 84
+key d dorian
+
+-- each bar gets a chord from a small Markov-ish choice
+let next_chord(n) = if n % 4 == 3 then ^5@7 else pick([^1@7 ^4@9 ^6@7 ^2@7])
+
+voice harmony = per_bar(n => next_chord(n)).inst(pad).vel(.45)
+voice melody = per_bar(n =>
+  dice([^1 ^3 ^5 ^7 ^8 ^9 . .], 8).octave(if n % 8 < 4 then 0 else 1)
+).inst(keys).humanize.legato(.8)
+voice bass = per_bar(n => [^1 . . ^5].transpose(rand_int(0, 1) * 12).octave(-2)).inst(bass)
+voice texture = [hat*16].degrade(drift(.5)).vel(noise(16).range(.1, .5))
+voice bells = [. . . ^12?0.3].inst(bell).sometimes(.5, x => x.step(2))

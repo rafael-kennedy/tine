@@ -98,12 +98,13 @@ def("echo", "echo(p, times: 3, time: 1/8, decay: 0.6)", "Repeat each event, quie
   for (let i = 1; i <= k; i++) layers.push(mapEv(shift(dt.mul(new R(i)), q), ev => ({ ...ev, p: { ...ev.p, vel: (ev.p.vel ?? 0.8) * Math.pow(dc, i) } })));
   return stack(layers);
 });
-def("ply", "ply(p, n)", "Repeat each event n times within its own length.", cat.time, ([p, n]) => {
-  const k = Math.round(N(n)); const q = P(p);
+def("ply", "ply(p, n)", "Repeat each event n times within its own length. n may be a pattern.", cat.time, ([p, n]) => {
+  const q = P(p);
   return new Pat((a, b, ctx) => {
     const out: Ev[] = [];
     // events that could start a repeat in [a,b) started at most 1 bar before
     for (const ev of q.query(new R(a.floor() - 1), b.add(ONE), ctx)) {
+      const k = Math.max(1, Math.round(N(sampleAt(n, ev.s, ctx))));
       const step = ev.e.sub(ev.s).div(new R(k));
       for (let i = 0; i < k; i++) { const s = ev.s.add(step.mul(new R(i))); if (s.ge(a) && s.lt(b)) out.push({ s, e: s.add(step), v: ev.v, p: ev.p }); }
     }
@@ -325,6 +326,11 @@ def("edo", "edo(n, steps)", "An n-tone equal division of the octave. With steps,
 });
 def("cents", "cents(list, period: 1200)", "A scale from offsets in cents.", cat.pitch, ([l, period], named) => new Scale("cents", items(l).map(x => N(x) / 100), N(named.period ?? period, 1200) / 100));
 def("scala", "scala(text)", "A scale from the text of a Scala .scl file (the common microtonal tuning format).", cat.pitch, ([t]) => parseScala(String(t)));
+def("scala_file", "scala_file(path)", "A scale loaded from a Scala .scl file next to your piece.", cat.pitch, ([p], _n, call) => {
+  const rf = call.interp.opts.readFile;
+  if (!rf) throw new Error("files cannot be read here; paste the file's text into scala(\"...\") instead");
+  return parseScala(rf(String(p)));
+});
 def("mode", "mode(scale, n)", "Rotate a scale to start on its n-th degree (1-based): mode(major, 2) is dorian.", cat.pitch, ([s, n]) => {
   if (!(s instanceof Scale)) throw new TypeError("mode needs a scale");
   const k = Math.round(N(n)) - 1, L = s.steps.length;

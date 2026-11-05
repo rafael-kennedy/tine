@@ -26,8 +26,10 @@ usage:
   tine roll <file> [--bars N]  draw the piece as a piano roll in the terminal
   tine daw [file]              open the live-coding DAW in your browser
   tine learn                   open the interactive tutorial
-  tine pack <file> [-o out.html] [--exe]
-                               package a piece as a standalone player
+  tine pack <file> [-o out.html]
+                               package a piece as a single-file HTML player
+  tine pack <file> --exe [--runtime tine-windows-x64.exe] [-o name]
+                               package a piece as a standalone executable
   tine new <name>              start a new piece from a template
   tine lsp                     run the language server (for editors)
 
@@ -207,11 +209,19 @@ async function pack(file: string, flags: Record<string, any>) {
   const title = basename(file, extname(file));
   if (flags.exe) {
     const out = (flags.o as string) ?? title + (process.platform === "win32" ? ".exe" : "");
-    const self = readFileSync(process.execPath);
+    // the runtime is this executable, or another platform's tine binary via --runtime
+    const runtime = (flags.runtime as string) ?? process.execPath;
+    if (!flags.runtime && /\bbun(\.exe)?$/.test(process.execPath)) { console.error("pack --exe needs a compiled tine binary: run it from one, or pass --runtime path/to/tine-<platform>"); process.exit(2); }
+    const self = readFileSync(runtime);
     const payload = Buffer.from(JSON.stringify({ title, src: frozen }), "utf8");
     const marker = Buffer.from("\n#TINE-PIECE#");
     const len = Buffer.alloc(8); len.writeBigUInt64LE(BigInt(payload.length));
     writeFileSync(out, Buffer.concat([self, marker, payload, len, Buffer.from("TINEPACK")]), { mode: 0o755 });
+    if (process.platform === "darwin") {
+      // appending data invalidates the macOS signature; re-sign ad hoc so it runs
+      const { spawnSync } = await import("node:child_process");
+      spawnSync("codesign", ["--remove-signature", out]); spawnSync("codesign", ["-s", "-", out]);
+    }
     console.log(`wrote ${out}: a standalone executable that plays '${title}' (seed ${scene.seed}). Run it with no arguments, or with 'render' or 'midi'.`);
     return;
   }
@@ -248,7 +258,10 @@ if (piece) {
   const tmp = join(mkdtempSync(join(tmpdir(), "tine-piece-")), `${piece.title}.tine`);
   writeFileSync(tmp, piece.src);
   const sub = process.argv[2];
-  if (sub === "render" || sub === "midi" || sub === "roll" || sub === "daw") process.argv.splice(3, 0, tmp);
+  if (sub === "render" || sub === "midi" || sub === "roll" || sub === "daw") {
+    process.argv.splice(3, 0, tmp);
+    if ((sub === "render" || sub === "midi") && !process.argv.includes("-o")) process.argv.push("-o", `${piece.title}.${sub === "render" ? "wav" : "mid"}`);
+  }
   else { console.log(`${piece.title}  ${dim("(a piece made with Tine; try 'render', 'midi' or 'daw' as an argument)")}`); process.argv.splice(2, process.argv.length, "play", tmp); }
 }
 main();

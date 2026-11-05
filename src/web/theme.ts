@@ -41,9 +41,9 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;padding:0 5px;border-ra
 .logo svg{width:30px;height:30px}
 .cm-editor{background:var(--ink2);border-radius:var(--radius);font-family:var(--mono);font-size:14px;height:100%}
 .cm-editor.cm-focused{outline:1px solid var(--brass)}
-.cm-gutters{background:transparent;border:none;color:var(--faint)}
+.cm-gutters{background:transparent!important;border:none!important;color:var(--faint)!important}
 .cm-activeLine{background:color-mix(in srgb,var(--brass) 6%,transparent)}
-.cm-activeLineGutter{background:transparent;color:var(--brass)}
+.cm-activeLineGutter{background:transparent!important;color:var(--brass)!important}
 .cm-content{caret-color:var(--brass)}
 .cm-cursor{border-left-color:var(--brass)!important;border-left-width:2px!important}
 .cm-selectionBackground,.cm-focused .cm-selectionBackground{background:color-mix(in srgb,var(--teal) 30%,transparent)!important}

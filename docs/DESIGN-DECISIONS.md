@@ -1,6 +1,6 @@
 # Tine: design decisions
 
-This is the record of every judgment call made while designing and building Tine. Each entry says what was decided, why, and what was given up. It is a living document; sections marked *(in progress)* cover parts still being built.
+This is the record of every judgment call made while designing and building Tine. Each entry says what was decided, why, and what was given up. Sections 1 to 14 cover the language; 15 onward cover the tools around it.
 
 ---
 
@@ -93,7 +93,7 @@ Scales can be built from semitones, cents, ratios (`just`), equal divisions (`ed
 
 **Chords on degrees count chord tones, chords on pitches name qualities.** `^5@7` is the diatonic seventh chord on the fifth degree (G7 in C major), the way a musician says "five seven". `c4@maj7` names a quality. `^2@m7` works too.
 
-**`*` means two different things in two places, on purpose.** Inside a phrase, `c*3` is a ratchet. In an expression, `[c e] * 2` multiplies frequency (up an octave), consistent with `c4 * 3/2`. Arithmetic consistency across pitches won over symmetry with the phrase notation. The tutorial calls this out.
+**`*` on a pattern repeats it; `*` on a single pitch multiplies frequency.** `[c e] * 2` plays the phrase twice per bar, exactly as `[c e]*2` does inside a phrase, and `[c e] / 2` stretches it over two bars. `c4 * 3/2` is a just fifth. This was revised during the build: the first version made `[c e] * 2` multiply frequency (an octave up) for arithmetic consistency, and I wrote that bug into my own tutorial examples twice. If the language's author trips on a rule, users will too. The cost is that transposing a whole melody by a ratio needs `.transpose(ratio(3/2))` or a `map`. `+` and `-` still apply note-wise to patterns, since nobody expects `+` to mean "faster".
 
 ## 8. Randomness is seeded and positional
 
@@ -155,11 +155,65 @@ The default instrument is `keys`, a tine piano, which seemed right.
 
 Given up: these are simple synths, not a production sound engine. The real answer for serious sound design is MIDI out to the performer's own instruments, which is first-class.
 
-## 15. Tooling *(in progress)*
+## 15. One binary
 
-- **REPL** (`tine`): multi-line input, tab completion, piano-roll drawings of any pattern in the terminal, `:play`, `:seed`, `:save`. Done.
-- **DAW** (`tine daw song.tine`): browser-based, served by the same binary; watches the file so you can edit in your own editor and hear changes. Being built.
-- **Tutorial** (`tine learn`): runnable, editable examples with exercises. Next.
-- **Packaging**: standalone `tine` binaries for five platforms; `tine pack` makes a single-file HTML player or a self-contained executable for one piece. Next.
-- **Editor support**: language server plus VS Code extension, and syntax files for other editors. Next.
-- **Brand**: logo and palette. Next.
+The `tine` executable contains the REPL, renderer, MIDI exporter, the DAW and tutorial (as embedded web pages served on localhost), the packager and the language server. A performer installs one file and nothing else. The cost is size (about 100 MB, mostly the embedded Bun runtime). Disk is cheap; a missing dependency at a gig is not.
+
+## 16. REPL
+
+- Multi-line input is detected rather than declared: open brackets, a trailing `=`, a `section` line or an indented line keep reading; an empty line ends a block.
+- Any pattern you evaluate is **drawn as a piano roll in the terminal**, so the REPL is useful without speakers. Experimenting with rhythm is mostly looking at where notes land.
+- `:play` renders and plays through the system audio player (afplay, paplay, aplay, pw-play, ffplay or PowerShell), which avoids native audio bindings.
+- `:save` writes the session as a `.tine` file with its seed, so a REPL experiment becomes a piece.
+- Values print as valid Tine code (`^1.octave(-1)`, not an internal structure), so output can be pasted back in.
+
+## 17. DAW
+
+The DAW is deliberately a *live-coding* workstation, not a piano-roll editor with a code panel bolted on. The code is the score; everything else serves performing it.
+
+- **Bar-quantized hot swap.** Re-evaluating schedules the new code to take over at the next bar line (or beat, or immediately, selectable). A groove never stumbles mid-bar.
+- **Errors never stop the music.** A voice that fails to evaluate keeps its last good version; a voice that fails while playing is skipped and reported, and the others continue.
+- **Takes.** Every evaluation is recorded with its code and seed. Anything heard can be restored exactly; starring a take writes its seed into the code. This is the seeded-randomness promise turned into a feature.
+- **Sections are scenes.** In live mode, clicking a section launches it on the next bar, layered over the top-level voices, like clip launching. "Play form" plays the arrangement start to finish.
+- **Your editor, or ours.** Run with a file and the DAW watches it: save in VS Code, Vim or anything else and the change is heard on the next bar. The DAW's own editor (CodeMirror) has highlighting, completion, hover docs and inline error marks.
+- **MIDI**: output per voice with port selection, MPE channel rotation, clock out, input play-through to a built-in instrument, a live display of the last controller moved with one-click insertion of `cc(n)`, and **capture**: arm it, play for 1 to 8 bars, and Tine quantizes what you played and writes it into the code as a new voice. Capture simplifies its output: it halves the grid wherever that keeps the rhythm exact, uses holds for long notes, braces for chords, and `< >` across bars.
+- **Samples and loops**: drop audio files on the window (or put them in a `samples/` folder beside the piece) and use them as `.sample("name")`; `fit: true` stretches a loop to its step length.
+- **Scheduling** uses the standard look-ahead pattern: a 25 ms timer schedules every note starting in the next 120 ms against the audio clock, and MIDI uses the timestamped Web MIDI send. Patterns being pure functions of time is what makes this simple.
+
+Given up: no audio recording, no mixer with effects chains, no plug-in hosting. Those exist in every other DAW, and MIDI out plus clock lets Tine drive one.
+
+## 18. Tutorial
+
+- **Every example is live and editable**, with its own piano roll, because reading about rhythm without hearing and seeing it is useless.
+- Fourteen short lessons in the order a musician needs things: sound, rhythm, layers, keys, chords, transformation, change over time, chance, code, sound design, microtonality, rhythmic depth, form, performance. Programming concepts (functions, lambdas) come in lesson 9, after enough music to want them.
+- **Exercises are checked by listening**: the checker evaluates your code and inspects the resulting notes, so any correct answer passes, not just the one I wrote. Answers are revealable; progress is remembered.
+- The test suite runs every tutorial example and checks that every exercise's answer passes and its starter does not, so the tutorial cannot rot as the language changes.
+
+## 19. Packaging
+
+- `tine` itself is compiled with Bun for Linux (x64, arm64), macOS (x64, arm64) and Windows (x64), cross-compiled from one machine.
+- `tine pack piece.tine` produces a **single HTML file** with the player, synth and piece inlined, frozen to its seed. It plays offline in any modern browser and offers WAV, MIDI and source downloads. This is the most portable "executable" there is.
+- `tine pack piece.tine --exe` produces a **native executable for one piece** by appending the piece to a copy of the tine binary; run with no arguments it plays, and `render`, `midi`, `roll` and `daw` work as subcommands. `--runtime` packs for another platform. On macOS the result is re-signed ad hoc.
+
+## 20. Editor support
+
+- A **language server** written from scratch (no dependencies) over stdio: diagnostics, completion (context-aware after `.` and `@`), hover (notes show their MIDI number and frequency; degrees show what they resolve to in the file's key; voices show how many notes they play), signature help that understands method-call style, go to definition, document outline, formatting and semantic tokens.
+- Diagnostics include **play-time errors**: the server evaluates the file and queries two bars of music, so a mistake that would only appear when a voice plays is underlined while you type.
+- The **VS Code extension** bundles the server, so editing needs nothing installed; playback commands call the `tine` binary in a terminal, and "Open in DAW" connects editor and DAW through the file watcher.
+- A generated **TextMate grammar** serves VS Code, Sublime, JetBrains and TextMate; Vim, Neovim, Helix and Emacs get native files. The grammar is generated from the standard library so it never falls out of date.
+
+## 21. Brand
+
+See `brand/BRAND.md`. Brass and teal on near-black ink; Fraunces for the wordmark, Inter and JetBrains Mono for interface and code. Dark is the default theme because live coding happens on stages; a light theme follows the system setting.
+
+## 22. Testing
+
+Ninety-plus tests cover the core (timing, phrases, pitch, microtonality, every transform), the randomness guarantees (replay, order independence, slice independence, voice isolation), sections and form, errors and suggestions, the language server over a real stdio session, every tutorial example and exercise, and every example piece.
+
+## 23. Known limits
+
+- Built-in sounds are simple synths; serious sound design is meant to happen on external instruments over MIDI.
+- Web MIDI is unavailable in Safari, so live MIDI in the DAW needs Chrome, Edge, Opera, or Firefox with a permission prompt. Rendering and MIDI file export work everywhere.
+- Note names reserving `a` to `g` will occasionally surprise a programmer. The error message says exactly what happened.
+- Patterns lose their "list-ness" after sound parameters are set (`.inst`, `.vel`), so list functions like `scramble` must come before those in a chain. The error message points to it.
+- There is no MIDI clock *input* yet: Tine can lead other gear but not follow it.

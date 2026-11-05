@@ -1,0 +1,25 @@
+-- live-set.tine: for performing with MIDI gear.
+-- Run: tine daw examples/live-set.tine, open the MIDI tab, press "Enable MIDI".
+tempo 124
+key a minor
+
+-- knob 74 opens the filter, knob 71 adds chaos
+voice acid = [^1 ^1 ^8 ^1 ^b3 ^1 ^5 ^b7].fast(2)
+  .octave(-2)
+  .inst(saw)
+  .cutoff(cc(74).range(200, 5000))
+  .res(.7)
+  .degrade(cc(71))
+
+-- whatever chord you hold, arpeggiated in sixteenths
+voice hands = held(16).arp("updown").inst(pluck).vel(.6)
+
+-- drums go out to a drum machine on channel 10; switch to .inst(kit) without one
+voice drums = {[kick*4] [. clap . clap] [. hat]*4}.midi(10)
+
+-- a pad on an external synth, microtonal chords via MPE
+voice pad = <^1@9 ^6@7>.slow(2).transpose(.14).midi(1).mpe
+
+section drop 8
+  voice acid = [^1*4 . ^8 . ^b7].octave(-2).inst(saw).cutoff(5000).res(.8)
+  voice drums = {[kick*4] [hat*16]}.inst(kit)
