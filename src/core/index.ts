@@ -1,0 +1,14 @@
+export * from "./rational";
+export * from "./errors";
+export * from "./lexer";
+export * from "./parser";
+export * from "./pitch";
+export * from "./rng";
+export * from "./pattern";
+export * from "./values";
+export * from "./interp";
+export * from "./builtins";
+export * from "./scene";
+export const VERSION = "1.0.0";
+export * from "./synth";
+export * from "./render";
