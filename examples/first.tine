@@ -1,0 +1,9 @@
+-- a new piece
+tempo 96
+key d dorian
+seed 885795
+
+voice drums = {[kick . . kick . . snare .] [hat*8].vel([.9 .5])}
+voice bass  = [^1 . ^1 ^5 . ^4 _ .].octave(-2).inst(bass)
+voice keys  = <^1@7 ^4@7 ^5@7 ^1@7>.strum.vel(.6)
+voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3 .].every(4, rev).inst(pluck)

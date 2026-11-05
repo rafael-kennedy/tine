@@ -195,3 +195,10 @@ describe("errors", () => {
     expect(sc.errors.length).toBe(1); expect(sc.voices.size).toBe(2);
   });
 });
+
+describe("pattern multiplication", () => {
+  test("pattern * n repeats, pitch * r is a ratio", () => {
+    expect(starts("voice a = [c e] * 2")).toEqual([0, 0.25, 0.5, 0.75]);
+    expect(starts("voice a = [c e] / 2", 2)).toEqual([0, 1]);
+  });
+});

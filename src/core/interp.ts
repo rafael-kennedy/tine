@@ -459,6 +459,13 @@ export function binop(op: string, l: any, r: any, span?: Span): any {
     const np = new Pat((a, b, ctx) => l.query(a, b, ctx).map(ev => ({ ...ev, v: scalar(op, ev.v, sampleAt(r, ev.s, ctx), span) })));
     return np;
   }
+  // pattern * n repeats it n times per bar, as x*n does inside a phrase;
+  // pattern / n stretches it. Single pitches still multiply by frequency ratios.
+  if (l instanceof Pat && isNum(r) && (op === "*" || op === "/")) {
+    const k = r instanceof R ? r : R.of(num(r));
+    if (k.n === 0) throw new TineError("runtime", op === "*" ? "a pattern repeated 0 times is silence; use silence instead" : "division by zero", span);
+    return fast(op === "*" ? k : ONE.div(k), l);
+  }
   if (l instanceof Pat) return mapV(l, x => scalar(op, x, r, span));
   if (r instanceof Pat) return mapV(r, x => scalar(op, l, x, span));
   return scalar(op, l, r, span);
