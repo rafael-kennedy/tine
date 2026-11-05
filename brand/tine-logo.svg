@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 64" width="690" height="192">
+  <title>Tine</title>
+  <style>text{font-family:Fraunces,Georgia,'Times New Roman',serif;font-weight:600}</style>
+  <g fill="none" stroke-linecap="round">
+    <path d="M23 8v20a9 9 0 0 0 18 0V8" stroke="#d4a944" stroke-width="5.5"/>
+    <path d="M32 37v20" stroke="#d4a944" stroke-width="5.5"/>
+    <path d="M13 14a22 22 0 0 0 0 22M50 14a22 22 0 0 1 0 22" stroke="#3aa6a0" stroke-width="3"/>
+    <path d="M7 10a30 30 0 0 0 0 30M56 10a30 30 0 0 1 0 30" stroke="#3aa6a0" stroke-width="2.4" opacity=".5"/>
+  </g>
+  <text x="70" y="47" font-size="46" fill="currentColor">tine</text>
+</svg>

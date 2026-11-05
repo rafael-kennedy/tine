@@ -1,0 +1,12 @@
+# Append to ~/.config/helix/languages.toml
+[[language]]
+name = "tine"
+scope = "source.tine"
+file-types = ["tine"]
+comment-token = "--"
+indent = { tab-width = 2, unit = "  " }
+language-servers = ["tine-lsp"]
+
+[language-server.tine-lsp]
+command = "tine"
+args = ["lsp"]

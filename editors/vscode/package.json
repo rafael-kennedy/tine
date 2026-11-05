@@ -1,0 +1,123 @@
+{
+  "name": "tine",
+  "displayName": "Tine",
+  "description": "Language support for Tine, a programming language for music: diagnostics, completion, hover, signatures, outline, and commands to play, render and live-code.",
+  "version": "1.0.0",
+  "publisher": "tine-lang",
+  "license": "MIT",
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "music",
+    "live coding",
+    "midi",
+    "microtonal",
+    "algorave"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:tine"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tine",
+        "aliases": [
+          "Tine",
+          "tine"
+        ],
+        "extensions": [
+          ".tine"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icon.png",
+          "dark": "./icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tine",
+        "scopeName": "source.tine",
+        "path": "./syntaxes/tine.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "tine",
+        "path": "./snippets.json"
+      }
+    ],
+    "configuration": {
+      "title": "Tine",
+      "properties": {
+        "tine.path": {
+          "type": "string",
+          "default": "tine",
+          "description": "Path to the tine executable, used by the play, render, MIDI and DAW commands."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "tine.daw",
+        "title": "Tine: Open in DAW (live)",
+        "icon": "$(play-circle)"
+      },
+      {
+        "command": "tine.play",
+        "title": "Tine: Play File"
+      },
+      {
+        "command": "tine.render",
+        "title": "Tine: Render to WAV"
+      },
+      {
+        "command": "tine.midi",
+        "title": "Tine: Export MIDI"
+      },
+      {
+        "command": "tine.pack",
+        "title": "Tine: Package as HTML Player"
+      },
+      {
+        "command": "tine.learn",
+        "title": "Tine: Open the Tutorial"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "tine.daw",
+          "when": "editorLangId == tine",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "tine.daw",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "editorLangId == tine"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "bun build src/extension.ts --outfile out/extension.js --target node --format cjs --external vscode && bun build ../../src/lsp/entry.ts --outfile out/server.js --target node --format cjs"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0"
+  }
+}

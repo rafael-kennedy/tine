@@ -47,7 +47,11 @@ export function levenshtein(a: string, b: string): number {
   for (let j = 1; j <= n; j++) dp[0][j] = j;
   for (let i = 1; i <= m; i++)
     for (let j = 1; j <= n; j++)
+    {
       dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      // swapped neighbours count as one typo
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + 1);
+    }
   return dp[m][n];
 }
 
@@ -57,5 +61,5 @@ export function suggest(name: string, candidates: Iterable<string>): string | un
     const d = levenshtein(name, c);
     if (d < bestD) { bestD = d; best = c; }
   }
-  return best && bestD <= Math.max(1, Math.floor(name.length / 3)) ? best : undefined;
+  return best && bestD <= (name.length <= 3 ? 1 : Math.max(2, Math.floor(name.length / 3))) ? best : undefined;
 }

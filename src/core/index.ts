@@ -12,3 +12,4 @@ export * from "./scene";
 export const VERSION = "1.0.0";
 export * from "./synth";
 export * from "./render";
+export * from "./docs";
