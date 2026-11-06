@@ -23,15 +23,15 @@ export const UNIT0: Unit = {
          <li><code>hello</code> is a name for this voice. Most single words work; lesson 0.6 covers the few that do not.</li>
          <li><code>=</code> means "plays this".</li>
          <li><code>[c4 e4 g4 c5]</code> is the music: four notes inside square brackets. The brackets hold one <b>bar</b>, a short stretch of time (two seconds here), and the notes share it equally.</li></ul>`,
-        `<p>Before you play the next one, guess: will it go up or down? Then press play and find out. You can change any example: click in the code, edit it, and play again (or press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>, <kbd>Cmd</kbd>+<kbd>Enter</kbd> on a Mac). You cannot break anything: <b>reset</b> puts the example back.</p>`,
-        { code: `-- guess first: up or down?\n-- Then change e4 to a4: now the tune goes down, up, down.\nvoice hello = [c5 g4 e4 c4]` },
+        `<p>You can change any example: click in the code, edit it, and play again (or press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>, <kbd>Cmd</kbd>+<kbd>Enter</kbd> on a Mac). You cannot break anything: <b>reset</b> puts the example back.</p>`,
+        { code: `-- guess first: up or down? Then press play and find out.\n-- Then change e4 to a4: now the tune goes down, up, down.\nvoice hello = [c5 g4 e4 c4]` },
         `<p>The notes share the bar equally, so more notes means shorter notes. These eight fit in the same two seconds as the four above. Delete four of them and listen: the others get longer.</p>`,
         { code: `-- eight steps in one bar (seven notes, then a silence): each is half as long as before\nvoice hello = [c4 e4 g4 c5 g4 e4 c4 .]` },
         `<p>That <code>.</code> at the end is a moment of silence. You will meet it properly in lesson 0.3. A line that starts with <code>--</code> is a <b>comment</b>: Tine skips it, and it is there for the person reading.</p>
          <p>Each lesson ends with a <b>challenge</b> and a few <b>quiz</b> questions. A challenge gives you a task and a box to write in. Press <b>check</b> and the page listens to what your code plays and tells you what is right and what is not. <b>Hint</b> gives a nudge and <b>show answer</b> shows one solution. Any code that plays the right music passes, even if it looks different from the answer.</p>
          <p>If anything is unclear, use <b>Ask about this lesson</b> at the bottom of the page. Ask in plain words. The answer knows which lesson you are on and what code you have written.</p>
          <p>The course leans toward jazz. From lesson 0.3 you will snap on 2 and 4 with a ride cymbal, and from 0.5 you will hear an upright bass.</p>`,
-        { code: `-- the ride cymbal: the sound of jazz drums. Lesson 0.3 explains its pattern.\nvoice ride = [ride [ride . ride] ride [ride . ride]].vel(.6)\nvoice hello = [c4 e4 g4 c5]` },
+        { code: `-- the ride cymbal: the sound of jazz drums. You will snap along with it in lesson 0.3.\nvoice ride = [ride [ride . ride] ride [ride . ride]].vel(.6)\nvoice hello = [c4 e4 g4 c5]` },
         { code: `-- Change g4 to . (a dot) and hear a gap where it was.\nvoice hello = [c4 e4 g4 c5]` },
         { exercise: {
           task: `<p>Write a voice called <code>first</code> that plays exactly four notes. Any four notes are fine. Use letters from <code>a</code> to <code>g</code>, each followed by the number 4, like <code>d4</code>.</p>`,
@@ -107,13 +107,13 @@ export const UNIT0: Unit = {
         `<p>Press play and clap along with the hi-hat.</p>`,
         { code: `tempo 90\nvoice count = [hat hat hat hat]` },
         `<p>That steady pulse, the thing you tap your foot to, is the <b>beat</b>. How fast the beats come is the <b>tempo</b>, in beats per minute. <code>tempo 90</code> means 90 beats a minute, a relaxed walk. Change it to 60 (one a second) and then to 150, and clap along each time.</p>`,
-        `<p>Beats fall into groups. Most jazz and popular music groups them in fours, and musicians count "<b>1</b> 2 3 4, <b>1</b> 2 3 4". Each group is a <b>bar</b>, also called a measure. Here the kick drum marks beat 1 of every bar. Count out loud with it.</p>`,
+        `<p>Beats fall into groups. Most jazz and popular music groups them in fours, and musicians count "<b>1</b> 2 3 4, <b>1</b> 2 3 4". Each group is a <b>bar</b>, also called a measure. Here the kick drum marks beat 1 of every bar.</p>`,
         { code: `tempo 90\n-- the kick marks beat 1. Count "1 2 3 4" out loud.\n-- Then move the kick: [hat hat kick hat] puts it on beat 3.\nvoice count = [kick hat hat hat]` },
         `<p>A <code>.</code> inside the brackets is a <b>rest</b>: a step where nothing plays. The silence still counts.</p>
          <p>Drums have names in Tine: <code>kick</code> (the bass drum), <code>snare</code>, <code>hat</code> (hi-hat), <code>ride</code> (a cymbal), <code>clap</code> and more. This is the most common drum beat in popular music: kick on 1 and 3, snare on 2 and 4.</p>`,
         { code: `tempo 100\n-- swap kick and snare (snare on 1 and 3) and hear how odd it feels\nvoice kick  = [kick . kick .]\nvoice snare = [. snare . snare]\nvoice hat   = [hat hat hat hat]` },
         `<p>The snare on beats 2 and 4 is the <b>backbeat</b>. In jazz the backbeat is lighter but always there: the drummer closes the hi-hat with a foot pedal on 2 and 4, and the audience snaps there, never on 1 and 3. Snap with this one.</p>`,
-        { code: `tempo 130\n-- snap with the claps on 2 and 4. The pedal hi-hat closes there too.\n-- The ride plays the jazz pattern, "ding, ding-a"; lesson 3 of Theory 101 (Swing) explains it.\n-- .vel sets how loud a voice is (lesson 0.6 says more). Change .vel(.7) on the claps to .vel(1): the snaps jump out over the ride.\nvoice ride = [ride [ride . ride] ride [ride . ride]].vel(.6)\nvoice hat  = [. pedal . pedal].vel(.5)\nvoice snap = [. clap . clap].vel(.7)` },
+        { code: `tempo 130\n-- snap with the claps on 2 and 4.\n-- The ride plays the jazz pattern, "ding, ding-a"; lesson 3 of Theory 101 (Swing) explains it.\n-- .vel sets how loud a voice is (lesson 0.6 says more). Change .vel(.7) on the claps to .vel(1): the snaps jump out over the ride.\nvoice ride = [ride [ride . ride] ride [ride . ride]].vel(.6)\nvoice hat  = [. pedal . pedal].vel(.5)\nvoice snap = [. clap . clap].vel(.7)` },
         `<p>Not all music counts in four. Count along with this one.</p>`,
         { code: `meter 3/4\ntempo 120\n-- count along: how many beats before the kick comes back?\n-- Then delete the meter line and listen: the three steps now share four beats.\nvoice oom = [kick . .]\nvoice pah = [. hat hat]` },
         `<p>Three: "<b>1</b> 2 3", a <b>waltz</b>. The <code>meter</code> line tells Tine how many beats each bar has. In <code>meter 3/4</code> the top number is the beats in each bar, so three steps in the brackets each get one beat. Leave the bottom number at 4 for now. Jazz waltzes count in three too.</p>`,
@@ -209,7 +209,7 @@ export const UNIT0: Unit = {
         `<p>Music usually comes in layers. The <b>melody</b> is the part you would sing. The <b>bass</b> is the low part that gives it ground. Each layer is its own voice, and all the voices play together. <code>.inst(upright)</code> picks the instrument: an upright (double) bass, the bass of jazz.</p>
          <p>Listen to three notes at once, then the same three one at a time.</p>`,
         { code: `-- bar 1: together. Bar 2: one after another.\n-- Change e4 to eb4 in both places: the sound turns darker (that is C minor; lesson 7 of Theory 101, Triads, explains why).\nvoice chord = <{c4 e4 g4} [c4 e4 g4 .]>`, bars: 2 },
-        `<p>Notes struck at the same moment make a <b>chord</b>. In Tine, curly braces <code>{ }</code> play their notes together. C, E and G together make the <b>C major chord</b>. Now four chords. Which sound calm, and which crunchy?</p>`,
+        `<p>Notes struck at the same moment make a <b>chord</b>. In Tine, curly braces <code>{ }</code> play their notes together. C, E and G together make the <b>C major chord</b>.</p>`,
         { code: `-- four chords: which sound calm, which crunchy?\n-- Change {c4 c#4 d4} to {c4 e4 a4} and the second one calms down.\nvoice v = <{c4 e4 g4} {c4 c#4 d4} {c4 e4 g4} {b3 f4 g4}>`, bars: 4 },
         `<p>The first and third are calm. The second clashes, and the fourth clashes in a way that wants to move back to the calm chord. Musicians call the calm kind <b>consonant</b> and the clashing kind <b>dissonant</b>. Neither is wrong. Music moves between calm and tension, and jazz likes a little crunch.</p>`,
         `<p>Put the layers together and you have a small band: melody, chords, a walking bass (one bass note on every beat), and the ride cymbal from lesson 0.3.</p>`,
@@ -249,7 +249,7 @@ export const UNIT0: Unit = {
         `<p>Instead of playing, the box shows a message: what went wrong, where (the <code>^</code> points at it), and a <b>hint</b> for fixing it. A place such as <code>1:14</code> means line 1, character 14. The words "syntax error" just mean Tine could not read the line. Here the bracket opened on line 1 is never closed. Add <code>]</code> at the end of line 1 and play again. Brackets always come in pairs: <code>[ ]</code>, <code>{ }</code>, <code>&lt; &gt;</code> and <code>( )</code>.</p>`,
         `<p>Here is a different mistake. Read the hint, fix the word, and play.</p>`,
         { code: `voice bass = [c3].instt(upright)`, broken: true },
-        `<p>Tine noticed that <code>instt</code> is not a word it knows, and suggested the closest one, <code>inst</code>. A <b>name error</b> means Tine read a word it does not know. One more. Notes need spaces between them. Without a space, Tine reads one strange word.</p>`,
+        `<p>Tine does not know the word <code>instt</code>. That is a <b>name error</b>, and Tine suggests the closest word it does know, <code>inst</code>. One more. Notes need spaces between them. Without a space, Tine reads one strange word.</p>`,
         { code: `-- put a space between c4 and e4\nvoice tune = [c4e4 g4 e4]`, broken: true },
         `<p>One last mistake. This voice has a name Tine will not accept.</p>`,
         { code: `-- rename the voice to tune and play again\nvoice tempo = [c4]`, broken: true },
