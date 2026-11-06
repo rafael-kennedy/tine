@@ -287,9 +287,10 @@ export function parseSymbol(text: string, octave = 3): Chord | null {
   let bass: Pitch | undefined;
   if (m[4]) {
     const bpc = L[m[4].toLowerCase()] + (m[5] === "#" ? 1 : m[5] === "b" ? -1 : 0);
-    let b = root - mod12(root - bpc); if (b >= root) b -= 12;
-    if (b === root - 12) b = root - 12;
-    bass = new Pitch(b);
+    // The slash note sits in one fixed octave below the chords (C2 to B2 at
+    // octave 3), so a bass line of slash chords stays in one register
+    // instead of following each chord's root up and down.
+    bass = new Pitch(12 * octave + mod12(bpc));
     notes.unshift(bass);
   }
   return new Chord(notes, new Pitch(root), bass);

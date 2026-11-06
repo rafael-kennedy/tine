@@ -364,6 +364,8 @@ export function resolveNotes(voice: string, evs: Ev[], ctx: Ctx): Note[] {
     const params = { ...ev.p };
     if (ev.v instanceof Pitch && ev.v.drum && params.inst === undefined) params.inst = "kit";
     delete params.key; delete params.vel; delete params.legato; delete params.dur;
+    // a chord symbol's root travels with its notes, so exports can name the chord (MusicXML harmony)
+    if (ev.v instanceof Chord && ev.v.root !== undefined) { const r = valueToSemis(ev.v.root, key)[0]; if (r !== undefined) params.chordRoot = r; }
     for (const semi of semis) out.push({ voice, start: ev.s, dur, semi, vel: Math.max(0, Math.min(1, vel)), params });
   }
   return out;

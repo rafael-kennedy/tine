@@ -56,3 +56,16 @@ describe("spelling by key", () => {
     expect(xml("key b minor\nvoice a = [a# b]")).toContain("<step>A</step><alter>1</alter>");
   });
 });
+
+describe("chord symbols in scores", () => {
+  test("changes() become harmony elements, slash chords keep their bass", () => {
+    const x = xml("key f major\nvoice comp = changes(\"Gm7 C7 | Bb/D\")", 2);
+    expect(x).toContain('<root-step>G</root-step></root><kind text="m7">minor-seventh</kind>');
+    expect(x).toContain('<kind text="7">dominant</kind>');
+    expect(x).toContain("<bass><bass-step>D</bass-step></bass>");
+  });
+  test("slash basses stay in one octave", () => {
+    const s = evaluate('voice b = changes("C/E | Am/G | Bb/D").bassnote', { seed: 1 });
+    expect(renderNotes(s, 3).notes.map(n => n.semi)).toEqual([40, 43, 38]);
+  });
+});

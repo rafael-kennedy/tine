@@ -10,6 +10,7 @@ import { Scene } from "./interp";
 import { TimedNote, timeline } from "./scene";
 import { assignChannels } from "./render";
 import { keyFifths } from "./pitch";
+import { identify } from "./harmony";
 
 const MAX_DIVISIONS = 100_000;
 const TYPES = ["whole", "half", "quarter", "eighth", "16th", "32nd", "64th", "128th"]; // 4 / 2^k quarters
@@ -60,6 +61,30 @@ function valueQuarters(v: { type: string; dots: number; tuplet?: [number, number
 
 interface Chord { start: number; end: number; notes: TimedNote[] }
 
+// MusicXML's named chord kinds; anything else is written as "other" with its symbol as text.
+const KINDS: Record<string, string> = {
+  "": "major", m: "minor", "7": "dominant", maj7: "major-seventh", m7: "minor-seventh", m7b5: "half-diminished",
+  dim7: "diminished-seventh", dim: "diminished", aug: "augmented", sus4: "suspended-fourth", sus2: "suspended-second",
+  "5": "power", "6": "major-sixth", m6: "minor-sixth", mmaj7: "major-minor", "9": "dominant-ninth", maj9: "major-ninth",
+  m9: "minor-ninth", "11": "dominant-11th", m11: "minor-11th", "13": "dominant-13th", maj13: "major-13th", m13: "minor-13th", "7#5": "augmented-seventh",
+};
+
+// A chord symbol for notes that sound together: three or more pitch classes,
+// or any notes that came from a chord symbol (which carries its root).
+export function harmonyXml(notes: TimedNote[], flats: boolean): { sym: string; xml: string } | null {
+  const semis = notes.map(n => Math.round(n.semi));
+  const hint = notes.find(n => n.params.chordRoot !== undefined)?.params.chordRoot;
+  if (hint === undefined && new Set(semis.map(x => ((x % 12) + 12) % 12)).size < 3) return null;
+  const id = identify(semis, hint);
+  if (!id) return null;
+  const bassPc = ((Math.min(...semis) % 12) + 12) % 12;
+  const r = spell(60 + id.root, flats), b = spell(60 + bassPc, flats);
+  const alter = (a: number, tag: string) => (a ? `<${tag}>${a}</${tag}>` : "");
+  const slash = bassPc !== id.root && !id.omitted.includes("root");
+  const xml = `<harmony><root><root-step>${r.step}</root-step>${alter(r.alter, "root-alter")}</root><kind text="${esc(id.sym)}">${KINDS[id.sym] ?? "other"}</kind>${slash ? `<bass><bass-step>${b.step}</bass-step>${alter(b.alter, "bass-alter")}</bass>` : ""}</harmony>`;
+  return { sym: `${id.root}${id.sym}/${slash ? bassPc : ""}`, xml };
+}
+
 export function toMusicXml(scene: Scene, notes: TimedNote[], bars: number, title = "Tine piece"): string {
   const qpb = new R(scene.meter[0] * 4, scene.meter[1]); // quarters per bar
   const playable = notes.filter(n => n.params.ccOut === undefined);
@@ -87,6 +112,7 @@ export function toMusicXml(scene: Scene, notes: TimedNote[], bars: number, title
   const parts: string[] = [], list: string[] = [];
   voices.forEach((voice, pi) => {
     const id = `P${pi + 1}`;
+    let lastSym = "";
     const mine = exact.filter(x => x.n.voice === voice);
     const drums = mine.some(x => x.n.params.inst === "kit");
     drumPart = drums;
@@ -130,6 +156,10 @@ export function toMusicXml(scene: Scene, notes: TimedNote[], bars: number, title
         for (const c of inBar) {
           const s = Math.max(c.start, m0), e = Math.min(c.end, m1);
           if (s > cur) body += rests(cur, s, li);
+          if (!drumPart && li === 0 && c.start >= m0) {
+            const h = harmonyXml(c.notes, flats);
+            if (h && h.sym !== lastSym) { body += h.xml; lastSym = h.sym; }
+          }
           body += pieces(c, s, e, li, c.start < m0, c.end > m1);
           cur = e;
         }
