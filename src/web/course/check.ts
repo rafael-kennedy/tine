@@ -23,7 +23,7 @@ export function spellChord(ss: number[]): string | null {
   const li0 = LETTERS.indexOf(m[1]), rpc = (LETTER_PC[li0] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0) + 12) % 12;
   // Try the root as named and its enharmonic twin (Ab and G#), and keep the spelling with fewer odd names (Cb, E#, double accidentals).
   const tries = [li0, ...(m[2] === "b" ? [(li0 + 6) % 7] : m[2] === "#" ? [(li0 + 1) % 7] : [])].map(li => spellFrom(ss, sym, li, rpc)).filter((x): x is string => !!x);
-  const odd = (x: string) => (x.match(/Cb|Fb|E#|B#|bb|##/g) ?? []).length;
+  const odd = (x: string) => (x.match(/bb|##/g) ?? []).length;
   return tries.sort((a, b) => odd(a) - odd(b))[0] ?? null;
 }
 function spellFrom(ss: number[], sym: string, li: number, rpc: number): string | null {
@@ -95,7 +95,7 @@ export function fits(semis: number[], label: string, rootPc: number, q: string):
   const miss = Q.need.find(x => !rel.includes(x));
   if (miss !== undefined) return `it needs ${spell(root, miss, q)}, the ${q === "dim7" && miss === 9 ? "diminished 7th" : ROLE[miss]}`;
   // b9 and b5 with neither root nor fifth is the dominant a tritone away (Db7 for G7), not this chord.
-  if ((q === "7" || q === "7b9") && rel.includes(1) && rel.includes(6) && !rel.includes(0) && !rel.includes(7)) return `that is ${pc(rootPc + 6) === 6 ? "Gb" : nm(rootPc + 6)}7, the tritone substitute. Build the dominant on ${root}`;
+  if ((q === "7" || q === "7b9") && rel.includes(1) && rel.includes(6) && !rel.includes(0) && !rel.includes(7)) return `that is ${pc(rootPc + 6) === 6 ? "Gb7 (F#7)" : nm(rootPc + 6) + "7"}, the tritone substitute. Build the dominant on ${root}`;
   const extra = rel.find(x => !Q.ok.includes(x));
   if (extra !== undefined) return `${spell(root, extra, q)} does not belong in ${label.split(" ")[0]}`;
   return null;
