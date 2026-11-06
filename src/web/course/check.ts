@@ -113,8 +113,9 @@ export function expectChords(n: TimedNote[], v: string, want: [number, string][]
   for (let i = 0; i < want.length; i++) {
     const [root, sym] = want[i];
     if (!g[i]) return `I hear ${g.length} chord${g.length === 1 ? "" : "s"}; I expected ${want.length}.`;
+    if (QUAL[sym]) { const why = fits(g[i].semis, NAMES[pc(root)] + sym, pc(root), sym); if (why) return `Chord ${i + 1} should be ${NAMES[pc(root)]}${sym}, but ${why}. You have ${nms(g[i].semis)}.`; }
     if (!rootHeard(n, v, g[i].t, root, g[i].semis)) return `Chord ${i + 1} should be ${NAMES[pc(root)]}${sym}, but nothing plays its root, ${NAMES[pc(root)]}. You have ${nms(g[i].semis)}. Put ${NAMES[pc(root)]} in the chord, or add a bass that plays it.`;
-    if (QUAL[sym]) { const why = fits(g[i].semis, NAMES[pc(root)] + sym, pc(root), sym); if (why) return `Chord ${i + 1} should be ${NAMES[pc(root)]}${sym}, but ${why}. You have ${nms(g[i].semis)}.`; continue; }
+    if (QUAL[sym]) continue;
     if (!isChord(g[i].semis, root, sym)) return `Chord ${i + 1} is ${named(g[i].semis)} (${nms(g[i].semis)}); it should be ${NAMES[pc(root)]}${sym}.`;
   }
   return null;
