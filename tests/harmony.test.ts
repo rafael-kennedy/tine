@@ -101,3 +101,13 @@ test(".key on a pattern re-keys its degrees (and an inner key wins)", () => {
   expect(notes(`voice x = cat([^3].key(a3, minor), [^3].key(a3, major))`, 2).map(n => n.semi)).toEqual([60, 61]);
   expect(notes(`voice x = [^1 ^3].key(d4, minor).key(g4, major)`).map(n => n.semi)).toEqual([62, 65]);
 });
+
+test("within folds a slash-chord bass line into one octave", () => {
+  const ns = notes(`voice b = changes("Bm | F#/A# | A | E/G# | G | D/F# | Em | F#7", octave: 2).bassnote.within(e1, e2)`, 8);
+  expect(ns.map(n => n.semi)).toEqual([35, 34, 33, 32, 31, 30, 28, 30]);
+});
+
+test("within moves chords as a unit and leaves notes in range alone", () => {
+  const ns = notes(`voice v = [c2@maj7 g4 c7].within(c4, c5)`);
+  expect(ns.map(n => n.semi).sort((a, b) => a - b)).toEqual([60, 60, 64, 67, 67, 71]);
+});
