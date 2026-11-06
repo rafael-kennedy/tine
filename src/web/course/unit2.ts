@@ -12,21 +12,25 @@ export const UNIT2: Unit = {
     {
       id: "function", title: "Harmonic function",
       parts: [
-        `<p>The seven diatonic chords sort into three families by what they do.</p>
-         <ul><li><b>Tonic</b> (T): home. <b>I</b>, and its stand-ins <b>vi</b> and <b>iii</b>, which share two of its notes.</li>
+        `<p>Listen to four chords in C major. The first feels like home. The second steps away. The third leans hard toward something. The last one arrives.</p>`,
+        { code: `-- Change the last ^1@7 to ^5@7 (in both lines): the phrase now stops on the leaning chord and never gets home.\nkey c major\nvoice chords = <^1@7 ^4@7 ^5@7 ^1@7>.voicelead\nvoice bass   = <^1 ^4 ^5 ^1>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>Those three jobs have names, and every diatonic chord does one of them. This is its <b>function</b>.</p>
+         <ul><li><b>Tonic</b> (T): home. <b>I</b>, and its stand-ins <b>vi</b> and <b>iii</b>, which share two of its three notes.</li>
          <li><b>Predominant</b> (PD), also called subdominant: leaving home and heading for the dominant. <b>IV</b> and <b>ii</b>, which share ^4 and ^6.</li>
          <li><b>Dominant</b> (D): tension that wants home. <b>V</b> and <b>vii°</b>, both holding the tritone between ^4 and ^7.</li></ul>
-         <p>Most tonal phrases follow the same path: <b>T, PD, D, T</b>. Here it is in its plainest form, with a bass line on the roots.</p>`,
-        { code: `key c major\nvoice chords = <^1@7 ^4@7 ^5@7 ^1@7>.voicelead\nvoice bass   = <^1 ^4 ^5 ^1>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>Swap each chord for another in its family and the phrase still makes sense. vi for I, ii for IV: this is <b>I vi ii V</b>, the most common progression in jazz, often called a <b>turnaround</b> because it turns the tune back to the top.</p>`,
-        { code: `key c major\nvoice chords = <^1@7 ^6@7 ^2@7 ^5@7>.voicelead\nvoice bass   = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>Jazz prefers <b>ii</b> to IV as its predominant. ii moves to V by a falling fifth, the strongest root motion there is, and ii7 shares three notes with IV. Classical harmony avoids going backwards from D to PD. The blues does it on purpose: V7 to IV7 to I7 at the end of every chorus.</p>`,
-        { code: `key c major\nvoice chords = <^5@dom7 ^4@dom7 ^1@dom7 ^1@dom7>.voicelead.swing\nvoice bass   = <^5 ^4 ^1 ^1>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>(<code>^4@dom7</code> asks for a dominant seventh on the fourth degree. A number after a degree counts diatonic tones, so <code>^4@7</code> would give Fmaj7. A name gives a fixed quality.)</p>`,
+         <p>The example you just heard is the path most tonal phrases follow: <b>T, PD, D, T</b>.</p>`,
+        { code: `-- I vi ii V with a Charleston comp, bass and ride.\n-- Change ^6@7 to ^3@7 (and ^6 to ^3 in the bass): iii is the other tonic stand-in, and the progression still works.\ntempo 150\nkey c major\nvoice comp = ([0 . . 0 . . . .] + <^1@7 ^6@7 ^2@7 ^5@7>).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + <^1 ^6 ^2 ^5>.octave(-2)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)`, bars: 4 },
+        `<p>That is T, PD, D again, with each chord swapped for a member of its family: vi for I, ii for IV. <b>I vi ii V</b> is the most common progression in jazz. It is called a <b>turnaround</b> because it turns the tune back to the top.</p>`,
+        { code: `-- IV V I, then ii V I. Listen to the bass under the first chord of each half.\n-- Change the first ^4@7 to ^2@7 (and ^4 to ^2 in the bass) and both halves become ii V I.\nkey c major\nvoice chords = <^4@7 ^5@7 ^1@7 . ^2@7 ^5@7 ^1@7 .>.voicelead\nvoice bass   = <^4 ^5 ^1 . ^2 ^5 ^1 .>.octave(-2).inst(upright)`, bars: 8 },
+        `<p>Jazz prefers <b>ii</b> to IV as its predominant. ii goes to V by root motion of a fifth (D down to G, or up a fourth, the same move), the strongest root motion in tonal music. IV goes to V by a step. ii7 also shares three of its four notes with IV, so it does the same job.</p>
+         <p>Classical harmony avoids moving backwards from D to PD. The blues does it on purpose: V7, IV7, I7 near the end of every chorus. <code>^4@dom7</code> below asks for a dominant seventh on ^4. A plain number after a degree counts scale tones, so <code>^4@7</code> would give Fmaj7. A name such as <code>dom7</code> gives a fixed quality.</p>`,
+        { code: `-- V7 IV7 I7, the end of a blues chorus.\n-- Change ^4@dom7 to ^4@7 (Fmaj7): it is still legal harmony, but the bluesy grit goes.\ntempo 120\nkey c major\nvoice comp = ([0 . . 0 . . . .] + <^5@dom7 ^4@dom7 ^1@dom7 ^1@dom7>).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + <^5 ^4 ^1 ^1>.octave(-2)).inst(upright)`, bars: 4 },
+        { code: `-- Partly done: bar 3 is empty. Put a dominant there (^5@7, and ^5 in the bass) and the phrase closes.\n-- Then try ^4@7 instead: it still gets home, but gently, with no tritone to resolve.\nkey c major\nvoice chords = <^6@7 ^2@7 . ^1@7>.voicelead\nvoice bass   = <^6 ^2 . ^1>.octave(-2).inst(upright)`, bars: 4 },
         { exercise: {
           task: `<p>In <b>G major</b>, write <code>voice prog</code>: four bars, one chord per bar, following <b>T, PD, D, T</b>. Bar 1 must be a tonic-function chord <b>other than I</b>, bar 2 a predominant, bar 3 a dominant, bar 4 the I chord. Triads or seventh chords are fine.</p>`,
           starter: `key g major\nvoice prog = <^1@7 ^1@7 ^1@7 ^1@7>`,
           solution: `key g major\nvoice prog = <^6@7 ^2@7 ^5@7 ^1@7>.voicelead`,
+          hint: `<p>The tonic stand-ins are ^3 and ^6. The predominants are ^2 and ^4. The dominants are ^5 and ^7.</p>`,
           bars: 4,
           check: (_s, n) => {
             const m = need(n, "prog"); if (m) return m;
@@ -34,15 +38,17 @@ export const UNIT2: Unit = {
             const spec: [number[], string][] = [[[3, 6], "a tonic substitute (iii or vi)"], [[2, 4], "a predominant (ii or IV)"], [[5, 7], "a dominant (V or vii°)"], [[1], "the I chord"]];
             for (let b = 0; b < 4; b++) {
               if (!c[b]) return `Bar ${b + 1} has no chord.`;
-              if (onDegree(c[b]!, G, spec[b][0]) === null) return `Bar ${b + 1} (${nms(c[b]!)}) should be ${spec[b][1]} in G major.`;
+              if (onDegree(c[b]!, G, spec[b][0]) === null) return `Bar ${b + 1} (${nms(c[b]!, "sharps")}) should be ${spec[b][1]} in G major.`;
             }
             return null;
           },
         } },
         { quiz: [
           { q: "What is the function of vi?", options: ["Tonic", "Predominant", "Dominant"], answer: 0, explain: "It shares two notes with I and often replaces it." },
-          { q: "Which two chords have dominant function?", options: ["I and V", "V and vii°", "ii and IV", "iii and vii°"], answer: 1 },
-          { q: "Listen. Does this phrase end on a tonic or a dominant?", listen: `key f major\nvoice x = <^1@3 ^6@3 ^2@3 ^5@3>.voicelead\nvoice b = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4, options: ["Tonic", "Dominant"], answer: 1, explain: "It stops on V and leaves you hanging." },
+          { q: "Which two chords have dominant function?", options: ["I and V", "V and vii°", "ii and IV", "iii and vii°"], answer: 1, explain: "Both hold the tritone between ^4 and ^7." },
+          { q: "Listen. The first chord is home. Does the phrase end on a tonic or a dominant?", listen: `key f major\nvoice x = <^1@3 ^6@3 ^2@3 ^5@3>.voicelead\nvoice b = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4, options: ["Tonic", "Dominant"], answer: 1, explain: "It stops on V (C major in F) and leaves you hanging." },
+          { q: "Listen. The first chord is home. Which family does the second chord belong to?", listen: `key bb major\nvoice x = <^1@7 ^2@7 ^5@7 ^1@7>.voicelead\nvoice b = <^1 ^2 ^5 ^1>.octave(-2).inst(upright)`, bars: 4, options: ["Tonic", "Predominant", "Dominant"], answer: 1, explain: "It is ii (Cm7 in Bb), leaving home on the way to V." },
+          { q: "From the seventh-chord lesson: in a major key, what quality is the seventh chord built on ^5?", options: ["maj7", "m7", "Dominant 7", "m7b5"], answer: 2, explain: "V7 is the only dominant seventh in the major scale. That is why it pulls home so hard." },
         ] },
       ],
     },
@@ -50,16 +56,19 @@ export const UNIT2: Unit = {
     {
       id: "cadences", title: "Cadences",
       parts: [
-        `<p>A <b>cadence</b> is the harmonic punctuation at the end of a phrase. There are four kinds, and each sounds different enough that you can learn them by ear.</p>
-         <ul><li><b>Authentic</b>: V (or V7) to I. When both chords are in root position and the melody ends on the tonic, it is a <b>perfect authentic cadence</b>, the full stop. Otherwise it is <b>imperfect</b>.</li>
-         <li><b>Half</b>: ending on V. A comma, or a question.</li>
-         <li><b>Plagal</b>: IV to I, the "amen" at the end of a hymn. Its minor form, <b>iv to I</b>, is everywhere in gospel and ballads.</li>
-         <li><b>Deceptive</b>: V to vi. The ear expects I and gets its relative minor.</li></ul>`,
-        { code: `-- perfect authentic\nkey f major\nvoice chords = <^5@7 ^1@3>.voicelead\nvoice bass   = <^5 ^1>.octave(-2).inst(upright)\nvoice top    = <[^2 _ _ ^7.octave(-1)] [^1 _ _ .]>.inst(vibes)`, bars: 2 },
-        { code: `-- plagal, then minor plagal\nkey f major\nvoice chords = <^4@3 ^1@3 ^4@m ^1@3>.voicelead\nvoice bass   = <^4 ^1 ^4 ^1>.octave(-2).inst(upright)`, bars: 4 },
-        { code: `-- deceptive\nkey f major\nvoice chords = <^2@7 ^5@7 ^6@7 .>.voicelead\nvoice bass   = <^2 ^5 ^6 .>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>Jazz has its own standard cadence, <b>ii-V-I</b>: a predominant, a dominant and a tonic, roots falling by fifths. It is so common that whole tunes are chains of them, and lesson 14 is devoted to it. Jazz cadences also stretch the tonic: a final chord is often <code>maj7</code>, <code>6</code> or <code>69</code> rather than a triad, because a plain major triad sounds unfinished in a jazz context.</p>`,
-        { code: `key bb major\nvoice chords = <^2@m9 ^5@13 ^1@69 .>.voicelead\nvoice bass   = <^2 ^5 ^1 .>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>Phrases end the way sentences do: with a full stop, a comma, a gentle close or a surprise. Here are four endings in F major. Play each one and decide how finished it sounds before you read its name.</p>`,
+        { code: `-- Ending A.\n-- Change the top line's last ^1 to ^3: the melody now ends on A, and the stop is a little less final.\nkey f major\nvoice chords = <^5@7 ^1@3>.voicelead\nvoice bass   = <^5 ^1>.octave(-2).inst(upright)\nvoice top    = <[^2 _ _ ^7.octave(-1)] [^1 _ _ .]>.inst(vibes)`, bars: 2 },
+        { code: `-- Ending B, played twice. The second time the first chord is minor.\n-- Change ^4@m to ^4@3 and the two halves match.\nkey f major\nvoice chords = <^4@3 ^1@3 ^4@m ^1@3>.voicelead\nvoice bass   = <^4 ^1 ^4 ^1>.octave(-2).inst(upright)`, bars: 4 },
+        { code: `-- Ending C. Change ^6@7 to ^1@7 (and ^6 to ^1 in the bass) and the surprise is gone.\nkey f major\nvoice chords = <^2@7 ^5@7 ^6@7 .>.voicelead\nvoice bass   = <^2 ^5 ^6 .>.octave(-2).inst(upright)`, bars: 4 },
+        { code: `-- Ending D. Replace the final . with ^1@3 (and ^1 in the bass): the question gets its answer.\nkey f major\nvoice chords = <^1@3 ^2@7 ^5@7 .>.voicelead\nvoice bass   = <^1 ^2 ^5 .>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>Each of those is a <b>cadence</b>, the harmonic punctuation at the end of a phrase.</p>
+         <ul><li>A is <b>authentic</b>: V (or V7) to I. With both chords in root position and the melody ending on the tonic, it is a <b>perfect authentic cadence</b>, the full stop. Your edit to ^3 made it <b>imperfect</b>.</li>
+         <li>B is <b>plagal</b>: IV to I, the "amen" at the end of a hymn. Its second half, <b>iv to I</b>, is the minor plagal, all over gospel and ballads.</li>
+         <li>C is <b>deceptive</b>: V to vi. The ear expects I and gets its relative minor.</li>
+         <li>D is a <b>half cadence</b>: the phrase stops on V. A comma, or a question.</li></ul>`,
+        `<p>Jazz has its own standard cadence, <b>ii-V-I</b>: a predominant, a dominant and a tonic, with roots falling by fifths. Whole tunes are chains of them, and lesson 14 is devoted to it. Jazz also stretches the final chord to <code>maj7</code>, <code>6</code> or <code>69</code>. In a jazz setting a plain triad sounds square.</p>`,
+        { code: `-- ii-V-I in Bb, rootless voicings in a Charleston comp.\n-- Change Bb69 to Bb7: the ending stops sounding final, because the b7 wants to move on (to Eb).\ntempo 140\nlet tune = changes("Cm9 | F13 | Bb69 | %")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)`, bars: 4 },
+        { code: `-- Partly done, in G major: bar 2 is empty.\n-- Put ^1@3 there for an authentic cadence. Then try ^6@3 for a deceptive one and compare.\nkey g major\nvoice prog = <^5@7 .>.voicelead\nvoice bass = <^5 .>.octave(-2).inst(upright)`, bars: 2 },
         { exercise: {
           task: `<p>Write <code>voice prog</code>: a <b>deceptive cadence in D major</b>. Bar 1 is the dominant (V or V7), bar 2 the chord the ear did not expect (vi or vi7).</p>`,
           starter: `key d major\nvoice prog = <^5@7 ^1@3>`,
@@ -68,16 +77,18 @@ export const UNIT2: Unit = {
           check: (_s, n) => {
             const m = need(n, "prog"); if (m) return m;
             const c = barChords(n, "prog", 2);
-            if (!c[0] || onDegree(c[0], 2, [5]) === null) return `Bar 1 should be V in D major (A or A7).`;
-            if (!c[1] || onDegree(c[1], 2, [6]) === null) return `Bar 2 should be vi in D major (Bm or Bm7); you have ${c[1] ? nms(c[1]) : "nothing"}.`;
+            if (!c[0] || onDegree(c[0], 2, [5]) === null) return `Bar 1 should be V in D major (A or A7); you have ${c[0] ? nms(c[0], "sharps") : "nothing"}.`;
+            if (!c[1] || onDegree(c[1], 2, [6]) === null) return `Bar 2 should be vi in D major (Bm or Bm7); you have ${c[1] ? nms(c[1], "sharps") : "nothing"}.`;
             return null;
           },
         } },
         { quiz: [
-          { q: "Listen. Which cadence?", listen: `key c major\nvoice x = <^1@3 ^4@3 ^5@7 ^1@3>.voicelead\nvoice b = <^1 ^4 ^5 ^1>.octave(-2).inst(upright)`, bars: 4, options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 0, explain: "V7 to I." },
-          { q: "Listen. Which cadence?", listen: `key c major\nvoice x = <^1@3 ^4@3 ^5@7 ^6@3>.voicelead\nvoice b = <^1 ^4 ^5 ^6>.octave(-2).inst(upright)`, bars: 4, options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 3, explain: "V7 to vi." },
-          { q: "Listen. Which cadence?", listen: `key c major\nvoice x = <^1@3 ^6@3 ^4@3 ^1@3>.voicelead\nvoice b = <^1 ^6 ^4 ^1>.octave(-2).inst(upright)`, bars: 4, options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 2, explain: "IV to I, no dominant at all." },
-          { q: "Listen. Which cadence?", listen: `key c major\nvoice x = <^1@3 ^6@3 ^2@3 ^5@3>.voicelead\nvoice b = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4, options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 1, explain: "It stops on V." },
+          { q: "Listen. The first chord is home. Which cadence?", listen: `key c major\nvoice x = <^1@3 ^4@3 ^5@7 ^1@3>.voicelead\nvoice b = <^1 ^4 ^5 ^1>.octave(-2).inst(upright)`, bars: 4, options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 0, explain: "V7 to I." },
+          { q: "Listen. The first chord is home. Which cadence?", listen: `key a major\nvoice x = <^1@3 ^4@3 ^5@7 ^6@3>.voicelead\nvoice b = <^1 ^4 ^5 ^6>.octave(-2).inst(upright)`, bars: 4, options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 3, explain: "V7 to vi (E7 to F#m)." },
+          { q: "Listen. The first chord is home. Which cadence?", listen: `key eb major\nvoice x = <^1@3 ^6@3 ^4@3 ^1@3>.voicelead\nvoice b = <^1 ^6 ^4 ^1>.octave(-2).inst(upright)`, bars: 4, options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 2, explain: "IV to I, with no dominant at all." },
+          { q: "Listen. The first chord is home. Which cadence?", listen: `key g major\nvoice x = <^1@3 ^6@3 ^2@3 ^5@3>.voicelead\nvoice b = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4, options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 1, explain: "It stops on V." },
+          { q: "A half cadence ends on a chord of which function?", options: ["Tonic", "Predominant", "Dominant"], answer: 2, explain: "It stops on V, the dominant, so it sounds unfinished." },
+          { q: "From the last lesson: which function does ii have?", options: ["Tonic", "Predominant", "Dominant"], answer: 1, explain: "ii, like IV, leads away from home toward V. That is why ii-V-I is a complete cadence." },
         ] },
       ],
     },
@@ -85,21 +96,19 @@ export const UNIT2: Unit = {
     {
       id: "voiceleading", title: "Voice leading",
       parts: [
-        `<p>A chord progression is also a set of melodies, one per voice, sung or played at the same time. <b>Voice leading</b> is the craft of making each of those lines move well. The classical rules come from four-part choir writing (soprano, alto, tenor, bass), and jazz pianists follow most of them by instinct.</p>
-         <ul><li>Keep <b>common tones</b> in the same voice.</li>
-         <li>Move the other voices by <b>step</b> where you can.</li>
-         <li>Avoid <b>parallel fifths and octaves</b>: two voices a fifth (or octave) apart moving to another fifth (or octave). They make two lines sound like one.</li>
-         <li>Resolve tendency tones: the <b>leading tone rises</b> to the tonic, and a <b>chordal seventh falls</b> by step.</li>
-         <li>Let the bass and the top voice move in <b>contrary motion</b> when you can.</li></ul>`,
-        { code: `-- parallel fifths: hollow, two voices fused into one\nvoice fifths = [{c3 g3} {d3 a3} {e3 b3} {f3 c4}]` },
-        { code: `-- a dominant seventh resolving: B rises to C, F falls to E\nvoice resolve = [{g2 b3 d4 f4} _ {c3 c4 c4 e4} _]` },
-        `<p>Compare a progression played as root-position blocks, every chord jumping, with the same chords voiced so each moves as little as possible. Tine's <code>voicelead</code> does the second: for each chord it picks the inversion closest to the one before.</p>`,
-        { code: `voice blocks = <c4@maj7 f4@maj7 b3@m7b5 e4@7 a3@m7 d4@m7 g3@7 c4@maj7>`, bars: 8 },
-        { code: `voice smooth = <c4@maj7 f4@maj7 b3@m7b5 e4@7 a3@m7 d4@m7 g3@7 c4@maj7>.voicelead`, bars: 8 },
-        `<p>The most important voice leading in jazz is the <b>guide-tone line</b>. The third and seventh of each chord define its quality, and in a chain of falling fifths they trade places by half step: the seventh of one chord falls to the third of the next. <code>guide</code> keeps just those two notes. Played smoothly, they make two melodies that outline the whole progression.</p>`,
-        { code: `voice guide = changes("Dm7 | G7 | Cmaj7 | Fmaj7 | Bm7b5 | E7 | Am7 | %").guide.voicelead(around: g4).inst(vibes)\nvoice bass  = changes("Dm7 | G7 | Cmaj7 | Fmaj7 | Bm7b5 | E7 | Am7 | %").root.octave(-1).inst(upright)`, bars: 8 },
+        `<p>Here is one progression played two ways. First, every chord in root position. Then the same chords, each placed as close as possible to the one before. Listen to the top note in each version.</p>`,
+        { code: `-- Root position: every chord jumps.\n-- Add .voicelead at the end of the line and it becomes the next example.\nvoice blocks = <c4@maj7 f4@maj7 b3@m7b5 e4@7 a3@m7 d4@m7 g3@7 c4@maj7>`, bars: 8 },
+        { code: `-- Voice-led: each note moves as little as it can.\n-- Change .voicelead to .voicelead(around: c5) and the whole thing moves up, still smooth.\nvoice smooth = <c4@maj7 f4@maj7 b3@m7b5 e4@7 a3@m7 d4@m7 g3@7 c4@maj7>.voicelead`, bars: 8 },
+        `<p>A progression is also a set of melodies, one per voice, sounding together. <b>Voice leading</b> is the craft of making each of those lines move well. The smooth version followed the two most basic rules: keep <b>common tones</b> (notes two chords share) in the same voice, and move the other voices by <b>step</b>. Tine's <code>voicelead</code> does this for you by picking, for each chord, the inversion nearest the one before.</p>`,
+        { code: `-- Two voices a fifth apart, moving together. Listen: they fuse into one hollow line.\n-- Change the upper notes to e3 f3 g3 a3, a third above the bass each time: two lines you can tell apart.\nvoice fifths = [{c3 g3} {d3 a3} {e3 b3} {f3 c4}]` },
+        `<p>That hollow sound is <b>parallel fifths</b>: two voices a fifth apart moving to another fifth. Parallel octaves do the same. Classical rules avoid both because two lines merge into one. One cure is <b>contrary motion</b>, where one voice goes up while the other goes down.</p>`,
+        { code: `-- G7 to C. B rises to C, and F falls to E.\n-- Change the last note e4 to f4: the F no longer resolves, and the C chord sounds wrong.\nvoice resolve = [{g2 b3 d4 f4} _ {c3 c4 c4 e4} _]` },
+        `<p>Some notes have a direction built in. These are <b>tendency tones</b>. The <b>leading tone rises</b> a half step to the tonic. A <b>chordal seventh falls</b> by step. In the example, B is the leading tone and F the seventh of G7. (D falls to C too, so C appears twice; that is normal.)</p>`,
+        { code: `-- Two lines: the third and the seventh of each chord, over the bass.\n-- Delete .guide to hear the full chords. The two lines are still inside them.\nlet tune = changes("Dm7 | G7 | Cmaj7 | Fmaj7 | Bm7b5 | E7 | Am7 | %")\nvoice guide = tune.guide.voicelead(around: g4).inst(vibes)\nvoice bass  = tune.root.octave(-1).inst(upright)`, bars: 8 },
+        `<p>Those are <b>guide tones</b>, and the two melodies they make are a <b>guide-tone line</b>, the most important voice leading in jazz. The third and seventh of a chord fix its quality. In a chain of falling fifths they trade places by half step: the seventh of one chord falls to the third of the next. Dm7's C falls to G7's B. G7's F falls to Cmaj7's E. Soloists play these lines to make the changes audible without a piano.</p>`,
+        { code: `-- Partly done: C, Am, F, G. Bar 1 and bar 2 are voiced by hand, close together.\n-- Voice bar 3 (F) and bar 4 (G) the same way: try {c4 f4 a4} and {b3 d4 g4}.\nvoice chords = <{c4 e4 g4} {c4 e4 a4} {f3 a3 c4} {g3 b3 d4}>`, bars: 4 },
         { exercise: {
-          task: `<p>Write <code>voice chords</code> playing <b>C, Am, F, G</b> (one per bar) so that the voice leading is smooth: from each chord to the next, the voices together move <b>no more than 6 half steps</b> in total. You can voice them by hand or let Tine help.</p>`,
+          task: `<p>Write <code>voice chords</code> playing <b>C, Am, F, G</b> (one per bar) so that the voice leading is smooth: from each chord to the next, the voices together move <b>no more than 6 half steps</b> in total. Voice them by hand or let Tine help.</p>`,
           starter: `voice chords = <c4@maj a3@m f3@maj g3@maj>`,
           solution: `voice chords = <c4@maj a3@m f3@maj g3@maj>.voicelead`,
           bars: 4,
@@ -107,15 +116,17 @@ export const UNIT2: Unit = {
             const m = need(n, "chords"); if (m) return m;
             const c = barChords(n, "chords", 4);
             const want: [number, string][] = [[0, ""], [9, "m"], [5, ""], [7, ""]];
-            for (let b = 0; b < 4; b++) if (!c[b] || !isChord(c[b]!, want[b][0], want[b][1])) return `Bar ${b + 1} should be ${["C", "Am", "F", "G"][b]}.`;
-            for (let b = 1; b < 4; b++) { const mv = movement(c[b - 1]!, c[b]!); if (mv > 6) return `From bar ${b} to bar ${b + 1} the voices move ${mv === Infinity ? "unevenly (different numbers of notes)" : mv + " half steps"}. Try another inversion.`; }
+            for (let b = 0; b < 4; b++) if (!c[b] || !isChord(c[b]!, want[b][0], want[b][1])) return `Bar ${b + 1} should be ${["C", "Am", "F", "G"][b]}${c[b] ? `; you have ${nms(c[b]!)}` : ""}.`;
+            for (let b = 1; b < 4; b++) { const mv = movement(c[b - 1]!, c[b]!); if (mv > 6) return `From bar ${b} to bar ${b + 1} the voices move ${mv === Infinity ? "unevenly (different numbers of notes)" : mv + " half steps"}. Try another inversion of bar ${b + 1}.`; }
             return null;
           },
         } },
         { quiz: [
+          { q: "Listen. The same four chords in C, played twice. Which time is voice-led?", listen: `voice x = <c4@maj f4@maj g4@maj c4@maj {c4 e4 g4} {c4 f4 a4} {b3 d4 g4} {c4 e4 g4}>`, bars: 8, options: ["The first time", "The second time"], answer: 1, explain: "The second time C stays put into F, and the other notes move by step. The first time every chord jumps." },
           { q: "Where does the leading tone usually go?", options: ["Down a step", "Up a half step to the tonic", "Up a fifth", "It stays put"], answer: 1 },
           { q: "In Dm7 to G7, which note of Dm7 falls a half step to become the third of G7?", options: ["D", "F", "A", "C"], answer: 3, explain: "C, the seventh of Dm7, falls to B." },
           { q: "Why do classical rules avoid parallel fifths?", options: ["They are out of tune", "Two voices merge and lose their independence", "They are too dissonant", "Fifths cannot be inverted"], answer: 1 },
+          { q: "From the cadence lesson: V to vi is which cadence?", options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 3 },
         ] },
       ],
     },
