@@ -102,7 +102,7 @@ export const UNIT2: Unit = {
          <li>C is <b>deceptive</b>: V to vi. The ear expects I and gets its relative minor.</li>
          <li>D is a <b>half cadence</b>: the phrase stops on V. A comma, or a question.</li></ul>`,
         { code: `-- ii-V-I in Bb. The piano leaves the roots to the bass (rootless voicings, lesson 14).\n-- Change Bb69 to Bb7: the ending stops sounding final, because its seventh, Ab, makes the chord lean on toward Eb.\ntempo 140\nlet tune = changes("Cm9 | F13 | Bb69 | %")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)`, bars: 4 },
-        `<p>That is <b>ii-V-I</b>, jazz's standard cadence: a predominant, a dominant and a tonic, with roots falling by fifths. Whole tunes are chains of them, and lesson 14 is devoted to it. Jazz also stretches the final chord to <code>maj7</code>, <code>6</code> or <code>69</code>. In a jazz setting a plain triad sounds square.</p>`,
+        `<p>That is <b>ii-V-I</b>, jazz's standard cadence: a predominant, a dominant and a tonic, with roots falling by fifths. Whole tunes are chains of them, and lesson 14 is devoted to it. Jazz also stretches the final chord to <code>maj7</code>, <code>6</code> or <code>69</code> (a 6th chord with an added 9th). In a jazz setting a plain triad sounds square.</p>`,
         { code: `-- Partly done, in G major: bar 2 is empty.\n-- Put ^1@3 there, and ^1 in the bass, for an authentic cadence. Then try ^6@3 (and ^6 in the bass) for a deceptive one and compare.\nkey g major\nvoice prog = <^5@7 .>.voicelead\nvoice bass = <^5 .>.octave(-2).inst(upright)`, bars: 2 },
         { exercise: {
           task: `<p>Write <code>voice prog</code>: a <b>deceptive cadence in D major</b>. Bar 1 is the dominant (V or V7), bar 2 the chord the ear did not expect (vi or vi7). If you use <code>.rootless</code>, add a bass that plays the roots.</p>`,
@@ -114,6 +114,7 @@ export const UNIT2: Unit = {
             const c = [0, 1].map(b => heard(n, "prog", b));
             if (c[0] && JSON.stringify(pcset(c[0])) === JSON.stringify([2, 5, 7, 11])) return "That is G7, V of C major. Without a key line, degrees count from C. Put key d major at the top.";
             const ps = c.map(x => x ? new Set(pcset(x)) : new Set<number>());
+            if (c[1] && !ps[1].has(11) && degreeOf(c[1], 2, [1]) !== null && (!ps[1].has(1) || pc(Math.min(...c[1])) === 2)) return `Bar 2 is ${nms(c[1])}, the tonic: V to I is an authentic cadence. A deceptive cadence goes to vi instead, Bm (^6@3 or ^6@7).`;
             if (c[0] && degreeOf(c[0], 2, [5]) === null && ps[0].has(1) && ps[0].has(7) && !ps[0].has(9)) return `Bar 1 has A7's 3rd and 7th (C# and G), but nothing plays its root, A. Put A in the chord, or add a bass that plays it.`;
             if (c[1] && degreeOf(c[1], 2, [6]) === null && ps[1].has(2) && ps[1].has(6) && !ps[1].has(11)) return `Bar 2 has Bm's 3rd and 5th (D and F#), but nothing plays its root, B. Put B in the chord, or add a bass that plays it.`;
             if (!c[0] || degreeOf(c[0], 2, [5]) === null) return `Bar 1 should be V in D major (A or A7); you have ${c[0] ? nms(c[0]) : "single notes or a rest, not a chord (write ^5@7, not ^5)"}.`;

@@ -54,12 +54,13 @@ export const UNIT3: Unit = {
          <tr><td>C7</td><td>V7/IV</td><td>Fmaj7</td><td>Bb</td></tr><tr><td>D7</td><td>V7/V</td><td>G7</td><td>F#</td></tr>
          <tr><td>E7</td><td>V7/vi</td><td>Am7</td><td>G#</td></tr></table>
          <p>Each brings at least one chromatic note, usually the leading tone of its target. vii° is never tonicized, because a diminished chord cannot sound like home.</p>`,
+        { code: `-- Four secondary dominants, each into its target: B7 to Em7, C7 to Fmaj7, D7 to G7, E7 to Am7.\n-- Change D7 to Dm7: G7 arrives without the push.\nlet prog = changes("B7 | Em7 | C7 | Fmaj7 | D7 | G7 | E7 | Am7")\nvoice comp = prog.voicelead\nvoice bass = prog.root.octave(-1).inst(upright)`, bars: 8 },
         { code: `-- On degrees, name the quality: ^6@dom7 is a dominant seventh on ^6, where ^6@7 would be the diatonic Cm7 in Eb.\n-- Change ^6@dom7 to ^3@dom7 (and ^6 to ^3 in the bass): G7 wants to resolve to Cm, but Fm7 comes next. Hear it miss.\nkey eb major\nvoice comp = <^1@maj7 ^6@dom7 ^2@m7 ^5@dom7>.voicelead\nvoice bass = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>A secondary dominant is heard as one only when its target follows.</p>`,
+        `<p>A secondary dominant points at one chord. Its pull lands only when that chord comes next.</p>`,
         { code: `-- Every chord is the V of the next: E7, A7, D7, G7, then home.\n-- Change E7 to Em7: the chain starts one link later.\ntempo 150\nlet tune = changes("E7 | A7 | D7 | G7 | C6 | %")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 6 },
         `<p>That chain is called <b>extended dominants</b>: the roots fall by fifths to the tonic. Ragtime and swing are full of them. "Sweet Georgia Brown" (1925) is built on one: VI7 (V7/ii), II7 (V7/V), V7, then I, four bars each.</p>`,
         { code: `-- A7 with its own ii in front: Em7b5 A7 into Dm7.\n-- Delete Em7b5 from bar 2 and A7 takes the whole bar again.\ntempo 130\nlet tune = changes("Cmaj7 | Em7b5 A7 | Dm7 | G7")\nvoice comp = tune.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>In jazz a secondary dominant usually brings its own ii, called its <b>related ii</b>. Em7b5 A7 is a small ii-V into Dm7. Its ii is half-diminished, the ii a minor target takes (lesson 20). Whole bridges are built from these.</p>`,
+        `<p>In jazz a secondary dominant often brings its own ii, called its <b>related ii</b>. Em7b5 A7 is a small ii-V into Dm7. Its ii is half-diminished, the ii a minor target takes (lesson 20). Whole bridges are built from these.</p>`,
         { code: `-- Partly done, in G major: I, V7/vi, vi, V7. Bar 2 is empty.\n-- Fill it with B7, the dominant of Em7.\nvoice comp = changes("Gmaj7 | N.C. | Em7 | D7").voicelead`, bars: 4 },
         { exercise: {
           task: `<p>In <b>F major</b>, write <code>voice comp</code>: four bars, <b>Imaj7, V7/ii, ii7, V7</b>, one chord per bar.</p>`,
@@ -68,6 +69,10 @@ export const UNIT3: Unit = {
           bars: 4,
           hint: `ii in F is Gm7. Its dominant is a fifth above G.`,
           check: (_s, n) => {
+            const m = need(n, "comp"); if (m) return m;
+            const c = barChords(n, "comp", 4);
+            if (c[0] && !fits(c[0], "Cmaj7", 0, "maj7")) return "Bar 1 is Cmaj7, the example's key. This one is in F: Fmaj7, then V7/ii, Gm7 and C7.";
+            if (c[1] && !fits(c[1], "A7", 9, "7")) return "Bar 2 is A7, which is V7/ii in C. In F, ii is Gm7, so V7/ii is the dominant on D: D7.";
             return chordBars(n, "comp", [[5, "maj7", "Fmaj7"], [2, "7", "D7"], [7, "m7", "Gm7"], [0, "7", "C7"]]);
           },
         } },
@@ -89,7 +94,8 @@ export const UNIT3: Unit = {
         `<p>In a minor key, the chords from harmonic minor give a darker ii-V: <b>iiø7, V7, i</b>. The ii is <b>half-diminished</b> (m7b5), and the dominant picks up the key's flat sixth as its <b>b9</b>. In C minor that is Dm7b5, G7b9, Cm. Tine's degree chords show where it comes from.</p>`,
         { code: `-- In C harmonic minor, the ninth chord on ^5 is G7b9 without asking.\n-- The diatonic tonic is Cmmaj7; jazz often plays Cm6 instead, as the comp does.\n-- Change key c harmonic_minor to key c major: print shows Dm7 G9 Cmaj7, and the comp's dominant loses its Ab. Cm6 is a fixed symbol, so it stays.\nkey c harmonic_minor\nprint(name([^2@7 ^5@9 ^1@7 ^1@m6]))\nvoice comp = <^2@7 ^5@9 ^1@m6 ^1@m6>.voicelead\nvoice bass = <^2 ^5 ^1 ^1>.octave(-2).inst(upright)`, bars: 4 },
         { code: `-- An altered dominant and two minor tonics. Rootless, the G7alt plays B Eb F Ab: G7b9b13.\n-- Change G7alt to G7b9: the Eb (b13) rises to E (13) and the dominant brightens.\n-- Change Cmmaj7 to Cm7: the tonic sounds more open and less settled.\ntempo 110\nlet tune = changes("Dm7b5 | G7alt | Cmmaj7 | Cm6")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)`, bars: 4 },
-        `<p><b>m6</b> (from melodic minor or dorian) and <b>mmaj7</b> (from harmonic or melodic minor) sound settled. <b>m7</b> and <b>m9</b> (from dorian or natural minor) sound open, good for a vamp. <b>G7alt</b> keeps only altered tensions: b9, #9, #11 and b13. Tine's 7alt plays b9, #9 and b13, with no fifth. Lesson 29 gives it a scale. Kenny Dorham's "Blue Bossa" (1963) comes home to C minor through Dm7b5 G7 again and again.</p>`,
+        `<p><b>m6</b> (from melodic minor or dorian) and <b>mmaj7</b> (from harmonic or melodic minor) sound settled. <b>m7</b> and <b>m9</b> (from dorian or natural minor) sound open, good for a vamp.</p>
+         <p><b>G7alt</b> keeps only altered tensions, the 5th and 9th moved by a half step: b9, #9, #11 and b13. Tine's 7alt plays b9, #9 and b13, with no fifth. Lesson 29 gives it a scale. Kenny Dorham's "Blue Bossa" (1963) comes home to C minor through Dm7b5 G7 again and again.</p>`,
         { code: `-- Partly done, in G minor: bar 1 is the minor ii. Fill bar 2 with the dominant, D7b9.\nvoice comp = changes("Am7b5 | N.C. | Gm6 | %").voicelead`, bars: 4 },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: a minor ii-V-i in <b>A minor</b>. The ii and the V get one bar each, and the tonic gets two. Give the dominant a <b>b9</b> and make the tonic an <b>m6</b>.</p>`,
@@ -97,7 +103,12 @@ export const UNIT3: Unit = {
           solution: `voice comp = changes("Bm7b5 | E7b9 | Am6 | %").voicelead`,
           bars: 4,
           hint: `ii in A minor is built on B, and V on E.`,
-          check: (_s, n) => chordBars(n, "comp", [[11, "m7b5", "Bm7b5 (the minor ii)"], [4, "7b9", "E7b9 (V with a b9)"], [9, "m6", "Am6"], [9, "m6", "Am6"]]),
+          check: (_s, n) => {
+            const m = need(n, "comp"); if (m) return m;
+            const c = barChords(n, "comp", 4);
+            if (c[0] && !fits(c[0], "Dm7b5", 2, "m7b5")) return "Bar 1 is Dm7b5, the minor ii of C minor. In A minor, ii is Bm7b5 and V is E7b9.";
+            return chordBars(n, "comp", [[11, "m7b5", "Bm7b5 (the minor ii)"], [4, "7b9", "E7b9 (V with a b9)"], [9, "m6", "Am6"], [9, "m6", "Am6"]]);
+          },
         } },
         { quiz: [
           { q: "Listen. Major ii-V-I or minor ii-V-i?", listen: `voice c = changes("Em7b5 | A7b9 | Dm6 | %").voicelead\nvoice b = changes("Em7b5 | A7b9 | Dm6 | %").root.octave(-1).inst(upright)`, bars: 4, options: ["Major", "Minor"], answer: 1 },
@@ -127,6 +138,9 @@ export const UNIT3: Unit = {
           solution: `voice comp = changes("Cm7 | F7 | Gmaj7 | %").voicelead`,
           bars: 4,
           check: (_s, n) => {
+            const m = need(n, "comp"); if (m) return m;
+            const c = barChords(n, "comp", 4);
+            if (c[0] && !fits(c[0], "Fm7", 5, "m7")) return "Bar 1 is Fm7, iv7 in C. In G, iv7 is Cm7 and bVII7 is F7.";
             return chordBars(n, "comp", [[0, "m7", "Cm7 (iv7)"], [5, "7", "F7 (bVII7)"], [7, "maj7", "Gmaj7"], [7, "maj7", "Gmaj7"]]);
           },
         } },

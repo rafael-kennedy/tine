@@ -174,13 +174,13 @@ export const UNIT1: Unit = {
          <p>The same pattern can start on any note. Tine lets you write the scale as <b>degrees</b>, numbered positions in whatever key is current: <code>^1</code> is the tonic, <code>^5</code> the dominant, <code>^8</code> the octave. Change the <code>key</code> line and the scale moves with it.</p>`,
         { code: `-- G major needs F# to keep the W W H W W W H pattern.\n-- Change the key to bb major, then e major, and play each.\nkey g major\nvoice scale = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8]` },
         { code: `-- the same scale in a new key each bar. Each new key changes exactly one note of the one before.\n-- (per_bar and at pick the key for each bar; you will not need to write this yourself.)\nvoice circle = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(at([c4 g3 d4 a3 e4 b3 f#3 db4 ab3 eb4 bb3 f4], bar), major))`, bars: 12 },
-        `<p>That walk is the <b>circle of fifths</b>. A <b>key signature</b> lists the sharps or flats a key needs, and keys are related by fifths. Go up a perfect fifth (seven half steps) and you add one sharp: C has none, G one, D two, A three, E four, B five, F# six. Go down a fifth and you add a flat: F one, Bb two, Eb three, Ab four, Db five, Gb six.</p>
+        `<p>That walk is the <b>circle of fifths</b>. A <b>key signature</b> lists the sharps or flats a key needs, and keys are related by fifths. Go up a perfect fifth (seven half steps) and you add one sharp: C has none, G one, D two, A three, E four, B five, F# six. Go down a fifth and you add a flat: F one, Bb two, Eb three, Ab four, Db five, Gb six. F# major and Gb major are one key under two names, and that is where the two sides meet. The example crosses there: it keeps going up by fifths, so after F# the flats drop away one at a time, Db, Ab, Eb, Bb, F, and then C again.</p>
          <p>Sharps are added in the order F C G D A E B, flats in the reverse, B E A D G C F. Trumpets, clarinets and tenor saxophones are pitched in Bb, alto and baritone saxes in Eb, so tunes are written in F, Bb, Eb and Ab far more than in E or B.</p>`,
         `<p>Because every major key has the same pattern, a tune keeps its shape in any key. Musicians call moving it <b>transposing</b>. Here is the start of a melody written in degrees, so it plays in whatever key you name.</p>`,
         { code: `-- change key f major to key eb major: same tune, new key, every note moves together\nkey f major\nvoice tune = <[^5 [^3 ^4] ^5 _] [^6 [^5 ^3] ^1 _]>.swing.inst(vibes)`, bars: 2 },
         { code: `-- Partly done: F major from F4 up to F5. Replace the dots with the next five notes, counting W W H W W W H. One of them is a flat.\nvoice f_major = [f4 g4 a4 . . . . .]` },
         { exercise: {
-          task: `<p>Write <code>voice scale</code>: the <b>Eb major</b> scale from Eb4 up to Eb5, using note names (no degrees). Work out the flats yourself from the W W H W W W H pattern, and spell them as flats. Tine plays G# and Ab alike, but the check reads your spelling too.</p>`,
+          task: `<p>Write <code>voice scale</code>: the <b>Eb major</b> scale from Eb4 up to Eb5 in one bar, using note names (no degrees). Work out the flats yourself from the W W H W W W H pattern, and spell them as flats. Tine plays G# and Ab alike, but the check reads your spelling too.</p>`,
           starter: `voice scale = [eb4]`,
           solution: `voice scale = [eb4 f4 g4 ab4 bb4 c5 d5 eb5]`,
           hint: `Start on Eb and count the pattern: Eb to F is W, F to G is W, G to Ab is H... Eb major has three flats.`,
@@ -189,7 +189,8 @@ export const UNIT1: Unit = {
             const l = line(n, "scale"), want = [63, 65, 67, 68, 70, 72, 74, 75];
             if (l.length !== 8) return `That is ${l.length} note${l.length === 1 ? "" : "s"}; a scale from Eb to Eb has 8.`;
             if (src && /\^\d/.test(src.replace(/--.*$/gm, ""))) return "Write note names like eb4, not degrees: the task is to work out the flats yourself.";
-            if (src && /\b[a-g]#/i.test(src.replace(/--.*$/gm, ""))) return "Eb major is spelled with flats only: Eb F G Ab Bb C D. A note in your code has a sharp; rewrite it with its flat or plain letter name.";
+            const sh = src && src.replace(/--.*$/gm, "").match(/\b([a-g])#(\d)/i);
+            if (sh) return `${sh[1].toUpperCase()}#${sh[2]} is a sharp name. Eb major has no sharps and uses each letter once: which letter does that step need, and is it flat or plain?`;
             const bad = l.findIndex((x, i) => x !== want[i]);
             const FL = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"], flat = (x: number) => FL[x % 12] + (Math.floor(x / 12) - 1);
             return bad < 0 ? null : `Note ${bad + 1} is ${flat(l[bad])}; it should be ${flat(want[bad])}.`;
@@ -251,9 +252,10 @@ export const UNIT1: Unit = {
     {
       id: "intervals", title: "Intervals",
       parts: [
-        `<p>An <b>interval</b> is the distance between two notes. Musicians hear intervals best inside a key, so start there: a C major chord sets the key, then each pair below starts on C and reaches up to another note of the scale.</p>`,
+        `<p>Musicians hear the distance between two notes best inside a key, so start there: a C major chord sets the key, then each pair below starts on C and reaches up to another note of the scale.</p>`,
         { code: `-- after the chord: C to E, C to G, C to A, C to B. Listen to how each one feels.\n-- Change {c4 g4} to {c4 f#4} and hear the tritone, the most restless interval.\n-- Change {c4 e4} to [c4 e4]: the same third, one note after the other.\nvoice chord = <{c4 e4 g4} . . . .>.vel(.5)\nvoice pair  = <. {c4 e4} {c4 g4} {c4 a4} {c4 b4}>`, bars: 5 },
-        `<p>Played together, an interval is <b>harmonic</b>; one note after the other, <b>melodic</b>. Each has a <b>number</b> and a <b>quality</b>. The number counts letter names inclusively: C up to E spans C, D, E, so it is a third. The quality pins down the exact size in half steps.</p>
+        { code: `-- every interval from C, smallest to largest. The printed list names them in order.\n-- (run(13) counts 0 to 12; map turns each number k into the interval from c4 to c4 + k.)\nprint(map(run(13), k => interval(c4, c4 + k)))\nvoice up = run(13).map(k => {c4 (c4 + k)}).slow(4)`, bars: 4 },
+        `<p>That distance between two notes is an <b>interval</b>. Played together, an interval is <b>harmonic</b>; one note after the other, <b>melodic</b>. Each has a <b>number</b> and a <b>quality</b>. The number counts letter names inclusively: C up to E spans C, D, E, so it is a third. The quality pins down the exact size in half steps.</p>
          <table class="t"><tr><th>half steps</th><th>interval</th><th>short</th></tr>
          <tr><td>0</td><td>unison</td><td>P1</td></tr><tr><td>1</td><td>minor 2nd</td><td>m2</td></tr><tr><td>2</td><td>major 2nd</td><td>M2</td></tr>
          <tr><td>3</td><td>minor 3rd</td><td>m3</td></tr><tr><td>4</td><td>major 3rd</td><td>M3</td></tr><tr><td>5</td><td>perfect 4th</td><td>P4</td></tr>
@@ -261,7 +263,6 @@ export const UNIT1: Unit = {
          <tr><td>8</td><td>minor 6th</td><td>m6</td></tr><tr><td>9</td><td>major 6th</td><td>M6</td></tr><tr><td>10</td><td>minor 7th</td><td>m7</td></tr>
          <tr><td>11</td><td>major 7th</td><td>M7</td></tr><tr><td>12</td><td>octave</td><td>P8</td></tr></table>
          <p>Unisons, fourths, fifths and octaves are <b>perfect</b>. Seconds, thirds, sixths and sevenths are <b>major</b> or <b>minor</b>. Any interval can be stretched to <b>augmented</b> or squeezed to <b>diminished</b>, which is a spelling question: C up to F# is an augmented fourth and C up to Gb a diminished fifth, both six half steps. Tine's <code>interval</code> names by size, so it calls both a tritone.</p>`,
-        { code: `-- every interval from C, smallest to largest. The printed list names them in order.\n-- (run(13) counts 0 to 12; map turns each number k into the interval from c4 to c4 + k.)\nprint(map(run(13), k => interval(c4, c4 + k)))\nvoice up = run(13).map(k => {c4 (c4 + k)}).slow(4)`, bars: 4 },
         { code: `-- bar 1: three intervals. Bar 2: three more. Which bar sounds settled?\n-- Try {c4 d4} in place of {c4 db4}: a major second, softer than the minor second.\nvoice consonant = <[{c4 g4} {c4 e4} {c4 a4} .] .>\nvoice dissonant = <. [{c4 db4} {c4 b4} {c4 f#4} .]>`, bars: 2 },
         `<p>Bar 1 played <b>consonances</b>, bar 2 <b>dissonances</b>: words for how stable an interval sounds. Octaves, fifths and unisons are <b>perfect consonances</b>; thirds and sixths are <b>imperfect consonances</b>; seconds, sevenths and the tritone are <b>dissonant</b>. The fourth is the odd one: classical harmony treats it as a dissonance when it sits above the bass, and as a consonance between upper voices.</p>
          <p>Jazz draws that line in a different place. Sevenths are everyday colors, not clashes, and stacked fourths are a whole style of piano voicing (lesson 30). The tritone comes back in lesson 8: it is what makes a dominant seventh chord want to resolve.</p>`,
@@ -269,10 +270,10 @@ export const UNIT1: Unit = {
         `<p>Flipping an interval like that is <b>inverting</b> it: the lower note goes up an octave. The numbers add to nine (a third becomes a sixth) and the half steps add to twelve. Major becomes minor, augmented becomes diminished, and perfect stays perfect. So if you know a minor third (3 half steps), you know a major sixth (9).</p>`,
         { code: `-- three intervals wider than an octave. Change d5 to d4 in the voice line: the same note an octave down, now a plain 2nd, much harsher.\nprint(interval(c4, d5), interval(c4, f5), interval(c4, a5))\nvoice compound = [{c4 d5} {c4 f5} {c4 a5} .]` },
         `<p>Intervals larger than an octave, like those, are <b>compound</b>. A ninth is a second plus an octave, an eleventh a fourth plus an octave, a thirteenth a sixth plus an octave. These are the names of jazz chord extensions: the 9, 11 and 13 in a symbol like <code>G13</code>.</p>`,
-        { code: `tempo 140\n-- G13 as a pianist voices it: G in the bass, then F, B and E above it. Chord symbols call them the 7th, the 3rd (it sits a 10th up) and the 13th. It resolves to Cmaj9.\n-- Change both e4s to eb4: the 13 becomes a b13, darker and more tense.\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.5)\nvoice comp = <[{g2 f3 b3 e4} . . {g2 f3 b3 e4} . . . .] [{c3 e3 b3 d4} _ _ _ _ _ _ _]>.swing.vel(.6)`, bars: 2 },
+        { code: `tempo 140\n-- G13 as a pianist voices it: G in the bass, then F, B and E above it. Chord symbols call them the 7th, the 3rd (it sits a 10th up) and the 13th. It resolves to Cmaj9.\n-- You will build chords like these in lessons 7 and 8. For now, listen for the top note E: a 13th above the G in the bass.\n-- Change both e4s to eb4: the 13 becomes a b13, darker and more tense.\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.5)\nvoice comp = <[{g2 f3 b3 e4} . . {g2 f3 b3 e4} . . . .] [{c3 e3 b3 d4} _ _ _ _ _ _ _]>.swing.vel(.6)`, bars: 2 },
         { code: `-- Partly done: two intervals above D4. The major 3rd is done. Make the second one a perfect 5th: change the second d4 inside {d4 d4} to the note 7 half steps up.\n-- Then add interval(d4, your note) to the print line to check that it says P5.\nprint(interval(d4, f#4))\nvoice above_d = [{d4 f#4} _ {d4 d4} _]` },
         { exercise: {
-          task: `<p>Write <code>voice dyads</code> that plays three harmonic intervals in turn: a <b>major 6th above F4</b>, a <b>minor 7th above G3</b>, and a <b>perfect 4th above Bb3</b>.</p>`,
+          task: `<p>Write <code>voice dyads</code> that plays three harmonic intervals in turn, all in one bar: a <b>major 6th above F4</b>, a <b>minor 7th above G3</b>, and a <b>perfect 4th above Bb3</b>.</p>`,
           starter: `voice dyads = [{f4 f4} {g3 g3} {bb3 bb3}]`,
           solution: `voice dyads = [{f4 d5} {g3 f4} {bb3 eb4}]`,
           hint: `Count half steps: M6 is 9, m7 is 10, P4 is 5. You can also write <code>{f4 (f4 + 9)}</code>.`,
@@ -289,10 +290,11 @@ export const UNIT1: Unit = {
                 if (g[i].semis.length === 2 && lo === want[i][0] && (hi - want[i][1]) % 12 === 0) return `Interval ${i + 1}: right letter, wrong octave. Use ${nmo(want[i][1])}.`;
                 if (g[i].semis.length === 2 && g[i].semis[1] - g[i].semis[0] === want[i][1] - want[i][0]) return `Interval ${i + 1} is the right size, but its lower note should be ${["F4", "G3", "Bb3"][i]}.`;
                 const got = g[i].semis.length === 2 ? `${g[i].semis[1] - g[i].semis[0]} half steps (${nms(g[i].semis)})` : nms(g[i].semis);
-                return `Interval ${i + 1} is ${got}; a ${names[i]} is ${want[i][1] - want[i][0]} half steps, ${nms(want[i])}.`;
+                return `Interval ${i + 1} is ${got}; a ${names[i]} is ${want[i][1] - want[i][0]} half steps.`;
               }
             }
-            if (src && /\bd#4/i.test(src.replace(/--.*$/gm, ""))) return "Interval 3: a 4th above Bb counts four letters, B C D E, so spell the top note Eb (eb4), not D#.";
+            const sh = src && src.replace(/--.*$/gm, "").match(/\b([a-g])#(\d)/i);
+            if (sh) return `${sh[1].toUpperCase()}#${sh[2]} is spelled with a sharp. Count letters for each interval: a 6th above F, a 7th above G and a 4th above Bb all land on a plain letter or a flat.`;
             return null;
           },
         } },
