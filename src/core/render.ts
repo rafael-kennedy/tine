@@ -3,6 +3,7 @@
 import { TimedNote, timeline, barSeconds } from "./scene";
 import { Scene } from "./interp";
 import { renderNote, reverb, noteLength } from "./synth";
+import { hasFx, fxOf, processBus, Fx } from "./fx";
 
 export interface SampleData { channels: Float32Array[]; sr: number }
 
@@ -14,8 +15,12 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
   const L = new Float32Array(len), R = new Float32Array(len);
   const sendL = new Float32Array(len), sendR = new Float32Array(len);
   const cache = new Map<string, Float32Array>();
+  // voices with effects mix into their own bus first
+  const fxVoices = new Set(notes.filter(n => hasFx(n.params)).map(n => n.voice));
+  const buses = new Map<string, { L: Float32Array; R: Float32Array; changes: { time: number; fx: Fx }[] }>();
+  for (const v of fxVoices) buses.set(v, { L: new Float32Array(len), R: new Float32Array(len), changes: [] });
   for (const n of notes) {
-    if (n.params.midi !== undefined) continue; // routed to external gear
+    if (n.params.midi !== undefined || n.params.ccOut !== undefined) continue; // routed to external gear
     const inst = String(n.params.inst ?? "keys");
     let buf: Float32Array;
     if (inst.startsWith("sample:")) {
@@ -35,12 +40,20 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
     const send = Number(n.params.reverb ?? (inst === "pad" || inst === "bell" ? 0.35 : 0.12));
     const start = Math.round(n.time * sr);
     const end = Math.min(len, start + buf.length);
+    const bus = buses.get(n.voice);
+    if (bus) bus.changes.push({ time: n.time, fx: fxOf(n.params) });
+    const oL = bus ? bus.L : L, oR = bus ? bus.R : R;
     for (let i = start, j = 0; i < end; i++, j++) {
       if (i < 0) continue;
       const v = buf[j];
-      L[i] += v * gl; R[i] += v * gr;
+      oL[i] += v * gl; oR[i] += v * gr;
       if (send > 0) { sendL[i] += v * gl * send; sendR[i] += v * gr * send; }
     }
+  }
+  for (const bus of buses.values()) {
+    bus.changes.sort((a, b) => a.time - b.time);
+    processBus(bus.L, bus.R, sr, bus.changes);
+    for (let i = 0; i < len; i++) { L[i] += bus.L[i]; R[i] += bus.R[i]; }
   }
   const [wl, wr] = reverb(sendL, sendR, sr);
   let peak = 0;
@@ -130,6 +143,26 @@ export function bendFor(semi: number): { note: number; bend: number } {
   return { note: Math.max(0, Math.min(127, note)), bend };
 }
 
+// The MIDI messages one Tine note becomes, in send order. Shared by the live
+// engine and the MIDI file writer so both say exactly the same thing.
+// `chans` remembers each channel's program and pitch bend, so a program change
+// is sent once and a bend is reset after a microtonal note.
+export type ChannelState = Map<number, { program?: number; bend: number }>;
+export function noteMessages(n: { semi: number; vel: number; params: Record<string, any> }, ch: number, chans: ChannelState, opts: { bend?: boolean } = {}): { on: number[][]; off: number[] | null } {
+  const on: number[][] = [];
+  const p = n.params;
+  let st = chans.get(ch);
+  if (!st) chans.set(ch, (st = { bend: 8192 }));
+  if (p.program !== undefined && st.program !== p.program) { st.program = p.program; on.push([0xc0 | ch, p.program - 1]); }
+  if (p.ctl) for (const [k, v] of Object.entries(p.ctl)) on.push([0xb0 | ch, Number(k), Math.round(Number(v) * 127)]);
+  if (p.ccOut !== undefined) { on.push([0xb0 | ch, p.ccOut, Math.round(Number(p.ccValue) * 127)]); return { on, off: null }; }
+  const { note, bend } = bendFor(n.semi);
+  const v = Math.max(1, Math.min(127, Math.round(n.vel * 127)));
+  if (opts.bend !== false && (opts.bend || bend !== st.bend)) { st.bend = bend; on.push([0xe0 | ch, bend & 0x7f, bend >> 7]); }
+  on.push([0x90 | ch, note, v]);
+  return { on, off: [0x80 | ch, note, 0] };
+}
+
 export function assignChannels(notes: TimedNote[]): Map<string, number> {
   const map = new Map<string, number>();
   let next = 1;
@@ -174,18 +207,17 @@ export function toMidiFile(scene: Scene, notes: TimedNote[]): Uint8Array {
     const evs: MidiEvent[] = [];
     const base = chans.get(voice)! - 1;
     let rot = 0;
+    const programs: ChannelState = new Map();
     // bend range = 2 semitones (the General MIDI default), set explicitly
     const used = new Set<number>();
     for (const n of ns) {
       let ch = base;
       if (n.params.mpe) { ch = 1 + (rot++ % 15); }
       if (!used.has(ch)) { used.add(ch); evs.push(...[[0x65, 0], [0x64, 0], [0x06, 2], [0x26, 0]].map(([c, v]) => ({ tick: 0, data: [0xb0 | ch, c, v], order: 0 }))); }
-      const { note, bend } = bendFor(n.semi);
       const t0 = tickOf(n.bar), t1 = Math.max(t0 + 1, tickOf(n.bar + n.bars));
-      const v = Math.max(1, Math.min(127, Math.round(n.vel * 127)));
-      if (ch !== 9) evs.push({ tick: t0, data: [0xe0 | ch, bend & 0x7f, bend >> 7], order: 1 });
-      evs.push({ tick: t0, data: [0x90 | ch, note, v], order: 2 });
-      evs.push({ tick: t1, data: [0x80 | ch, note, 0], order: 0 });
+      const m = noteMessages(n, ch, programs, ch === 9 ? { bend: false } : {});
+      for (const data of m.on) evs.push({ tick: t0, data, order: 1 });
+      if (m.off) evs.push({ tick: t1, data: m.off, order: 0 });
     }
     tracks.push(encodeTrack(evs, voice));
   }

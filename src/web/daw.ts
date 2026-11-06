@@ -342,11 +342,14 @@ export async function startDaw() {
     const thruSel = h("select", {}, h("option", { value: "" }, "off"), ...Object.keys(INSTRUMENT_DOCS).filter(k => k !== "kit").map(k => h("option", { value: k }, k)));
     thruSel.value = engine.thru.enabled ? engine.thru.inst : ""; thruSel.onchange = () => { engine.thru.enabled = !!thruSel.value; if (thruSel.value) engine.thru.inst = thruSel.value; };
     const clk = h("input", { type: "checkbox" }) as HTMLInputElement; clk.checked = transport.clockOut; clk.onchange = () => (transport.clockOut = clk.checked);
+    const fol = h("input", { type: "checkbox" }) as HTMLInputElement; fol.checked = transport.followClock;
+    fol.onchange = () => { transport.followClock = fol.checked; transport.clockTempo = null; if (fol.checked) { transport.clockOut = clk.checked = false; } log(fol.checked ? "following MIDI clock: press play on the other device" : "Tine keeps its own tempo again", "i"); };
     p.append(
       h("div", { class: "field" }, h("span", {}, "output"), outSel),
       h("div", { class: "field" }, h("span", {}, "input"), inSel),
       h("div", { class: "field" }, h("span", {}, "play-thru"), thruSel),
       h("label", { class: "chk" }, clk, "send MIDI clock (other gear follows Tine's tempo)"),
+      h("label", { class: "chk" }, fol, "follow MIDI clock (Tine follows other gear's tempo, start and stop)"),
       h("h4", {}, "controllers"), lastCc,
       h("h4", {}, "capture"),
     );
@@ -497,10 +500,12 @@ export async function startDaw() {
   };
   transport.onError = (voice, e) => { log(`voice ${voice}: ${(e as Error).message}`, "e"); };
   transport.onSwap = bar => log(`new code playing from bar ${Math.floor(bar) + 1}`, "i");
+  transport.onRemote = on => { if (on) { playBtn.classList.add("on"); log("started by MIDI clock", "i"); } else { playBtn.classList.remove("on"); log("stopped by MIDI clock", "i"); } };
   transport.onEnd = () => { playBtn.classList.remove("on"); log("the form finished", "i"); };
   const frame = () => {
     if (transport.playing) {
       posEl.textContent = transport.positionText();
+      if (transport.followClock && transport.clockTempo && lastScene) bpmEl.textContent = `${transport.clockTempo.toFixed(1)} bpm (clock) · ${lastScene.meter[0]}/${lastScene.meter[1]}`;
       roll.head = transport.currentBar();
       if (capture) {
         const b = transport.bar();

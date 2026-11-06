@@ -202,3 +202,32 @@ describe("pattern multiplication", () => {
     expect(starts("voice a = [c e] / 2", 2)).toEqual([0, 1]);
   });
 });
+
+describe("evolve", () => {
+  test("state carries forward from bar 0", () => {
+    expect(pitches("voice a = evolve(60, (s, n) => s + 2, (s, n) => pitch(s))", 4)).toEqual([60, 62, 64, 66]);
+  });
+  test("random walks replay identically in any query order", () => {
+    const src = "voice a = evolve(c4, (s, n) => s + pick([-2 -1 1 2]), (s, n) => [s (s + 7)])";
+    const sc = evaluate(src, { seed: 11 });
+    const fwd = liveNotes(sc, 0, 16);
+    const sc2 = evaluate(src, { seed: 11 });
+    const back: any[] = [];
+    for (let b = 15; b >= 0; b--) back.push(...liveNotes(sc2, b, b + 1));
+    expect(back.sort((x, y) => x.bar - y.bar || x.semi - y.semi)).toEqual(fwd.sort((x, y) => x.bar - y.bar || x.semi - y.semi));
+    expect(new Set(fwd.map(n => n.semi)).size).toBeGreaterThan(3);
+  });
+  test("each section restarts its state", () => {
+    const n = renderNotes(evaluate("section s 2\n  voice a = evolve(60, (x, n) => x + 1, (x, n) => pitch(x))\nform s s"), undefined).notes;
+    expect(n.map(x => x.semi)).toEqual([60, 61, 60, 61]);
+  });
+});
+
+describe("inexact timing", () => {
+  test("rounding past 2^53 is reported per voice", () => {
+    const s = evaluate("voice ok = [c e g]\nvoice deep = [c].late(1/999983).late(1/999979).late(1/999961)", { seed: 1 });
+    const hit = new Set<string>();
+    renderNotes(s, 1, { onInexact: v => hit.add(v) });
+    expect([...hit]).toEqual(["deep"]);
+  });
+});

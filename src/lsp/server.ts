@@ -3,7 +3,7 @@
 // Neovim, Helix, Zed, Emacs, Sublime) gets diagnostics, completion, hover,
 // signature help, go-to-definition, outline and formatting.
 import {
-  evaluate, parse, renderNotes, TineError, builtinList, KEYWORDS, SCALES, DRUMS, INSTRUMENTS, CHORDS, describeWord, Stmt, Node, Span, lex,
+  evaluate, parse, renderNotes, TineError, builtinList, KEYWORDS, SCALES, DRUMS, INSTRUMENTS, CHORDS, describeWord, VERSION, Stmt, Node, Span, lex,
 } from "../core";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -34,6 +34,8 @@ function readerFor(uri: string) {
   try { const dir = dirname(fileURLToPath(uri)); return (p: string) => readFileSync(resolve(dir, p), "utf8"); } catch { return undefined; }
 }
 
+export const INEXACT_MSG = (v: string) => `voice ${v}: its timing needs fractions too large to keep exact, so some times are rounded (by at most a millionth of a bar). It plays, but a note can miss a bar line by that much. Simpler ratios keep it exact.`;
+
 function diagnose(uri: string) {
   const src = docs.get(uri) ?? "";
   const diags: any[] = [];
@@ -43,7 +45,10 @@ function diagnose(uri: string) {
     for (const e of scene.errors) add(e);
     if (!scene.errors.length) {
       // query a little music so errors that happen at play time show up now
-      try { renderNotes(scene, scene.form ? undefined : 2, { onError: (v, e) => add(new TineError("runtime", `voice ${v}: ${(e as Error).message}`, scene.voices.get(v)?.span ?? [...scene.sections.values()].find(s => s.voices.has(v))?.voices.get(v)?.span)) }); }
+      const spanOf = (v: string) => scene.voices.get(v)?.span ?? [...scene.sections.values()].find(s => s.voices.has(v))?.voices.get(v)?.span;
+      const warned = new Set<string>();
+      const onInexact = (v: string) => { if (!warned.has(v)) { warned.add(v); add(new TineError("timing", INEXACT_MSG(v), spanOf(v)), 2); } };
+      try { renderNotes(scene, scene.form ? undefined : 2, { onInexact, onError: (v, e) => add(new TineError("runtime", `voice ${v}: ${(e as Error).message}`, scene.voices.get(v)?.span ?? [...scene.sections.values()].find(s => s.voices.has(v))?.voices.get(v)?.span)) }); }
       catch (e) { if (e instanceof TineError) add(e); }
     }
   } catch (e) {
@@ -233,7 +238,7 @@ export function startServer() {
               documentFormattingProvider: true,
               semanticTokensProvider: { legend: semanticLegend(), full: true },
             },
-            serverInfo: { name: "tine-lsp", version: "1.0.0" },
+            serverInfo: { name: "tine-lsp", version: VERSION },
           });
         case "initialized": return;
         case "shutdown": return reply(null);

@@ -62,6 +62,11 @@ export class Key {
 
 const LETTERS: Record<string, number> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
 
+export function keySpelling(key: Key): "sharps" | "flats" | undefined {
+  const { fifths, mode } = keyFifths(key);
+  return mode === undefined ? undefined : fifths < 0 ? "flats" : fifths > 0 ? "sharps" : undefined;
+}
+
 export function parseNote(text: string, defaultOctave = 4): Pitch {
   const letter = text[0].toLowerCase();
   let i = 1, acc = 0;
@@ -77,10 +82,26 @@ export function parseDegree(text: string): Degree {
 }
 
 const NAMES = ["c", "c#", "d", "eb", "e", "f", "f#", "g", "ab", "a", "bb", "b"];
-export function pitchName(semi: number): string {
+const SHARP_NAMES = ["c", "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a", "a#", "b"];
+const FLAT_NAMES = ["c", "db", "d", "eb", "e", "f", "gb", "g", "ab", "a", "bb", "b"];
+
+// Where a key sits on the circle of fifths (sharps positive), for the
+// diatonic modes; 0 for other scales. Spelling follows its sign.
+const MODE_OFFSET: Record<string, number> = { major: 0, ionian: 0, dorian: 2, phrygian: 4, lydian: 5, mixolydian: 7, minor: 9, aeolian: 9, locrian: 11 };
+const FIFTHS_OF_MAJOR: Record<number, number> = { 0: 0, 7: 1, 2: 2, 9: 3, 4: 4, 11: 5, 6: 6, 5: -1, 10: -2, 3: -3, 8: -4, 1: -5 };
+export function keyFifths(key: Key): { fifths: number; mode?: string } {
+  const name = key.scale.name, off = MODE_OFFSET[name];
+  if (off === undefined) return { fifths: 0 };
+  const pc = (((Math.round(key.root.semi) - off) % 12) + 12) % 12;
+  return { fifths: FIFTHS_OF_MAJOR[pc], mode: name === "ionian" ? "major" : name === "aeolian" ? "minor" : name };
+}
+
+// `spelling` "sharps" or "flats" follows a key; without it, the common mix (c# eb f# ab bb).
+export function pitchName(semi: number, spelling?: "sharps" | "flats"): string {
   const r = Math.round(semi);
   const cents = Math.round((semi - r) * 100);
-  const name = NAMES[((r % 12) + 12) % 12] + (Math.floor(r / 12) - 1);
+  const names = spelling === "sharps" ? SHARP_NAMES : spelling === "flats" ? FLAT_NAMES : NAMES;
+  const name = names[((r % 12) + 12) % 12] + (Math.floor(r / 12) - 1);
   return cents ? `${name}${cents > 0 ? "+" : ""}${cents}c` : name;
 }
 

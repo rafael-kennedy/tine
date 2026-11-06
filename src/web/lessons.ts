@@ -118,6 +118,8 @@ export const LESSONS: Lesson[] = [
       { code: `let up = [c e g e]\nlet turn = [d f a f]\nvoice tune = arrange(up, 2, turn, 1, up.rev, 1)`, bars: 4 },
       `<p>For anything else, <code>per_bar</code> hands you the bar number and lets you compute the bar with ordinary logic.</p>`,
       { code: `voice climb = per_bar(n => [c e g].transpose(n % 4 * 2).fast(1 + n % 3))`, bars: 4 },
+      `<p>Sometimes a bar should depend on the bar before, like a melody that wanders a step at a time. <code>evolve(start, step, play)</code> keeps a value from bar to bar: <code>step</code> turns this bar's value into the next one, and <code>play</code> turns it into music. It still replays exactly: Tine works the chain out from the start, so bar 9 sounds the same whether you got there by playing or by jumping.</p>`,
+      { code: `voice walk = evolve(c4, (p, bar) => p + pick([-2 -1 1 2]), (p, bar) => [p (p + 7) (p + 12) (p + 7)]).inst(pluck)`, bars: 4 },
     ],
   },
   {
@@ -152,6 +154,9 @@ export const LESSONS: Lesson[] = [
       `<p>Signals are continuous shapes: <code>sine</code>, <code>tri</code>, <code>saw</code>, <code>square</code>, <code>noise</code> and <code>drift</code> (smooth, seeded wandering). Use <code>.range(lo, hi)</code> to scale them and <code>.seg(n)</code> to turn one into notes.</p>`,
       { code: `key c minor_pent\nvoice drifty = drift(.5).range(0, 10).seg(8).map(x => floor(x)).degrees.inst(bell).pan(sine(1).range(-1, 1))`, bars: 2 },
       `<p>Other parameters: <code>legato</code>, <code>dur</code> (in beats), <code>gain</code>, <code>pan</code>, <code>attack</code>, <code>decay</code>, <code>sustain</code>, <code>release</code>, <code>reverb</code>.</p>`,
+      `<p>Effects work on a whole voice after its notes are mixed: <code>.hpf(hz)</code> and <code>.lpf(hz)</code> filter it, <code>.drive(x)</code> saturates it from 0 to 1, and <code>.delay(mix, time: 3/16, feedback: .4)</code> echoes it. Delay time is in bars, so the echo stays in time at any tempo.</p>`,
+      { code: `voice fuzz = [c2 . c2 eb2 . g1 bb1 .].inst(saw).drive(.7).lpf(1800)
+voice echo = [g4 . . bb4 . . . .].inst(pluck).delay(.5, feedback: .55)`, bars: 2 },
     ],
   },
   {
@@ -191,7 +196,7 @@ export const LESSONS: Lesson[] = [
       `<p>Run <code>tine daw mypiece.tine</code>. The DAW opens in your browser, plays the file, and reloads whenever the file changes, so you can perform from the DAW's editor or from your own editor.</p>`,
       `<p>Re-evaluate with <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>. New code takes over on the next bar line, so the groove never stumbles. If you make a mistake, the broken voice keeps its last good version and everything else carries on.</p>`,
       `<p>Sections become scenes you can launch, and every evaluation is saved with its seed under <b>Takes</b>, so nothing you heard is ever lost.</p>`,
-      `<p>Connect MIDI gear in the MIDI tab:</p><ul><li><code>.midi(2)</code> sends a voice to channel 2 of a synth or another DAW.</li><li><code>cc(74)</code> is a knob on your controller, as a 0 to 1 signal: <code>.cutoff(cc(74).range(200, 4000))</code>.</li><li><code>held(8).arp</code> arpeggiates whatever chord you hold on the keyboard.</li><li><b>● capture</b> records what you play for a few bars and writes it into your code as a new voice.</li><li>MIDI clock out keeps drum machines in time with you.</li></ul>`,
+      `<p>Connect MIDI gear in the MIDI tab:</p><ul><li><code>.midi(2)</code> sends a voice to channel 2 of a synth or another DAW.</li><li><code>cc(74)</code> is a knob on your controller, as a 0 to 1 signal: <code>.cutoff(cc(74).range(200, 4000))</code>.</li><li><code>held(8).arp</code> arpeggiates whatever chord you hold on the keyboard.</li><li><b>● capture</b> records what you play for a few bars and writes it into your code as a new voice.</li><li><code>.ctl(74, sine(4))</code> turns a synth's knob along with the music, <code>.program(5)</code> changes its sound, and <code>sine(4).as_cc(74).midi(1)</code> is a voice made only of knob moves.</li><li>Send MIDI clock and drum machines follow you; follow MIDI clock and you follow them, tempo, start and stop.</li></ul>`,
       { code: `-- in the DAW, with a keyboard connected:\nkey c minor\nvoice hands = held(8).arp("updown").inst(pluck)\nvoice drums = {[kick . snare .] [hat*8]}`, bars: 2 },
       `<p>That is the whole language. The <b>Reference</b> at the end lists every function.</p>`,
     ],

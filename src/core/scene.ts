@@ -43,14 +43,18 @@ export interface QueryOptions {
   inputs?: Inputs;
   onError?: (voice: string, err: unknown) => void;   // a broken voice never stops the others
   muted?: Set<string>;
+  onInexact?: (voice: string, count: number) => void; // timing that had to be rounded (see R.inexact)
 }
 
 function queryVoice(v: VoiceDef, a: R, b: R, ctx: Ctx, opts: QueryOptions): Note[] {
   if (opts.muted?.has(v.name)) return [];
+  const before = R.inexact;
   try { return resolveNotes(v.name, v.pat.query(a, b, ctx), ctx); }
   catch (e) {
     if (opts.onError) { opts.onError(v.name, e); return []; }
     throw e instanceof TineError ? e : new TineError("runtime", `in voice '${v.name}': ${(e as Error).message}`, v.span);
+  } finally {
+    if (opts.onInexact && R.inexact > before) opts.onInexact(v.name, R.inexact - before);
   }
 }
 
@@ -60,6 +64,7 @@ function finish(scene: Scene, n: Note, offsetBar: number, offsetSec: number, tem
   let bars = n.dur.toNumber();
   if (n.params.durBeats !== undefined) bars = Number(n.params.durBeats) / scene.meter[0];
   const params = { ...n.params }; delete params.durBeats;
+  if (params.delayTime !== undefined) { params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs; delete params.delayTime; }
   return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section };
 }
 

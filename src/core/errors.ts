@@ -6,7 +6,7 @@ export interface Span { start: number; end: number; }
 export class TineError extends Error {
   span?: Span;
   hint?: string;
-  kind: "syntax" | "name" | "type" | "runtime";
+  kind: "syntax" | "name" | "type" | "runtime" | "timing";
   constructor(kind: TineError["kind"], message: string, span?: Span, hint?: string) {
     super(message);
     this.kind = kind; this.span = span; this.hint = hint;

@@ -20,9 +20,9 @@ voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .]
 
 | | |
 | --- | --- |
-| **Language** | `src/core`: parser, interpreter, exact-time patterns, seeded randomness, pitch and tuning model, synth, WAV and MIDI writers |
+| **Language** | `src/core`: parser, interpreter, exact-time patterns, seeded randomness, pitch and tuning model, synth, per-voice effects, WAV, MIDI and MusicXML writers |
 | **REPL** | `tine`: multi-line input, tab completion, piano-roll drawings in the terminal, `:play`, `:seed`, `:save` |
-| **DAW** | `tine daw piece.tine`: live coding in the browser with bar-quantized hot swap, mute/solo, sections as launchable scenes, MIDI in/out/clock, controller mapping, capture of played notes into code, sample loading, a history of every take with its seed, WAV/MIDI export |
+| **DAW** | `tine daw piece.tine`: live coding in the browser with bar-quantized hot swap, mute/solo, sections as launchable scenes, MIDI in/out with control and program changes, MIDI clock in and out, controller mapping, per-voice effects, synthesis in a background thread, capture of played notes into code, sample loading, a history of every take with its seed, WAV/MIDI export |
 | **Tutorial** | `tine learn`: 14 interactive lessons with live examples and checked exercises |
 | **Packaging** | standalone `tine` binaries for Linux, macOS and Windows; `tine pack` turns one piece into a single-file HTML player or its own executable |
 | **Editors** | a language server (`tine lsp`), a VS Code extension, and support files for Neovim, Vim, Helix, Emacs, Sublime, JetBrains and Zed (`editors/`) |
@@ -53,6 +53,7 @@ tine daw groove.tine       # open the live DAW (Chrome/Edge for MIDI)
 tine learn                 # the tutorial
 tine render groove.tine    # groove.wav
 tine midi groove.tine      # groove.mid, one track per voice, for any other DAW
+tine xml groove.tine       # groove.musicxml, a score for MuseScore, Dorico, Sibelius
 tine pack groove.tine      # groove.html, plays anywhere
 tine pack groove.tine --exe   # ./groove, its own executable
 ```

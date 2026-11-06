@@ -4,6 +4,7 @@
 // re-evaluating never disturbs the groove.
 import { Scene, liveNotes, formNotes, timeline, barSeconds, TimedNote, Inputs } from "../core";
 import { Engine } from "./engine";
+import { ClockFollower, CLOCK, START, CONTINUE, STOP } from "./clockin";
 
 export type Quantize = "bar" | "beat" | "now";
 
@@ -22,6 +23,9 @@ export class Transport {
   sectionStart = 0;
   pendingSection: string | null | undefined = undefined; // null means "clear"
   clockOut = false;
+  followClock = false;          // take tempo, start and stop from incoming MIDI clock
+  clockTempo: number | null = null;
+  readonly follower = new ClockFollower();
 
   // time anchor: bar `anchorBar` happens at audio time `anchorTime`
   private anchorTime = 0;
@@ -31,14 +35,49 @@ export class Transport {
   private timer: any = null;
   private nextClock = 0;
   lookahead = 0.12;
+  renderAhead = 0.6;            // seconds beyond the look-ahead that the synth worker renders early
+  private preparedTo = 0;
 
   onNotes: ((notes: ScheduledNote[]) => void) | null = null;
   onError: ((voice: string, err: unknown) => void) | null = null;
   onSwap: ((bar: number) => void) | null = null;
   onSection: ((name: string | undefined) => void) | null = null;
   onEnd: (() => void) | null = null;
+  onRemote: ((playing: boolean) => void) | null = null; // started or stopped by incoming MIDI clock
 
-  constructor(public engine: Engine) {}
+  constructor(public engine: Engine) {
+    engine.onRealtime = (st, ms) => this.realtime(st, ms);
+  }
+
+  // Incoming MIDI clock. Live mode follows tempo and phase; form mode, whose
+  // tempo comes from the arrangement, only follows start and stop.
+  private realtime(st: number, ms: number) {
+    if (!this.followClock) return;
+    const f = this.follower;
+    if (st === START) { f.start(); if (this.playing) this.stop(); void this.start(0).then(() => this.onRemote?.(true)); return; }
+    if (st === CONTINUE) { f.started = true; if (!this.playing) void this.start(this.mode === "live" ? this.clockBar() : 0).then(() => this.onRemote?.(true)); return; }
+    if (st === STOP) { f.stop(); if (this.playing) { this.stop(); this.onRemote?.(false); } return; }
+    if (st !== CLOCK) return;
+    const q = f.tick(ms);
+    if (!q || !this.scene || !this.playing || this.mode !== "live") return;
+    const tempo = q * this.scene.meter[1] / 4; // quarter notes per minute -> beats of this meter
+    const sec = barSeconds(this.scene, tempo);
+    if (this.clockTempo === null || Math.abs(sec - this.barSec) / this.barSec > 0.002) {
+      this.clockTempo = Math.round(tempo * 100) / 100;
+      this.reanchor(this.scheduledTo);
+    }
+    // once a beat, pull the bar line toward the clock's, a third of the way at a time
+    if (f.started && f.ticks % 24 === 1) {
+      const t = this.engine.fromPerf(ms);
+      const err = this.clockBar() - this.bar(t);
+      if (Math.abs(err) < 0.25) this.anchorTime -= err * this.barSec / 3;
+    }
+  }
+
+  private clockBar(): number {
+    const s = this.scene; if (!s) return 0;
+    return this.follower.quarters() / (s.meter[0] * 4 / s.meter[1]);
+  }
 
   get inputs(): Inputs {
     return { cc: (n, ch) => this.engine.ccValue(n, ch), held: () => [...this.engine.held].sort((a, b) => a - b) };
@@ -46,6 +85,7 @@ export class Transport {
 
   tempo(): number {
     const s = this.scene; if (!s) return 120;
+    if (this.followClock && this.clockTempo && this.mode === "live") return this.clockTempo;
     if (this.mode === "live" && this.section) return s.sections.get(this.section)?.tempo ?? s.tempo;
     return s.tempo;
   }
@@ -56,6 +96,7 @@ export class Transport {
   load(scene: Scene) {
     if (!this.playing || !this.scene) { this.scene = scene; this.pending = null; this.engine.tuningRef = scene.tuningRef; return; }
     this.pending = scene;
+    this.preparedTo = this.scheduledTo; // render the new code's notes ahead too
     if (this.quantize === "now") this.applyPending(this.scheduledTo);
   }
 
@@ -85,6 +126,7 @@ export class Transport {
     this.anchorTime = this.engine.now + 0.08;
     this.anchorBar = fromBar;
     this.scheduledTo = fromBar;
+    this.preparedTo = fromBar;
     this.nextClock = this.anchorTime;
     this.formStart = this.anchorTime;
     if (this.clockOut) this.engine.sendStartStop(true);
@@ -131,11 +173,38 @@ export class Transport {
       }
     }
     this.scheduledTo = a;
+    this.prepare();
     this.clock();
   }
 
+  // Query a little further ahead than we schedule, and hand those notes to the
+  // engine's worker so their audio is ready before they are due.
+  private prepare() {
+    const scene = this.pending ?? this.scene;
+    if (!scene) return;
+    const opts = { inputs: this.inputs, muted: this.effectiveMuted(), onError: () => {} };
+    const t = this.engine.now + this.lookahead + this.renderAhead;
+    const from = Math.max(this.preparedTo, this.scheduledTo);
+    if (this.mode === "form" && scene.form?.length) {
+      const tl = timeline(scene); if (!tl.bars) return;
+      const to = this.formBarAt(t);
+      for (let a = from; a < to - 1e-9;) {
+        const loops = Math.floor(a / tl.bars + 1e-9), lb = Math.min(to, (loops + 1) * tl.bars);
+        this.engine.prepare(formNotes(scene, a - loops * tl.bars, lb - loops * tl.bars, opts));
+        a = lb;
+      }
+      this.preparedTo = Math.max(this.preparedTo, to);
+      return;
+    }
+    const to = this.bar(t);
+    if (to <= from) return;
+    const notes = liveNotes(scene, from, to, { ...opts, section: this.section, sectionStart: this.sectionStart });
+    this.engine.prepare(notes.map(n => ({ ...n, durSec: n.bars * this.barSec })));
+    this.preparedTo = to;
+  }
+
   private clock() {
-    if (!this.clockOut || !this.scene) return;
+    if (!this.clockOut || this.followClock || !this.scene) return;
     const tick = this.barSec / (this.scene.meter[0] * (4 / this.scene.meter[1]) * 24);
     const until = this.engine.now + this.lookahead;
     if (this.nextClock < this.engine.now - 0.5) this.nextClock = this.engine.now;
@@ -190,12 +259,14 @@ export class Transport {
     this.scheduledTo = a;
     const seg = tl.segments.find(g => (a % tl.bars) < g.startBar + g.bars);
     if (seg) this.barSec = barSeconds(scene, seg.tempo);
+    this.prepare();
     this.clock();
   }
 
   private dispatch(notes: ScheduledNote[]) {
     for (const n of notes) this.engine.play(n, n.when);
-    if (notes.length) this.onNotes?.(notes);
+    const shown = notes.filter(n => n.params.ccOut === undefined);
+    if (shown.length) this.onNotes?.(shown);
   }
 
   currentBar(): number { return this.mode === "form" && this.scene?.form?.length ? this.formBarAt() : this.bar(); }

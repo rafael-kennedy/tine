@@ -55,9 +55,12 @@ class R {
     }
     return new R(sign * h1, k1);
   }
+  static inexact = 0;
   static safe(n, d) {
-    if (Math.abs(n) > SAFE || Math.abs(d) > SAFE)
+    if (Math.abs(n) > SAFE || Math.abs(d) > SAFE) {
+      R.inexact++;
       return R.approx(n / d);
+    }
     return new R(n, d);
   }
   add(o) {
@@ -430,6 +433,11 @@ function parse(src) {
   const p = new Parser(src, lex(src));
   return { stmts: p.program(), src };
 }
+var RENAMES = { a: "amt", b: "base", c: "count", d: "deg", e: "ev", f: "fn", g: "gen" };
+function renameHint(name) {
+  const alt = RENAMES[name.toLowerCase()] ?? `${name}_`;
+  return `rename it, for example to '${alt}' (a to g, with # or b and an octave, always mean notes)`;
+}
 
 class Parser {
   src;
@@ -535,7 +543,7 @@ class Parser {
       this.next();
       const nameTok = this.tok;
       if (nameTok.type !== "ident")
-        this.err(nameTok.type === "note" ? `'${nameTok.text}' is a note name and cannot be used as a variable` : "expected a name after 'let'", nameTok);
+        this.err(nameTok.type === "note" ? `'${nameTok.text}' is a note name and cannot be used as a variable` : "expected a name after 'let'", nameTok, nameTok.type === "note" ? renameHint(nameTok.text) : undefined);
       this.next();
       let params = null;
       if (this.isOp("("))
@@ -634,7 +642,7 @@ class Parser {
     while (!this.isOp(")")) {
       const t = this.tok;
       if (t.type !== "ident")
-        this.err(t.type === "note" ? `'${t.text}' is a note name and cannot be a parameter` : "expected a parameter name", t);
+        this.err(t.type === "note" ? `'${t.text}' is a note name and cannot be a parameter` : "expected a parameter name", t, t.type === "note" ? renameHint(t.text) : undefined);
       ps.push(t.text);
       this.next();
       if (this.isOp(","))
@@ -663,7 +671,7 @@ class Parser {
       return { t: "if", c, a, b, span: sp(this.spanOf(s), b.span) };
     }
     if (this.tok.type === "note" && this.isOp("=>", this.peek()))
-      this.err(`'${this.tok.text}' is a note name and cannot be a parameter`, this.tok, "try a longer name, like x or p");
+      this.err(`'${this.tok.text}' is a note name and cannot be a parameter`, this.tok, renameHint(this.tok.text));
     if (this.tok.type === "ident" && this.isOp("=>", this.peek())) {
       const s = this.next();
       this.next();
@@ -1092,10 +1100,13 @@ function parseDegree(text) {
   return new Degree(parseInt(text.slice(i), 10), acc);
 }
 var NAMES = ["c", "c#", "d", "eb", "e", "f", "f#", "g", "ab", "a", "bb", "b"];
-function pitchName(semi) {
+var SHARP_NAMES = ["c", "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a", "a#", "b"];
+var FLAT_NAMES = ["c", "db", "d", "eb", "e", "f", "gb", "g", "ab", "a", "bb", "b"];
+function pitchName(semi, spelling) {
   const r = Math.round(semi);
   const cents = Math.round((semi - r) * 100);
-  const name = NAMES[(r % 12 + 12) % 12] + (Math.floor(r / 12) - 1);
+  const names = spelling === "sharps" ? SHARP_NAMES : spelling === "flats" ? FLAT_NAMES : NAMES;
+  const name = names[(r % 12 + 12) % 12] + (Math.floor(r / 12) - 1);
   return cents ? `${name}${cents > 0 ? "+" : ""}${cents}c` : name;
 }
 var ET = (name, steps) => new Scale(name, steps);
@@ -1403,6 +1414,39 @@ function perBar(fn) {
       cache.set(k, p);
       if (cache.size > 256)
         cache.delete(cache.keys().next().value);
+    }
+    return p;
+  });
+}
+var MAX_EVOLVE_BARS = 1e5;
+function evolve(init, step, view) {
+  const states = new Map;
+  const views = new Map;
+  const stateAt = (c, ctx) => {
+    if (c < 0)
+      return init;
+    if (c > MAX_EVOLVE_BARS)
+      throw new Error(`evolve can look ahead at most ${MAX_EVOLVE_BARS} bars`);
+    const k = `${ctx.seed}|${ctx.voice}|${ctx.offset}`;
+    let arr = states.get(k);
+    if (!arr) {
+      arr = [init];
+      states.set(k, arr);
+      if (states.size > 32)
+        states.delete(states.keys().next().value);
+    }
+    while (arr.length <= c)
+      arr.push(step(arr[arr.length - 1], arr.length, ctx));
+    return arr[c];
+  };
+  return perBarSelect((c, ctx) => {
+    const k = `${ctx.seed}|${ctx.voice}|${ctx.offset}|${c}`;
+    let p = views.get(k);
+    if (!p) {
+      p = view(stateAt(c, ctx), c, ctx);
+      views.set(k, p);
+      if (views.size > 256)
+        views.delete(views.keys().next().value);
     }
     return p;
   });
@@ -1730,7 +1774,12 @@ function builtinList() {
 }
 var P = (x) => toPat(x);
 var N = (x, d) => x === undefined ? d : num(x);
+var clamp01 = (x) => Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0;
 var RR = (x) => x instanceof R ? x : R.of(num(x));
+var need = (args, n, sig) => {
+  if (args.length < n)
+    throw new TineError("type", `expected at least ${n} argument${n > 1 ? "s" : ""}`, undefined, `usage: ${sig}`);
+};
 function items(x) {
   if (Array.isArray(x))
     return x;
@@ -1784,7 +1833,7 @@ function registerBuiltins(env) {
 var cat = { time: "time", rand: "chance", pitch: "pitch", param: "sound", list: "lists", math: "math", gen: "generators", io: "input", misc: "misc" };
 def("fast", "fast(p, n)", "Play p n times faster (n times per bar).", cat.time, ([p, n]) => fast(RR(n), P(p)));
 def("slow", "slow(p, n)", "Stretch p over n bars.", cat.time, ([p, n]) => fast(ONE.div(RR(n)), P(p)));
-def("late", "late(p, t)", "Delay p by t bars (1/8 = an eighth note in 4/4... of a bar).", cat.time, ([p, t]) => shift(RR(t), P(p)));
+def("late", "late(p, t)", "Delay p by t bars: in 4/4, 1/8 is an eighth note.", cat.time, ([p, t]) => shift(RR(t), P(p)));
 def("early", "early(p, t)", "Shift p earlier by t bars.", cat.time, ([p, t]) => shift(RR(t).neg(), P(p)));
 def("rev", "rev(p)", "Reverse p within each bar. On a list, reverses the list.", cat.time, ([p]) => {
   const q = P(p);
@@ -1875,6 +1924,10 @@ def("trunc", "trunc(p, fraction)", "Play only the first fraction of each bar.", 
 def("per_bar", "per_bar(bar => pattern)", "Build each bar from a function of the bar number. Randomness inside is keyed to the bar.", cat.time, ([f], _n, call) => {
   const salt = call.interp.salt();
   return perBar((c, ctx) => P(call.interp.callKeyed(f, [new R(c)], ctx, c, salt)));
+});
+def("evolve", "evolve(start, (state, bar) => next, (state, bar) => pattern)", "Carry state from bar to bar. Bar 0 plays view(start); each later bar's state is step(previous state, bar). Replayable: states are always computed forward from bar 0.", cat.time, ([init, step, view], _n, call) => {
+  const s1 = call.interp.salt(), s2 = call.interp.salt();
+  return evolve(init, (st, bar, ctx) => call.interp.callKeyed(step, [st, new R(bar)], ctx, bar, s1), (st, bar, ctx) => P(view === undefined ? st : call.interp.callKeyed(view, [st, new R(bar)], ctx, bar, s2)));
 });
 def("loop", "loop(p, bars)", "Repeat the first `bars` bars of p forever.", cat.time, ([p, b]) => {
   const n = Math.max(1, Math.round(N(b))), q = P(p);
@@ -2166,6 +2219,14 @@ param("release", "release(p, seconds)", "Envelope release time.");
 param("decay", "decay(p, seconds)", "Envelope decay time.");
 param("sustain", "sustain(p, level)", "Envelope sustain level 0 to 1.");
 param("reverb", "reverb(p, amount)", "Send to the built-in reverb, 0 to 1.");
+param("hpf", "hpf(p, hz)", "High-pass filter on the whole voice: removes rumble below hz. Unlike cutoff, which shapes each note, this filters the voice's mix.");
+param("lpf", "lpf(p, hz)", "Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep.");
+param("drive", "drive(p, amount)", "Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp.");
+def("delay", "delay(p, mix, time: 3/16, feedback: .4)", "An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats.", cat.param, ([p, mix, time, fb], named) => {
+  let q = setParam(P(p), "delay", mix ?? 0.3);
+  q = setParam(q, "delayTime", named.time ?? time ?? 3 / 16);
+  return setParam(q, "feedback", named.feedback ?? fb ?? 0.4);
+});
 def("dur", "dur(p, beats)", "Fixed note length in beats, independent of the step length.", cat.param, ([p, v]) => setParam(P(p), "durBeats", v));
 def("set", "set(p, name, value)", "Attach any named parameter to events (it is passed through to MIDI CC maps and exports).", cat.param, ([p, n, v]) => setParam(P(p), String(n), v));
 def("inst", "inst(p, name, ...options)", "Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name.", cat.param, ([p, name], named) => {
@@ -2187,6 +2248,26 @@ def("midi", 'midi(p, channel: 1, port: "")', "Send to an external MIDI device in
   if (pt !== undefined)
     q = setParam(q, "port", String(pt));
   return q;
+});
+def("ctl", "ctl(p, number, value)", "Send a MIDI control change (value 0 to 1) just before each note. value may be a pattern or signal: .ctl(74, sine(4)).", cat.param, ([p, n, v], _named, call) => {
+  need([p, n, v], 3, "ctl(p, number, value)");
+  const k = Math.max(0, Math.min(127, Math.round(N(n))));
+  return mapEv(P(p), (ev, ctx) => ({ ...ev, p: { ...ev.p, ctl: { ...ev.p.ctl ?? {}, [k]: clamp01(num(sampleAt(v, ev.s, ctx))) } } }));
+});
+def("program", "program(p, n)", "Choose an instrument on external gear with a MIDI program change (1 to 128, as printed in General MIDI lists). It is sent only when it changes.", cat.param, ([p, n]) => {
+  return mapEv(P(p), (ev, ctx) => ({ ...ev, p: { ...ev.p, program: Math.max(1, Math.min(128, Math.round(num(sampleAt(n, ev.s, ctx))))) } }));
+});
+def("as_cc", "as_cc(p, number, rate: 16)", "Turn a voice of numbers (0 to 1) into MIDI control changes instead of notes: voice sweep = sine(4).as_cc(74).midi(1). A signal is sampled `rate` times per bar.", cat.param, ([p, n, r], named) => {
+  const k = Math.max(0, Math.min(127, Math.round(N(n))));
+  let q = P(p);
+  if (q.sig)
+    q = segment(Math.max(1, Math.round(N(named.rate ?? r, 16))), q);
+  return mapEv(q, (ev) => {
+    const v = ev.v instanceof R ? ev.v.toNumber() : ev.v;
+    if (typeof v !== "number")
+      throw new TineError("type", `as_cc needs numbers from 0 to 1, got ${typeName(ev.v)}`, undefined, "try a signal like sine(4), or a phrase of numbers like [0 .5 1]");
+    return { ...ev, v: 0, p: { ...ev.p, ccOut: k, ccValue: clamp01(v) } };
+  });
 });
 def("mpe", "mpe(p)", "Send each note on its own MIDI channel (2 to 16) so microtonal pitch bends do not collide.", cat.param, ([p]) => setParam(P(p), "mpe", true));
 def("cc", "cc(number, channel: any)", "A live signal (0 to 1) from a MIDI controller knob or fader.", cat.io, ([n, ch]) => {
@@ -2901,6 +2982,7 @@ function timeline(scene) {
 function queryVoice(v, a, b, ctx, opts) {
   if (opts.muted?.has(v.name))
     return [];
+  const before = R.inexact;
   try {
     return resolveNotes(v.name, v.pat.query(a, b, ctx), ctx);
   } catch (e) {
@@ -2909,6 +2991,9 @@ function queryVoice(v, a, b, ctx, opts) {
       return [];
     }
     throw e instanceof TineError ? e : new TineError("runtime", `in voice '${v.name}': ${e.message}`, v.span);
+  } finally {
+    if (opts.onInexact && R.inexact > before)
+      opts.onInexact(v.name, R.inexact - before);
   }
 }
 function finish(scene, n, offsetBar, offsetSec, tempo, section) {
@@ -2919,6 +3004,10 @@ function finish(scene, n, offsetBar, offsetSec, tempo, section) {
     bars = Number(n.params.durBeats) / scene.meter[0];
   const params = { ...n.params };
   delete params.durBeats;
+  if (params.delayTime !== undefined) {
+    params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs;
+    delete params.delayTime;
+  }
   return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section };
 }
 function liveNotes(scene, a, b, opts = {}) {
@@ -3027,6 +3116,10 @@ Frequency of A4 in Hz.`
   };
   return k[word] ?? null;
 }
+
+// ../../src/core/index.ts
+var VERSION = "1.1.0";
+
 // ../../src/lsp/server.ts
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
@@ -3068,6 +3161,7 @@ function readerFor(uri) {
     return;
   }
 }
+var INEXACT_MSG = (v) => `voice ${v}: its timing needs fractions too large to keep exact, so some times are rounded (by at most a millionth of a bar). It plays, but a note can miss a bar line by that much. Simpler ratios keep it exact.`;
 function diagnose(uri) {
   const src = docs2.get(uri) ?? "";
   const diags = [];
@@ -3078,8 +3172,16 @@ ${e.hint}` : ""), code: e.kind });
     for (const e of scene.errors)
       add(e);
     if (!scene.errors.length) {
+      const spanOf = (v) => scene.voices.get(v)?.span ?? [...scene.sections.values()].find((s) => s.voices.has(v))?.voices.get(v)?.span;
+      const warned = new Set;
+      const onInexact = (v) => {
+        if (!warned.has(v)) {
+          warned.add(v);
+          add(new TineError("timing", INEXACT_MSG(v), spanOf(v)), 2);
+        }
+      };
       try {
-        renderNotes(scene, scene.form ? undefined : 2, { onError: (v, e) => add(new TineError("runtime", `voice ${v}: ${e.message}`, scene.voices.get(v)?.span ?? [...scene.sections.values()].find((s) => s.voices.has(v))?.voices.get(v)?.span)) });
+        renderNotes(scene, scene.form ? undefined : 2, { onInexact, onError: (v, e) => add(new TineError("runtime", `voice ${v}: ${e.message}`, scene.voices.get(v)?.span ?? [...scene.sections.values()].find((s) => s.voices.has(v))?.voices.get(v)?.span)) });
       } catch (e) {
         if (e instanceof TineError)
           add(e);
@@ -3340,7 +3442,7 @@ function startServer() {
               documentFormattingProvider: true,
               semanticTokensProvider: { legend: semanticLegend(), full: true }
             },
-            serverInfo: { name: "tine-lsp", version: "1.0.0" }
+            serverInfo: { name: "tine-lsp", version: VERSION }
           });
         case "initialized":
           return;

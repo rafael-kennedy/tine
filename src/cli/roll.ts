@@ -16,7 +16,7 @@ function lcmDen(xs: number[], cap = 48): number {
   return grid;
 }
 
-export function roll(notes: TimedNote[], bars: number, useColor = true, width = 64): string {
+export function roll(notes: TimedNote[], bars: number, useColor = true, width = 64, spelling?: "sharps" | "flats"): string {
   const c = color(useColor);
   if (!notes.length) return `${c.dim}(silence)${c.reset}`;
   let steps = lcmDen(notes.flatMap(n => [n.bar % 1, (n.bar + n.bars) % 1]));
@@ -25,7 +25,7 @@ export function roll(notes: TimedNote[], bars: number, useColor = true, width = 
   const cols = steps * bars;
   const rows = new Map<string, { semi: number; cells: string[] }>();
   for (const n of notes) {
-    const label = n.params.inst === "kit" ? drumName(Math.round(n.semi)) : pitchName(n.semi);
+    const label = n.params.inst === "kit" ? drumName(Math.round(n.semi)) : pitchName(n.semi, spelling);
     const key = `${label}`;
     if (!rows.has(key)) rows.set(key, { semi: n.semi, cells: Array(cols).fill(" ") });
     const r = rows.get(key)!;

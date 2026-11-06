@@ -8,7 +8,7 @@ A Tine file (`.tine`) is a list of statements, one per line. Blocks are indented
 | --- | --- |
 | `voice name = pattern` | A named part. Top-level voices loop forever. |
 | `let name = value` | Name a value. |
-| `let f(a, b) = expression` | Define a function. The body may be an indented block whose last line is the result. |
+| `let fn(x, y) = expression` | Define a function. The body may be an indented block whose last line is the result. |
 | `tempo 120` | Beats per minute, where a beat is the meter's denominator. |
 | `meter 7/8` | Beats per bar and the beat unit. Default 4/4. One bar is one cycle. |
 | `key d dorian` | The key that scale degrees resolve against. Default `c major`. |
@@ -95,14 +95,41 @@ Every random decision is a hash of the seed, the voice name, the random site, th
 | `.mpe` | one channel per note (2 to 16), so microtonal pitch bends do not collide |
 | `cc(n)` | controller n as a 0 to 1 signal |
 | `held(steps)` | notes held on the keyboard, as a chord |
+| `.ctl(74, v)` | send control change 74 (v from 0 to 1, a number, pattern or signal) before each note |
+| `.program(n)` | program change, 1 to 128 as General MIDI lists number them; sent only when it changes |
+| `sine(4).as_cc(74)` | a voice of control changes instead of notes, sampled 16 times a bar (`rate:` to change) |
 
-Fractional pitches are sent as pitch bend with a range of 2 semitones. Exported MIDI files contain one track per voice, tempo and meter, and the seed in a text event.
+Fractional pitches are sent as pitch bend with a range of 2 semitones, reset after each microtonal note. Exported MIDI files contain one track per voice, tempo and meter, program and control changes, and the seed in a text event.
+
+In the DAW's MIDI panel, *send MIDI clock* makes other gear follow Tine, and *follow MIDI clock* makes Tine follow other gear: its tempo (measured from the clock and smoothed), start, continue and stop. Following works on tempo and phase in live mode; in form mode it follows start and stop only.
+
+## Effects
+
+Each voice has a bus with four effects, always in this order: high-pass, low-pass, drive, delay. They act on the voice's mix, so a delay repeats the whole voice and drive distorts a chord as one sound.
+
+| Code | Effect |
+| --- | --- |
+| `.hpf(hz)` | high-pass filter: removes everything below hz |
+| `.lpf(hz)` | low-pass filter: removes everything above hz (`cutoff` instead filters each note inside the synth) |
+| `.drive(x)` | saturation from 0 (clean) to 1 (crushed) |
+| `.delay(mix, time: 3/16, feedback: .4)` | echo. time is in bars, so it follows the tempo; feedback sets how many repeats |
+
+Settings can be patterns or signals (`.lpf(sine(8).range(400, 3400))`), and the latest note sets the bus. Remove an effect from the code and it turns off at the next bar line.
+
+## State across bars
+
+`evolve(start, (state, bar) => next, (state, bar) => pattern)` keeps a value that changes from bar to bar, like a counter, a random walk or a voice-led chord. The state at bar n is the step applied n times to `start`, so any bar can be played in any order and always sounds the same. Without the third argument, the state itself is played. Each section starts again from `start`.
+
+```tine
+voice walk = evolve(c4, (p, bar) => p + pick([-2 -1 1 2]), (p, bar) => [p (p + 7) (p + 12) (p + 7)])
+```
 
 ## Command line
 
 ```
 tine                      REPL
 tine play | render | midi | roll | check  <file>
+tine xml <file>           MusicXML score for MuseScore, Dorico, Sibelius, Finale
 tine daw [file]           live-coding DAW in the browser
 tine learn                interactive tutorial
 tine pack <file>          single-file HTML player
@@ -121,7 +148,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | --- | --- |
 | `fast(p, n)` | Play p n times faster (n times per bar). |
 | `slow(p, n)` | Stretch p over n bars. |
-| `late(p, t)` | Delay p by t bars (1/8 = an eighth note in 4/4... of a bar). |
+| `late(p, t)` | Delay p by t bars: in 4/4, 1/8 is an eighth note. |
 | `early(p, t)` | Shift p earlier by t bars. |
 | `rev(p)` | Reverse p within each bar. On a list, reverses the list. |
 | `every(p, n, f, at: n-1)` | Apply f on one bar out of every n (the last one by default, where fills belong). |
@@ -139,6 +166,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `euclid(p, hits, steps, rot: 0)` | Spread `hits` events as evenly as possible over `steps` (Euclidean rhythm). |
 | `trunc(p, fraction)` | Play only the first fraction of each bar. |
 | `per_bar(bar => pattern)` | Build each bar from a function of the bar number. Randomness inside is keyed to the bar. |
+| `evolve(start, (state, bar) => next, (state, bar) => pattern)` | Carry state from bar to bar. Bar 0 plays view(start); each later bar's state is step(previous state, bar). Replayable: states are always computed forward from bar 0. |
 | `loop(p, bars)` | Repeat the first `bars` bars of p forever. |
 
 ### Chance
@@ -201,11 +229,18 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `decay(p, seconds)` | Envelope decay time. |
 | `sustain(p, level)` | Envelope sustain level 0 to 1. |
 | `reverb(p, amount)` | Send to the built-in reverb, 0 to 1. |
+| `hpf(p, hz)` | High-pass filter on the whole voice: removes rumble below hz. Unlike cutoff, which shapes each note, this filters the voice's mix. |
+| `lpf(p, hz)` | Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep. |
+| `drive(p, amount)` | Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp. |
+| `delay(p, mix, time: 3/16, feedback: .4)` | An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats. |
 | `dur(p, beats)` | Fixed note length in beats, independent of the step length. |
 | `set(p, name, value)` | Attach any named parameter to events (it is passed through to MIDI CC maps and exports). |
 | `inst(p, name, ...options)` | Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name. |
 | `sample(p, name, fit: false)` | Play a loaded audio sample (drop files into the DAW). With fit: true it is stretched to the event length, for loops. |
 | `midi(p, channel: 1, port: "")` | Send to an external MIDI device instead of the built-in synth. |
+| `ctl(p, number, value)` | Send a MIDI control change (value 0 to 1) just before each note. value may be a pattern or signal: .ctl(74, sine(4)). |
+| `program(p, n)` | Choose an instrument on external gear with a MIDI program change (1 to 128, as printed in General MIDI lists). It is sent only when it changes. |
+| `as_cc(p, number, rate: 16)` | Turn a voice of numbers (0 to 1) into MIDI control changes instead of notes: voice sweep = sine(4).as_cc(74).midi(1). A signal is sampled `rate` times per bar. |
 | `mpe(p)` | Send each note on its own MIDI channel (2 to 16) so microtonal pitch bends do not collide. |
 
 ### Input

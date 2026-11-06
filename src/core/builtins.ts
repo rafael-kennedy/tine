@@ -6,7 +6,7 @@ import { R, ONE, ZERO } from "./rational";
 import { Pitch, Degree, Key, Scale, CHORDS, SCALES } from "./pitch";
 import {
   Pat, Chord, Rest, REST, toPat, seq, stack, alt, fast, shift, rev, every, degrade, euclid, mapV, mapEv,
-  setParam, signal, segment, sampleAt, perBar, perBarSelect, filterEv, evRand, withCtx, arrange, silence, Ev, Ctx,
+  setParam, signal, segment, sampleAt, perBar, perBarSelect, evolve, filterEv, evRand, withCtx, arrange, silence, Ev, Ctx,
 } from "./pattern";
 import { rand01, hashStr } from "./rng";
 import { Env, Builtin, Closure, Rec, typeName, show, num, isNum, truthy, CallInfo } from "./values";
@@ -21,6 +21,7 @@ export function builtinList(): Builtin[] { return DEFS; }
 
 const P = (x: any) => toPat(x);
 const N = (x: any, d?: number) => (x === undefined ? d! : num(x));
+const clamp01 = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0);
 const RR = (x: any) => (x instanceof R ? x : R.of(num(x)));
 const need = (args: any[], n: number, sig: string) => { if (args.length < n) throw new TineError("type", `expected at least ${n} argument${n > 1 ? "s" : ""}`, undefined, `usage: ${sig}`); };
 
@@ -75,7 +76,7 @@ const cat = { time: "time", rand: "chance", pitch: "pitch", param: "sound", list
 // ===== time =====
 def("fast", "fast(p, n)", "Play p n times faster (n times per bar).", cat.time, ([p, n]) => fast(RR(n), P(p)));
 def("slow", "slow(p, n)", "Stretch p over n bars.", cat.time, ([p, n]) => fast(ONE.div(RR(n)), P(p)));
-def("late", "late(p, t)", "Delay p by t bars (1/8 = an eighth note in 4/4... of a bar).", cat.time, ([p, t]) => shift(RR(t), P(p)));
+def("late", "late(p, t)", "Delay p by t bars: in 4/4, 1/8 is an eighth note.", cat.time, ([p, t]) => shift(RR(t), P(p)));
 def("early", "early(p, t)", "Shift p earlier by t bars.", cat.time, ([p, t]) => shift(RR(t).neg(), P(p)));
 def("rev", "rev(p)", "Reverse p within each bar. On a list, reverses the list.", cat.time, ([p]) => {
   const q = P(p); const r = rev(q); if (q.items) r.items = [...q.items].reverse(); return r;
@@ -147,6 +148,12 @@ def("trunc", "trunc(p, fraction)", "Play only the first fraction of each bar.", 
 def("per_bar", "per_bar(bar => pattern)", "Build each bar from a function of the bar number. Randomness inside is keyed to the bar.", cat.time, ([f], _n, call) => {
   const salt = call.interp.salt();
   return perBar((c, ctx) => P(call.interp.callKeyed(f, [new R(c)], ctx, c, salt)));
+});
+def("evolve", "evolve(start, (state, bar) => next, (state, bar) => pattern)", "Carry state from bar to bar. Bar 0 plays view(start); each later bar's state is step(previous state, bar). Replayable: states are always computed forward from bar 0.", cat.time, ([init, step, view], _n, call) => {
+  const s1 = call.interp.salt(), s2 = call.interp.salt();
+  return evolve(init,
+    (st, bar, ctx) => call.interp.callKeyed(step, [st, new R(bar)], ctx, bar, s1),
+    (st, bar, ctx) => P(view === undefined ? st : call.interp.callKeyed(view, [st, new R(bar)], ctx, bar, s2)));
 });
 def("loop", "loop(p, bars)", "Repeat the first `bars` bars of p forever.", cat.time, ([p, b]) => {
   const n = Math.max(1, Math.round(N(b))), q = P(p);
@@ -369,6 +376,15 @@ param("release", "release(p, seconds)", "Envelope release time.");
 param("decay", "decay(p, seconds)", "Envelope decay time.");
 param("sustain", "sustain(p, level)", "Envelope sustain level 0 to 1.");
 param("reverb", "reverb(p, amount)", "Send to the built-in reverb, 0 to 1.");
+// ===== effects (per voice, on the voice's bus; see core/fx.ts) =====
+param("hpf", "hpf(p, hz)", "High-pass filter on the whole voice: removes rumble below hz. Unlike cutoff, which shapes each note, this filters the voice's mix.");
+param("lpf", "lpf(p, hz)", "Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep.");
+param("drive", "drive(p, amount)", "Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp.");
+def("delay", "delay(p, mix, time: 3/16, feedback: .4)", "An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats.", cat.param, ([p, mix, time, fb], named) => {
+  let q = setParam(P(p), "delay", mix ?? 0.3);
+  q = setParam(q, "delayTime", named.time ?? time ?? 3 / 16);
+  return setParam(q, "feedback", named.feedback ?? fb ?? 0.4);
+});
 def("dur", "dur(p, beats)", "Fixed note length in beats, independent of the step length.", cat.param, ([p, v]) => setParam(P(p), "durBeats", v));
 def("set", "set(p, name, value)", "Attach any named parameter to events (it is passed through to MIDI CC maps and exports).", cat.param, ([p, n, v]) => setParam(P(p), String(n), v));
 def("inst", "inst(p, name, ...options)", "Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name.", cat.param, ([p, name], named) => {
@@ -386,6 +402,24 @@ def("midi", "midi(p, channel: 1, port: \"\")", "Send to an external MIDI device 
   let q = setParam(P(p), "midi", Math.round(N(named.channel ?? ch, 1)));
   const pt = named.port ?? port; if (pt !== undefined) q = setParam(q, "port", String(pt));
   return q;
+});
+def("ctl", "ctl(p, number, value)", "Send a MIDI control change (value 0 to 1) just before each note. value may be a pattern or signal: .ctl(74, sine(4)).", cat.param, ([p, n, v], _named, call) => {
+  need([p, n, v], 3, "ctl(p, number, value)");
+  const k = Math.max(0, Math.min(127, Math.round(N(n))));
+  return mapEv(P(p), (ev, ctx) => ({ ...ev, p: { ...ev.p, ctl: { ...(ev.p.ctl ?? {}), [k]: clamp01(num(sampleAt(v, ev.s, ctx))) } } }));
+});
+def("program", "program(p, n)", "Choose an instrument on external gear with a MIDI program change (1 to 128, as printed in General MIDI lists). It is sent only when it changes.", cat.param, ([p, n]) => {
+  return mapEv(P(p), (ev, ctx) => ({ ...ev, p: { ...ev.p, program: Math.max(1, Math.min(128, Math.round(num(sampleAt(n, ev.s, ctx))))) } }));
+});
+def("as_cc", "as_cc(p, number, rate: 16)", "Turn a voice of numbers (0 to 1) into MIDI control changes instead of notes: voice sweep = sine(4).as_cc(74).midi(1). A signal is sampled `rate` times per bar.", cat.param, ([p, n, r], named) => {
+  const k = Math.max(0, Math.min(127, Math.round(N(n))));
+  let q = P(p);
+  if (q.sig) q = segment(Math.max(1, Math.round(N(named.rate ?? r, 16))), q);
+  return mapEv(q, ev => {
+    const v = ev.v instanceof R ? ev.v.toNumber() : ev.v;
+    if (typeof v !== "number") throw new TineError("type", `as_cc needs numbers from 0 to 1, got ${typeName(ev.v)}`, undefined, "try a signal like sine(4), or a phrase of numbers like [0 .5 1]");
+    return { ...ev, v: 0, p: { ...ev.p, ccOut: k, ccValue: clamp01(v) } };
+  });
 });
 def("mpe", "mpe(p)", "Send each note on its own MIDI channel (2 to 16) so microtonal pitch bends do not collide.", cat.param, ([p]) => setParam(P(p), "mpe", true));
 def("cc", "cc(number, channel: any)", "A live signal (0 to 1) from a MIDI controller knob or fader.", cat.io, ([n, ch]) => {

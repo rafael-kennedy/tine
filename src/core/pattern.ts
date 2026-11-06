@@ -174,6 +174,32 @@ export function perBar(fn: (bar: number, ctx: Ctx) => Pat): Pat {
   });
 }
 
+// State carried from bar to bar, without giving up replayability: the state
+// at bar n is step(state at n-1, n), always computed forward from bar 0 and
+// memoized. Looking ahead, rewinding or querying out of order therefore
+// gives exactly the same states as playing straight through.
+export const MAX_EVOLVE_BARS = 100_000;
+export function evolve(init: any, step: (state: any, bar: number, ctx: Ctx) => any, view: (state: any, bar: number, ctx: Ctx) => Pat): Pat {
+  const states = new Map<string, any[]>();
+  const views = new Map<string, Pat>();
+  const stateAt = (c: number, ctx: Ctx) => {
+    if (c < 0) return init;
+    if (c > MAX_EVOLVE_BARS) throw new Error(`evolve can look ahead at most ${MAX_EVOLVE_BARS} bars`);
+    const k = `${ctx.seed}|${ctx.voice}|${ctx.offset}`;
+    let arr = states.get(k);
+    if (!arr) { arr = [init]; states.set(k, arr); if (states.size > 32) states.delete(states.keys().next().value!); }
+    // arr[i] is the state at bar i; bar 0 starts from init
+    while (arr.length <= c) arr.push(step(arr[arr.length - 1], arr.length, ctx));
+    return arr[c];
+  };
+  return perBarSelect((c, ctx) => {
+    const k = `${ctx.seed}|${ctx.voice}|${ctx.offset}|${c}`;
+    let p = views.get(k);
+    if (!p) { p = view(stateAt(c, ctx), c, ctx); views.set(k, p); if (views.size > 256) views.delete(views.keys().next().value!); }
+    return p;
+  });
+}
+
 export function mapEv(p: Pat, f: (ev: Ev, ctx: Ctx) => Ev | null): Pat {
   const np = new Pat((a, b, ctx) => {
     const out: Ev[] = [];

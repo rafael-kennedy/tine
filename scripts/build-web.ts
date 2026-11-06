@@ -16,6 +16,11 @@ const apps = [
   { name: "player", entry: "src/web/player.ts", title: "Tine Player", desc: "A piece made with Tine." },
 ];
 
+// The synthesis worker travels inside each page as text and starts from a Blob URL.
+const wres = await Bun.build({ entrypoints: [join(root, "src/web/synth-worker.ts")], target: "browser", minify: true, format: "esm" });
+if (!wres.success) { for (const l of wres.logs) console.error(l); process.exit(1); }
+const WORKER = `<script type="text/js-worker" id="tine-synth-worker">${(await wres.outputs[0].text()).replace(/<\/script/gi, "<\\/script")}</script>`;
+
 const out: Record<string, string> = {};
 for (const app of apps) {
   if (!existsSync(join(root, app.entry))) { console.log(`skip ${app.name}`); continue; }
@@ -23,7 +28,7 @@ for (const app of apps) {
   if (!res.success) { for (const l of res.logs) console.error(l); process.exit(1); }
   const js = (await res.outputs[0].text()).replace(/<\/script/gi, "<\\/script");
   const extra = app.name === "player" ? `<script type="text/tine" id="piece"></script>` : "";
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${app.title}</title><meta name="description" content="${app.desc}">${FAVICON}${FONTS}</head><body>${extra}<script type="module">${js}</script></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${app.title}</title><meta name="description" content="${app.desc}">${FAVICON}${FONTS}</head><body>${extra}${WORKER}<script type="module">${js}</script></body></html>`;
   writeFileSync(join(dist, `${app.name}.html`), html);
   out[app.name] = html;
   console.log(`dist/${app.name}.html  ${(html.length / 1024).toFixed(0)} KB`);

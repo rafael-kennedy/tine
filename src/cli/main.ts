@@ -4,7 +4,7 @@
 // language server, so a performer installs exactly one thing.
 import { readFileSync, writeFileSync, existsSync, watch, statSync } from "node:fs";
 import { resolve, dirname, basename, extname, join } from "node:path";
-import { evaluate, formatError, renderNotes, toMidiFile, randomSeed, VERSION, timeline, pitchName, Scene, TineError, lineCol } from "../core";
+import { evaluate, formatError, renderNotes, toMidiFile, toMusicXml, randomSeed, VERSION, timeline, pitchName, keySpelling, Scene, TineError, lineCol } from "../core";
 import { repl } from "./repl";
 import { renderToWav, playWav, openBrowser, loadSamples } from "./audio";
 import { roll } from "./roll";
@@ -13,6 +13,7 @@ import * as assets from "./assets.gen";
 const tty = process.stdout.isTTY ?? false;
 const red = (s: string) => (tty ? `\x1b[31m${s}\x1b[0m` : s);
 const dim = (s: string) => (tty ? `\x1b[2m${s}\x1b[0m` : s);
+const yellow = (s: string) => (tty ? `\x1b[33m${s}\x1b[0m` : s);
 
 const USAGE = `tine ${VERSION}: a programming language for music
 
@@ -22,6 +23,7 @@ usage:
   tine play <file>             render and play through your speakers
   tine render <file> [-o out.wav]   render to a WAV file
   tine midi <file> [-o out.mid]     export a Standard MIDI File
+  tine xml <file> [-o out.musicxml] export a score for MuseScore, Dorico, Sibelius
   tine check <file>            report problems (exit code 1 if any)
   tine roll <file> [--bars N]  draw the piece as a piano roll in the terminal
   tine daw [file]              open the live-coding DAW in your browser
@@ -53,10 +55,13 @@ function args() {
   return { cmd: pos[0], pos: pos.slice(1), flags };
 }
 
+let loaded: { src: string; file: string } | null = null; // for errors raised while the music plays
+
 function load(file: string, flags: Record<string, any>): { scene: Scene; src: string } {
   if (!file) { console.error("missing file argument"); process.exit(2); }
   if (!existsSync(file)) { console.error(`no such file: ${file}`); process.exit(2); }
   const src = readFileSync(file, "utf8");
+  loaded = { src, file };
   const seed = flags.seed !== undefined ? parseInt(flags.seed, 10) : randomSeed();
   try {
     const scene = evaluate(src, { seed, readFile: p => readFileSync(resolve(dirname(file), p), "utf8") });
@@ -85,7 +90,9 @@ async function main() {
       for (const e of scene.errors) console.error(red(formatError(src, e, file)));
       if (scene.errors.length) process.exit(1);
       // query a few bars so runtime errors inside patterns surface too
-      try { renderNotes(scene, bars ?? 4); } catch (e) { console.error(red(formatError(src, e, file))); process.exit(1); }
+      const inexact = new Map<string, number>();
+      try { renderNotes(scene, bars ?? 4, { onInexact: (v, k) => inexact.set(v, (inexact.get(v) ?? 0) + k) }); } catch (e) { console.error(red(formatError(src, e, file))); process.exit(1); }
+      for (const v of inexact.keys()) console.error(yellow(`warning: voice ${v}: its timing needs fractions too large to keep exact, so some times are rounded (by at most a millionth of a bar). It plays, but a note can miss a bar line by that much. Simpler ratios keep it exact.`));
       console.log(`${file}: ok (${scene.voices.size} voice${scene.voices.size === 1 ? "" : "s"}, ${scene.sections.size} section${scene.sections.size === 1 ? "" : "s"})`);
       return;
     }
@@ -106,6 +113,14 @@ async function main() {
       console.log(`wrote ${out}: ${notes.length} notes on ${new Set(notes.map(n => n.voice)).size} tracks, seed ${scene.seed}`);
       return;
     }
+    case "xml": {
+      const { scene } = load(pos[0], flags);
+      const r = renderNotes(scene, bars);
+      const out = outName(pos[0], ".musicxml", flags);
+      writeFileSync(out, toMusicXml(scene, r.notes, Math.ceil(r.bars), basename(pos[0] ?? "piece", ".tine")));
+      console.log(`wrote ${out}: ${Math.ceil(r.bars)} bars, ${new Set(r.notes.filter(n => n.params.ccOut === undefined).map(n => n.voice)).size} parts, seed ${scene.seed}`);
+      return;
+    }
     case "play": {
       const { scene } = load(pos[0], flags);
       const { wav, seconds } = renderToWav(scene, bars, 44100, loadSamples(flags.samples as string));
@@ -118,7 +133,7 @@ async function main() {
       const b = bars ?? (scene.form ? Math.min(timeline(scene).bars, 4) : 2);
       const { notes } = renderNotes(scene, b);
       const voices = [...new Set(notes.map(n => n.voice))];
-      for (const v of voices) { console.log(`\n${tty ? "\x1b[1m" : ""}${v}${tty ? "\x1b[0m" : ""}`); console.log(roll(notes.filter(n => n.voice === v), b, tty, 96)); }
+      for (const v of voices) { console.log(`\n${tty ? "\x1b[1m" : ""}${v}${tty ? "\x1b[0m" : ""}`); console.log(roll(notes.filter(n => n.voice === v), b, tty, 96, keySpelling(scene.key))); }
       console.log(dim(`\nseed ${scene.seed}`));
       return;
     }
@@ -222,7 +237,7 @@ async function pack(file: string, flags: Record<string, any>) {
       const { spawnSync } = await import("node:child_process");
       spawnSync("codesign", ["--remove-signature", out]); spawnSync("codesign", ["-s", "-", out]);
     }
-    console.log(`wrote ${out}: a standalone executable that plays '${title}' (seed ${scene.seed}). Run it with no arguments, or with 'render' or 'midi'.`);
+    console.log(`wrote ${out}: a standalone executable that plays '${title}' (seed ${scene.seed}). Run it with no arguments, or with 'render', 'midi' or 'xml'.`);
     return;
   }
   const out = outName(file, ".html", flags);
@@ -258,10 +273,15 @@ if (piece) {
   const tmp = join(mkdtempSync(join(tmpdir(), "tine-piece-")), `${piece.title}.tine`);
   writeFileSync(tmp, piece.src);
   const sub = process.argv[2];
-  if (sub === "render" || sub === "midi" || sub === "roll" || sub === "daw") {
+  if (sub === "render" || sub === "midi" || sub === "xml" || sub === "roll" || sub === "daw") {
     process.argv.splice(3, 0, tmp);
-    if ((sub === "render" || sub === "midi") && !process.argv.includes("-o")) process.argv.push("-o", `${piece.title}.${sub === "render" ? "wav" : "mid"}`);
+    if ((sub === "render" || sub === "midi" || sub === "xml") && !process.argv.includes("-o")) process.argv.push("-o", `${piece.title}.${sub === "render" ? "wav" : sub === "xml" ? "musicxml" : "mid"}`);
   }
-  else { console.log(`${piece.title}  ${dim("(a piece made with Tine; try 'render', 'midi' or 'daw' as an argument)")}`); process.argv.splice(2, process.argv.length, "play", tmp); }
+  else { console.log(`${piece.title}  ${dim("(a piece made with Tine; try 'render', 'midi', 'xml' or 'daw' as an argument)")}`); process.argv.splice(2, process.argv.length, "play", tmp); }
 }
-main();
+main().catch(e => {
+  // a pattern can fail only when it is queried (render, midi, xml, roll): show it like any other error
+  if (e instanceof TineError && loaded) { console.error(red(formatError(loaded.src, e, loaded.file))); process.exit(1); }
+  console.error(red(`tine: ${e instanceof Error ? e.message : String(e)}`));
+  process.exit(1);
+});

@@ -40,8 +40,13 @@ export class R {
     }
     return new R(sign * h1, k1);
   }
+  // How many results were too big to keep exact (past 2^53) and were rounded
+  // to the nearest fraction with a denominator up to a million: an error of at
+  // most a millionth of a bar (two microseconds at 120 bpm), usually far less. The checker and the language server read this and
+  // warn, because a rounded time can miss an exact bar line by that much.
+  static inexact = 0;
   private static safe(n: number, d: number): R {
-    if (Math.abs(n) > SAFE || Math.abs(d) > SAFE) return R.approx(n / d);
+    if (Math.abs(n) > SAFE || Math.abs(d) > SAFE) { R.inexact++; return R.approx(n / d); }
     return new R(n, d);
   }
   add(o: R): R { return R.safe(this.n * o.d + o.n * this.d, this.d * o.d); }

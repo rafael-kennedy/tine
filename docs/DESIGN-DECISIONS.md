@@ -208,7 +208,7 @@ See `brand/BRAND.md`. Brass and teal on near-black ink; Fraunces for the wordmar
 
 ## 22. Testing
 
-Ninety-plus tests cover the core (timing, phrases, pitch, microtonality, every transform), the randomness guarantees (replay, order independence, slice independence, voice isolation), sections and form, errors and suggestions, the language server over a real stdio session, every tutorial example and exercise, and every example piece.
+A hundred and twenty tests cover the core (timing, phrases, pitch, microtonality, every transform), the randomness guarantees (replay, order independence, slice independence, voice isolation), sections and form, errors and suggestions, the language server over a real stdio session, every tutorial example and exercise, every example piece, the MIDI messages each note becomes, clock following, effects, and the MusicXML writer.
 
 ## 23. Known limits
 
@@ -216,4 +216,83 @@ Ninety-plus tests cover the core (timing, phrases, pitch, microtonality, every t
 - Web MIDI is unavailable in Safari, so live MIDI in the DAW needs Chrome, Edge, Opera, or Firefox with a permission prompt. Rendering and MIDI file export work everywhere.
 - Note names reserving `a` to `g` will occasionally surprise a programmer. The error message says exactly what happened.
 - Patterns lose their "list-ness" after sound parameters are set (`.inst`, `.vel`), so list functions like `scramble` must come before those in a chain. The error message points to it.
-- There is no MIDI clock *input* yet: Tine can lead other gear but not follow it.
+- No Ableton Link (section 25). MIDI clock in and out covers sync with hardware and other DAWs.
+- Following MIDI clock adjusts tempo and phase in live mode only; in form mode it follows start and stop, because the arrangement owns the tempo.
+- Tempo changes are steps between sections. There is no gradual accelerando or ritardando yet.
+- MusicXML export writes tuplets as time modifications without bracket marks, writes drum parts as unpitched notes at their General MIDI pitch, and does not attempt beaming. Scores import correctly; engraving is left to the notation program.
+- There is no choir or formant voice, and lists cannot yet hold lists.
+
+---
+
+# Tine 1.1
+
+These came from a comparison with other music languages (`docs/COMPARISON.md`), which ranked the gaps that mattered most to performers and composers. Each decision below says what was chosen, what was rejected, and why.
+
+## 24. Talking to gear: control changes, program changes, clock in
+
+- `.ctl(74, sine(4))` sends a control change just before each note, so a knob on a hardware synth moves with the music. The value is 0 to 1, the same range `cc()` reads, so a controller can be read and written with one scale.
+- `.program(n)` sends a program change, numbered 1 to 128 as General MIDI lists print them (MIDI sends 0 to 127). It is sent only when it changes on that channel, because some synths glitch on a repeated program change.
+- `.as_cc(74)` turns a whole voice of numbers into control changes instead of notes: `voice sweep = sine(4).as_cc(74).midi(1)`. A signal is sampled `rate` times per bar (16 by default). Such a voice never sounds in the built-in synth and is hidden from the piano roll.
+- One function, `noteMessages`, decides what bytes a note becomes. The live engine and the MIDI file writer both call it, so what you hear from gear and what another DAW imports are the same. It also resets pitch bend after a microtonal note, which 1.0 forgot to do.
+- **MIDI clock in.** "Follow MIDI clock" in the DAW makes Tine the follower: start, continue and stop come from the other device, and the tempo is measured from its clock ticks. Clock ticks arrive 24 per beat, and USB MIDI jitters by a millisecond or so, so the tempo is a least-squares line fitted through the last two beats of ticks rather than the gap between the last two. That gives a steady reading within a fraction of a BPM. Once a beat, Tine also nudges its bar line a third of the way toward where the clock says it is, so it stays in phase without audible jumps.
+- Following and sending clock are mutually exclusive in the DAW, so two machines can never chase each other.
+
+## 25. Ableton Link: deferred, on purpose
+
+Link keeps several apps on a network in tempo and phase. It was ranked first alongside MIDI, and it is not in 1.1. The reasons:
+
+- Browsers cannot do it. Link runs over UDP multicast on the local network, and no browser API can send or receive that. The DAW lives in a browser.
+- The `tine` binary could do it, as a bridge between Link and the browser, but it would need a reimplementation of the Link protocol in TypeScript. Ableton publishes Link as a C++ library under GPL; a clean-room implementation that has never been tested against real Link peers would be a sync feature that fails on stage, which is worse than none.
+- MIDI clock covers the same need for most setups: every DAW and drum machine sends and follows it, and Tine now does both.
+
+The plan, recorded so it is not lost: a `tine link` bridge inside the binary that speaks Link on the network and talks to the DAW page over the WebSocket the file watcher already uses, once it can be tested against Ableton Live.
+
+## 26. Synthesis moved off the main thread
+
+In 1.0 every note's audio was computed on the browser's main thread, the same thread that runs the editor. A dense passage could make typing stutter, or a note late.
+
+- **Chosen: a Web Worker that renders ahead.** The scheduler already looks 120 ms ahead to place notes. It now also looks 0.6 s further and sends those notes to a background thread, which renders them with the very same `renderNote` function and hands the audio back without copying it (a "transferable" buffer). By the time a note is due, its sound is usually waiting in a cache.
+- **Rejected: an AudioWorklet.** A worklet runs inside the audio thread itself, which is the textbook place for synthesis. But it would mean rewriting the mixer, voice allocation, envelopes and effects as a real-time engine that must never allocate memory or take too long, while the browser's own nodes (filters, delay, convolution reverb) do much of that work well today. The worker keeps one synth for the CLI, the WAV export and the browser, which is the property 1.0 was built around.
+- **Fallback.** A note whose sound has not arrived is rendered on the main thread, exactly as in 1.0: late work, never silence. A page that forbids workers (some embeds do) simply behaves like 1.0. The engine counts notes that were ready ("ahead") and notes that were not ("late"); in a browser test, only the notes in the first tenth of a second after pressing play were late.
+- Moving rendering between threads exposed a replay bug: the noise generator for drums kept running from note to note, so a snare could sound slightly different depending on what was rendered before it. Noise now restarts from the note's own pitch every time.
+
+## 27. Per-voice effects
+
+- `.hpf(hz)`, `.lpf(hz)`, `.drive(amount)` and `.delay(mix, time: 3/16, feedback: .4)` act on a voice's **bus**, after its notes are mixed. A delay repeats the whole voice and drive saturates a chord as one sound, like an amp. This is different from `cutoff`, which shapes each note inside the synth, and the docs say so.
+- The order is fixed: high-pass, low-pass, drive, delay. Fixed order is less flexible than a patchable effects rack, but it is the order a guitarist's pedalboard and most channel strips use, it never produces a surprising result, and it needs no syntax for routing.
+- Delay time is in bars, like all time in Tine, so `3/16` is a dotted eighth in 4/4 and stays in time when the tempo changes. It becomes seconds once, when notes are made.
+- Settings ride on the notes. The latest note sets the bus, and a note with no effect parameters puts the bus back to neutral. So deleting `.delay(...)` from the code turns the echo off at the next bar line, the same way every other change behaves.
+- There are two implementations of one design: Web Audio nodes in the DAW, and a sample-by-sample version in `core/fx.ts` for WAV export. The filters use the same Butterworth formula as the browser's, and drive is the same curve, so a render sounds like the performance.
+- The browser keeps each voice's chain once created, so echoes ring out across code swaps instead of being cut.
+
+## 28. State that replays: `evolve`
+
+- Live coders asked for "a value that changes every bar based on last bar", like a random walk, a counter, or a chord that leads smoothly into the next. A plain variable cannot do that in Tine, because patterns are pure functions of time and can be asked for bar 37 before bar 36.
+- `evolve(start, (state, bar) => next, (state, bar) => pattern)` defines the state at bar *n* as the step function applied *n* times to the start. It is a fold over bars. Asking for bar 37 computes bars 1 to 37 once and remembers them, so any bar can be asked in any order, and the result is always the same. That keeps seeking, looping, rendering a slice and replaying a take exact.
+- The memory is keyed by seed, voice and section start, so a section restarts its state when it starts, and two voices never share a walk. Randomness inside the step is keyed by bar, so a seeded random walk replays exactly.
+- Cost is linear in how far into the piece you are, once. A cap of 100,000 bars stops a mistake from eating memory; that is over two days of music at 120 BPM.
+- The jazz course's `voicelead` (smooth chord voicing, where each chord depends on the last) is being moved onto it, which is the test that it is general enough.
+
+## 29. MusicXML export
+
+- `tine xml piece.tine` writes a MusicXML 4.0 score with one part per voice, for MuseScore, Dorico, Sibelius and Finale. Every example piece's score was checked against the official MusicXML 4.0 schema.
+- **Exact rhythm.** MusicXML counts time in "divisions" per quarter note. Tine computes the least common multiple of every denominator in the piece, so a quintuplet against a triplet, or a 7-tuplet in 7/8, lands on whole numbers with no rounding. If that number would pass 100,000 (generative pieces with nudged timing can do this), the score falls back to a fine 480-per-quarter grid.
+- Notes across bar lines are split and tied. Lengths that are not plain or dotted values become tied chains (five sixteenths is a quarter tied to a sixteenth), and non-binary lengths become one tuplet note with its ratio.
+- Overlapping notes of different lengths in one voice go into separate notation voices in the same staff; notes that start and end together become chords.
+- **Spelling follows the key**: B minor writes A sharp, F major writes B flat. Microtones keep their cents as a decimal `<alter>`, which MusicXML allows; how each notation program displays them varies.
+- Velocity becomes each note's dynamics attribute, section names become rehearsal marks, tempo changes become metronome marks, and the seed is stored in the file.
+
+## 30. Rounded time is reported
+
+- Tine's time is exact fractions stored in ordinary numbers. Past 2^53 (about nine quadrillion) a numerator or denominator cannot be stored exactly, and 1.0 silently rounded to the nearest fraction with a denominator up to a million.
+- **Chosen: keep the fast path and warn.** Every rounding is counted, per voice. `tine check` prints a warning naming the voice, and the language server underlines it as a warning while you type. The error is at most a millionth of a bar, two microseconds at 120 BPM, but a rounded time can miss an exact bar line, and the composer should know their rhythm is no longer exact.
+- **Rejected: BigInt fractions.** They would never round, but every time calculation in every voice would get several times slower, to protect pieces that almost nobody writes. It takes deliberately extreme rhythm, like offsets of 1/999983 stacked three deep, to reach the limit.
+
+## 31. Error fixes from writing a real piece
+
+An arrangement written in Tine against 1.0 found three rough edges, now fixed:
+
+- An error that only happens when music is made (inside `per_bar`, say) crashed `render`, `midi` and `roll` with a raw stack trace. Every command now prints it like any other error, with the line and a hint.
+- Naming a parameter `f` (a note) now suggests a rename, `fn`, instead of only saying it is not allowed.
+- The terminal piano roll spells notes by the file's key, so B minor shows `a#` and not `bb`.
+

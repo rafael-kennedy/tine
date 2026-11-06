@@ -97,6 +97,9 @@ function defaultsFor(inst: string) {
 export function renderNote(spec: NoteSpec, sr: number): Float32Array {
   const len = Math.max(1, Math.ceil(noteLength(spec) * sr));
   const out = new Float32Array(len);
+  // Noise restarts for every note, so a note sounds the same whichever thread
+  // renders it and in whatever order.
+  noiseSeed = (22222 + Math.round(spec.semi * 1000) * 7919) >>> 0;
   const p = spec.params;
   const amp = Math.pow(spec.vel, 1.3) * Number(p.gain ?? 1) * 0.32;
   const d = defaultsFor(spec.inst);

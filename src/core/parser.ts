@@ -43,6 +43,13 @@ export function parse(src: string): Program {
   return { stmts: p.program(), src };
 }
 
+// a through g are notes, so `f` or `bb` cannot name a value. Offer a name that reads the same.
+const RENAMES: Record<string, string> = { a: "amt", b: "base", c: "count", d: "deg", e: "ev", f: "fn", g: "gen" };
+function renameHint(name: string): string {
+  const alt = RENAMES[name.toLowerCase()] ?? `${name}_`;
+  return `rename it, for example to '${alt}' (a to g, with # or b and an octave, always mean notes)`;
+}
+
 class Parser {
   i = 0;
   constructor(public src: string, public toks: Token[]) {}
@@ -120,7 +127,7 @@ class Parser {
     if (this.isKw("let")) {
       this.next();
       const nameTok = this.tok;
-      if (nameTok.type !== "ident") this.err(nameTok.type === "note" ? `'${nameTok.text}' is a note name and cannot be used as a variable` : "expected a name after 'let'", nameTok);
+      if (nameTok.type !== "ident") this.err(nameTok.type === "note" ? `'${nameTok.text}' is a note name and cannot be used as a variable` : "expected a name after 'let'", nameTok, nameTok.type === "note" ? renameHint(nameTok.text) : undefined);
       this.next();
       let params: string[] | null = null;
       if (this.isOp("(")) params = this.paramList();
@@ -198,7 +205,7 @@ class Parser {
     const ps: string[] = [];
     while (!this.isOp(")")) {
       const t = this.tok;
-      if (t.type !== "ident") this.err(t.type === "note" ? `'${t.text}' is a note name and cannot be a parameter` : "expected a parameter name", t);
+      if (t.type !== "ident") this.err(t.type === "note" ? `'${t.text}' is a note name and cannot be a parameter` : "expected a parameter name", t, t.type === "note" ? renameHint(t.text) : undefined);
       ps.push(t.text); this.next();
       if (this.isOp(",")) this.next(); else if (!this.isOp(")")) this.err("expected ',' or ')'");
     }
@@ -224,7 +231,7 @@ class Parser {
       return { t: "if", c, a, b, span: sp(this.spanOf(s), b.span) };
     }
     // lambda: x => ...
-    if (this.tok.type === "note" && this.isOp("=>", this.peek())) this.err(`'${this.tok.text}' is a note name and cannot be a parameter`, this.tok, "try a longer name, like x or p");
+    if (this.tok.type === "note" && this.isOp("=>", this.peek())) this.err(`'${this.tok.text}' is a note name and cannot be a parameter`, this.tok, renameHint(this.tok.text));
     if (this.tok.type === "ident" && this.isOp("=>", this.peek())) {
       const s = this.next(); this.next();
       const body = this.expr();
