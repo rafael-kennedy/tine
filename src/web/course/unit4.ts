@@ -1,6 +1,7 @@
 // Unit 4, Theory 202: jazz harmony in depth, and a first step past tonality.
 import type { Unit } from "./types";
-import { of, inBar, groups, need, expectChords, barChords, nms, nm, pc, pcset, line } from "./check";
+import { of, inBar, groups, need, expectChords, barChords, nms, nm, pc, pcset, line, fits, rootHeard } from "./check";
+const NM = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 import { pitchName } from "../../core";
 
 const subset = (semis: number[], pcs: number[]) => { const s = new Set(pcs.map(x => ((x % 12) + 12) % 12)); return semis.every(x => s.has(pc(x))); };
@@ -30,7 +31,7 @@ export const UNIT4: Unit = {
         { code: `-- G13 to C, then G7alt to C.\n-- Change g3@7alt to g3@7b9: Eb becomes E, so only one altered tension (Ab) is left, and the pull is milder.\ntempo 90\nvoice comp = <g3@13 c3@maj9 g3@7alt c3@maj9>.rootless.voicelead\nvoice bass = <g1 c2 g1 c2>.inst(upright)`, bars: 4 },
         `<p>Dominant chords take the widest range of tensions, because their job is tension. Natural 9 and 13 sound sweet and bluesy. Altered tensions (b9, #9, b13) sound urgent and dark, and they lead by half step into the notes of the tonic: Ab to G, Eb to E.</p>`,
         { code: `-- G13 as four notes: root and 7th low, 3rd and 13th high. Then Cmaj9 without its 5th.\n-- Change e4 to d4: that is plain G7 (root, 7, 3, 5), and the color is gone.\nvoice g13 = <{g2 f3 b3 e4} {c3 e3 b3 d4}>.inst(keys)`, bars: 2 },
-        `<p>Pianists don't play every note of a 13th chord. That shape is common: the root and seventh in the left hand, the third and the tension in the right. The 5th and 9th are the least necessary notes, and the ear fills them in. The 11th stays out because it clashes with the 3rd.</p>`,
+        `<p>Pianists don't play every note of a 13th chord. That shape is common: the root and seventh in the left hand, the third and the tension in the right. The 5th adds the least, because the root already implies it. The 9th is optional. The 11th stays out because it clashes with the 3rd.</p>`,
         { code: `-- Partly done: root, 7th and 3rd of C7. Add the 13th (A) on top, a4, to make C13.\nvoice comp = {c3 bb3 e4}.inst(keys)` },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: a <b>D13</b> voicing that contains the root, 3rd, 7th and 13th (D, F#, C, B) and does <b>not</b> contain the avoid note G.</p>`,
@@ -85,7 +86,7 @@ export const UNIT4: Unit = {
             if (l.length !== 8) return `That is ${l.length} notes; write 8.`;
             const dor = [2, 4, 5, 7, 9, 11, 0];
             const bad = l.find(x => !subset([x], dor));
-            if (bad !== undefined) return `${nm(bad, "sharps")} is not in D dorian.`;
+            if (bad !== undefined) return `${["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"][pc(bad)]} is not in D dorian (D E F G A B C).`;
             return l.some(x => pc(x) === 11) ? null : "Every note is in the mode, but there is no B natural, the note that makes it dorian rather than aeolian.";
           },
         } },
@@ -113,6 +114,7 @@ export const UNIT4: Unit = {
          <tr><td>5 mixolydian b6</td><td><code>mixolydian_b6</code></td><td>7b13</td></tr>
          <tr><td>6 locrian natural 2</td><td><code>locrian_nat2</code></td><td>m7b5 (iiø7)</td></tr>
          <tr><td>7 altered</td><td><code>altered</code></td><td>7alt: b9, #9, b13, and the b5</td></tr></table>`,
+        { code: `-- Melodic minor's seven modes, all on C, one per bar.\n-- Change c4 to g4 and c2 to g2 to hear the same seven from G.\nlet mm = [melodic_minor dorian_b2 lydian_augmented lydian_dominant mixolydian_b6 locrian_nat2 altered]\nvoice m = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(c4, at(mm, bar))).inst(vibes)\nvoice drone = c2.inst(pad).vel(.3)`, bars: 7 },
         { code: `-- Dm9, Db7#11 (the tritone sub), Cmaj9, with a Db lydian dominant line in bar 2.\n-- Change lydian_dominant to mixolydian: the G in the line becomes Gb, and the link to the original G7 is lost.\ntempo 120\nvoice comp = <d3@m9.rootless {f3 g3 b3 eb4} c3@maj9.rootless .>.voicelead.vel(.5)\nvoice bass = <d2 db2 c2 .>.inst(upright)\nvoice line = <[^1 ^3 ^5 ^7 ^9 ^7 ^5 ^3].key(d4, dorian) [^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(db4, lydian_dominant) [^3 _ _ _ . . . .].key(c4, major) [.]>.swing.inst(vibes)`, bars: 4 },
         `<p><b>Lydian dominant</b> is mixolydian with a raised 4th, the natural scale for a tritone substitute. Over Db7, its raised 4th is G, the root of the chord it replaces.</p>`,
         { code: `-- A whole-tone scale over C7#5.\n-- Change whole_tone to half_whole and c3@7#5 to c3@7b9: the other symmetric dominant sound.\nvoice whole = [^1 ^2 ^3 ^4 ^5 ^6 ^7 .].key(c4, whole_tone).inst(vibes)\nvoice comp  = c3@7#5.vel(.4)` },
@@ -120,9 +122,8 @@ export const UNIT4: Unit = {
          <ul><li><b>Whole tone</b>, for 7#5 and 9#5. It has only two transpositions.</li>
          <li><b>Half-whole diminished</b>, for 7b9 chords with a natural 13.</li>
          <li><b>Whole-half diminished</b>, for diminished seventh chords.</li></ul>
-         <p>Each diminished scale has only three transpositions.</p>
-         <p>Melodic minor's other modes cover a whole minor ii-V-i. Over Dm7b5, G7alt and CmMaj7 the line moves from D locrian natural 2 to G altered to C melodic minor.</p>`,
-        { code: `-- A minor ii-V-i in C: D locrian natural 2, G altered, C melodic minor.\n-- Change locrian_nat2 to locrian: E becomes Eb, a half step above the root, the b9 the table calls an avoid note.\ntempo 120\nvoice comp = <{c4 f4 ab4} g3@7alt.rootless c3@mmaj7.rootless .>.voicelead.vel(.5)\nvoice bass = <d2 g1 c2 .>.inst(upright)\nvoice line = <[^1 ^2 ^3 ^4 ^5 ^4 ^3 ^2].key(d4, locrian_nat2) [^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(g4, altered) [^3 _ _ _ . . . .].key(c4, melodic_minor) [.]>.swing.inst(vibes)`, bars: 4 },
+         <p>Each diminished scale has only three transpositions.</p>`,
+        { code: `-- A minor ii-V-i in C. Melodic minor's modes cover all three chords: D locrian natural 2, G altered, C melodic minor.\n-- Change locrian_nat2 to locrian: E becomes Eb, the b9, an avoid note on m7b5 (see the tensions lesson).\ntempo 120\nvoice comp = <{c4 f4 ab4} g3@7alt.rootless c3@mmaj7.rootless .>.voicelead.vel(.5)\nvoice bass = <d2 g1 c2 .>.inst(upright)\nvoice line = <[^1 ^2 ^3 ^4 ^5 ^4 ^3 ^2].key(d4, locrian_nat2) [^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(g4, altered) [^3 _ _ _ . . . .].key(c4, melodic_minor) [.]>.swing.inst(vibes)`, bars: 4 },
         { code: `-- Partly done: a G altered line with two gaps. Fill them with ab4 (b9) and bb4 (#9).\nvoice comp = g3@7alt.vel(.4)\nvoice line = [g4 . . b4 c#5 eb5 f5 g5].inst(vibes)` },
         { exercise: {
           task: `<p>Over <b>C7alt</b>, write <code>voice line</code>: eight notes using only the <b>C altered scale</b>, and include both the <b>b9</b> (Db) and the <b>#9</b> (Eb).</p>`,
@@ -243,7 +244,7 @@ export const UNIT4: Unit = {
           { q: "Listen. Dm7 to G7. Does the line cross the bar line by half step (7th to 3rd)?", listen: `voice comp = changes("Dm7 | G7").rootless.voicelead.vel(.45)\nvoice line = <[f4 a4 c5 e5 d5 _ c5 _] [b4 _ _ _ . . . .]>.swing.inst(vibes)`, bars: 2, options: ["Yes, C to B", "No, it leaps"], answer: 0, explain: "C, the 7th of Dm7, falls to B, the 3rd of G7." },
           { q: "The bebop dominant scale adds which note to mixolydian?", options: ["The b9", "The major 7th", "The #11", "The b3"], answer: 1 },
           { q: "Why add the passing note?", options: ["To make the scale symmetrical", "So chord tones fall on the beats in a run of eighths", "To avoid the tritone", "For a darker sound"], answer: 1 },
-          { q: "From the nonchord-tone lesson: F, D#, E is what device aimed at E?", options: ["A suspension", "An enclosure", "An escape tone", "A pedal"], answer: 1 },
+          { q: "From the walking-bass lesson: in the first example the bass plays F# on beat 4 of bar 1, then G. What is the F#?", options: ["A chromatic approach from below", "A chord tone of Dm7", "A note of D dorian", "An enclosure"], answer: 0, explain: "F# is a half step below G, the next root." },
         ] },
       ],
     },
@@ -253,7 +254,7 @@ export const UNIT4: Unit = {
       parts: [
         `<p>Sixteen bars on almost one chord. Listen for the one big event: where the whole band moves to a new key.</p>`,
         { code: `-- A sections in D dorian, the bridge in Eb dorian.\n-- Change key eb dorian to key g dorian: the bridge moves up a fourth instead of a half step.\ntempo 140\nsection main 4\n  key d dorian\n  let sw = {^2 ^5 ^8 ^11 ^13}.octave(-1)\n  voice pad = [. . . . . . sw sw.step(-1)].swing.inst(keys).vel(.5)\n  voice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\nsection bridge 4\n  key eb dorian\n  let sw = {^2 ^5 ^8 ^11 ^13}.octave(-1)\n  voice pad = [. . . . . . sw sw.step(-1)].swing.inst(keys).vel(.5)\n  voice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.35)\nform main main bridge main` },
-        `<p>In the late 1950s Miles Davis began writing tunes with very few chords, some lasting eight or sixteen bars ("Milestones", 1958; "So What", 1959), and John Coltrane soon followed. In <b>modal jazz</b> the harmony is a mode rather than a progression, and the interest moves to melody, rhythm and texture. That example is the form of Miles Davis's "So What" (1959), later reused in John Coltrane's "Impressions": a 32-bar AABA (shortened here) whose A sections are one dorian mode and whose bridge is the same mode a half step up. The pad plays the "So What" chord from the voicings lesson, answered one step lower.</p>`,
+        `<p>In the late 1950s Miles Davis began writing tunes with very few chords, some held for eight or sixteen bars ("Milestones", 1958), and John Coltrane soon followed. In <b>modal jazz</b> the harmony is a mode rather than a progression, and the interest moves to melody, rhythm and texture. That example is the form of "So What" (1959), later reused in John Coltrane's "Impressions": a 32-bar AABA (shortened here) whose A sections are one dorian mode and whose bridge is the same mode a half step up. The pad plays the "So What" chord from the voicings lesson, answered one step lower.</p>`,
         { code: `-- One quartal shape slid through D dorian.\n-- Change q.step(2) to q.step(4): beat 2 becomes A D G C, all perfect fourths. F against B is left only on beat 4.\ntempo 120\nkey d dorian\nlet q = {^1 ^4 ^7 ^10}\nvoice planing = [q q.step(1) q.step(2) q.step(1) q . q.step(-1) .].inst(keys).swing\nvoice bass = [^1 _ _ _ ^1 _ _ _].octave(-2).inst(upright)` },
         `<p>Chords built from thirds (<b>tertian</b>) point at a root and a function. Chords built from fourths (<b>quartal</b>) don't, which suits music that doesn't want to move. Sliding one shape through the mode step by step, as you just heard, is <b>planing</b>. The steps are diatonic, so the fourths are mostly perfect, with an occasional tritone that adds a bite. In Tine, write the shape on degrees and move it with <code>.step</code>.</p>`,
         { code: `-- G9sus4, Abmaj7, G9sus4, Fm11, all over a G pedal.\n-- Change the bass to <g1 g1 g1 f1>.inst(upright): the last chord settles as Fm11, and the pedal's float is gone.\ntempo 90\nvoice comp = <g3@9sus4 ab3@maj7 g3@9sus4 f3@m11>.voicelead.inst(keys)\nvoice bass = [g1 _ _ _].inst(upright)`, bars: 4 },
@@ -282,7 +283,7 @@ export const UNIT4: Unit = {
         } },
         { quiz: [
           { q: "Listen. A D bass, then a chord. Is it built in thirds or in fourths?", listen: `voice b = d2.inst(upright)\nvoice x = <. {d3 g3 c4 f4}>.inst(keys)`, bars: 2, options: ["Thirds", "Fourths"], answer: 1, explain: "D G C F: every gap is a perfect fourth." },
-          { q: "Listen. The A section is D dorian. Where does the bridge go?", listen: `tempo 160\nsection main 2\n  key d dorian\n  voice pad = {^1 ^4 ^7 ^10}.inst(keys).vel(.5)\n  voice b = ^1.octave(-2).inst(upright)\nsection bridge 2\n  key eb dorian\n  voice pad = {^1 ^4 ^7 ^10}.inst(keys).vel(.5)\n  voice b = ^1.octave(-2).inst(upright)\nform main bridge main`, bars: 6, options: ["Up a half step", "Up a fourth", "Down a whole step"], answer: 0 },
+          { q: "Listen. The A section is D dorian. Where does the bridge go?", listen: `tempo 160\nsection main 2\n  key d dorian\n  voice pad = {^1 ^4 ^7 ^10}.inst(keys).vel(.5)\n  voice b = ^1.octave(-2).inst(upright)\nsection bridge 2\n  key g dorian\n  voice pad = {^1 ^4 ^7 ^10}.inst(keys).vel(.5)\n  voice b = ^1.octave(-2).inst(upright)\nform main bridge main`, bars: 6, options: ["Up a half step", "Up a fourth", "Down a whole step"], answer: 1, explain: "The bass goes from D up to G." },
           { q: "What replaces a progression in modal jazz?", options: ["A mode held for many bars", "A twelve-tone row", "A fixed bass riff", "Constant modulation"], answer: 0 },
           { q: "A 9sus4 chord leaves out which chord tone?", options: ["The root", "The 3rd", "The 7th", "The 9th"], answer: 1 },
           { q: "From the modes lesson: what is the signature note of dorian?", options: ["The b2", "The natural 6", "The #4", "The b7"], answer: 1 },
@@ -309,8 +310,20 @@ export const UNIT4: Unit = {
           bars: 4,
           check: (_s, n) => {
             const g = groups(of(n, "comp")).filter(x => x.semis.length >= 2);
-            if ((g[1] && has(g[1].semis, [8, 2])) || (g[2] && has(g[2].semis, [1, 4]) && !has(g[2].semis, [5]))) return "The cycle moves down by major thirds: F, Db, A, F. You went up.";
-            return expectChords(n, "comp", [[7, "m7"], [8, "7"], [1, "maj7"], [4, "7"], [9, "maj7"], [0, "7"], [5, "maj7"]]);
+            if ((g[1] && has(g[1].semis, [8, 2])) || (g[2] && has(g[2].semis, [9, 1, 4]) && !has(g[2].semis, [5]))) return "The cycle moves down by major thirds: F, Db, A, F. You went up.";
+            // Major tonics may be maj7, 6 or 6/9; the others go by quality.
+            const want: [number, string][] = [[7, "m7"], [8, "7"], [1, "maj7"], [4, "7"], [9, "maj7"], [0, "7"], [5, "maj7"]];
+            const m = need(n, "comp"); if (m) return m;
+            if (g.length < want.length) return `I hear ${g.length} chord${g.length === 1 ? "" : "s"}; the substitution has ${want.length}.`;
+            for (let i = 0; i < want.length; i++) {
+              const [r, q] = want[i], label = NM[r] + q, rel = pcset(g[i].semis).map(x => (x - r + 12) % 12);
+              if (q === "maj7") {
+                const ok = rel.includes(4) && (rel.includes(11) || rel.includes(9)) && !rel.includes(10) && !rel.includes(5) && !rel.includes(3);
+                if (!ok) return `Chord ${i + 1} should be a major tonic on ${NM[r]} (${NM[r]}maj7 or ${NM[r]}6). You have ${nms(g[i].semis)}.`;
+              } else { const why = fits(g[i].semis, label, r, q); if (why) return `Chord ${i + 1} should be ${label}, but ${why}. You have ${nms(g[i].semis)}.`; }
+              if (!rootHeard(n, "comp", g[i].t, r, g[i].semis)) return `Chord ${i + 1} should be ${label}, but nothing plays its root, ${NM[r]}. Put ${NM[r]} in the chord, or add a bass that plays it.`;
+            }
+            return null;
           },
         } },
         { quiz: [
@@ -344,7 +357,7 @@ export const UNIT4: Unit = {
          <tr><td>Coltrane and other symmetric cycles</td><td>33</td></tr></table>`,
         { code: `-- Partly done: bars 1, 2 and 4 are reharmonized. Bar 3 is still plain.\n-- Replace Dm7 G7 with Dm9 Db13, or with Bm7b5 Bb7 (Dm9 and Bm7b5 both contain D; Db13 and Bb7 both contain F).\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7 | Dm7 G7 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
         { exercise: {
-          task: `<p>Reharmonize the melody. Write <code>voice comp</code> with <b>two chords in each of bars 1 to 3</b> (and one or two in bar 4), using <b>at least six different chords</b>, and make it your own, not one of the lesson's two reharmonizations. The melody note sounding at the start of each chord must belong to that chord (a chord tone or a tension that you include in the symbol). Play full chords (no <code>.rootless</code>), so the check can hear every note of each chord.</p>`,
+          task: `<p>Reharmonize the melody. Write <code>voice comp</code> with <b>two chords in each of bars 1 to 3</b> (and one or two in bar 4), using <b>at least six different chords</b>, and make it your own, with at least two chords that differ from each of the lesson's two reharmonizations. The melody note sounding at the start of each chord must belong to that chord (a chord tone or a tension that you include in the symbol). Play full chords (no <code>.rootless</code>), so the check can hear every note of each chord.</p>`,
           starter: `voice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nvoice comp = changes("C | Am | Dm G7 | C")`,
           solution: `voice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nvoice comp = changes("Cmaj7 G7 | Abmaj7 Fmaj7 | Bm7b5 Bb7 | Cmaj7").voicelead`,
           bars: 4,
@@ -412,7 +425,7 @@ export const UNIT4: Unit = {
         } },
         { quiz: [
           { q: "Listen. Bar 1 is the row. Is bar 2 the row backwards (retrograde) or the inversion?", listen: `let row = [0 11 7 8 3 1 2 10 6 5 4 9]\nvoice x = cat(row.map(x => pitch(60 + x)), row.map(x => pitch(60 + x)).rev).inst(vibes)`, bars: 2, options: ["Retrograde", "Inversion"], answer: 0, explain: "It ends where bar 1 began, on C." },
-          { q: "What is T3 of the set {0 4 7}?", options: ["{3 7 10}", "{0 3 7}", "{9 1 4}", "{3 4 7}"], answer: 0 },
+          { q: "What is T5 of the set {0 4 7}?", options: ["{5 9 0}", "{5 9 12}", "{0 4 7}", "{7 11 2}"], answer: 0, explain: "Add 5 to each: 5, 9, and 12, which is 0." },
           { q: "What is the inversion of pitch class 4?", options: ["4", "8", "16", "-4"], answer: 1, explain: "12 minus 4." },
           { q: "Which transformation plays a row backwards?", options: ["Inversion", "Retrograde", "Transposition", "Prime"], answer: 1 },
           { q: "From the Coltrane lesson: which interval divides the octave into three equal parts?", options: ["Minor 3rd", "Major 3rd", "Whole step", "Tritone"], answer: 1 },
