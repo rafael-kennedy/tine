@@ -95,3 +95,9 @@ test("jazz scales and instruments", () => {
   expect(notes(`voice x = [c2 e2].inst(upright)`).length).toBe(2);
   expect(notes(`voice x = c@maj7.inst(vibes)`).length).toBe(4);
 });
+
+test(".key on a pattern re-keys its degrees (and an inner key wins)", () => {
+  expect(notes(`voice x = [^1 ^3].key(a3, minor)`).map(n => n.semi)).toEqual([57, 60]);
+  expect(notes(`voice x = cat([^3].key(a3, minor), [^3].key(a3, major))`, 2).map(n => n.semi)).toEqual([60, 61]);
+  expect(notes(`voice x = [^1 ^3].key(d4, minor).key(g4, major)`).map(n => n.semi)).toEqual([62, 65]);
+});

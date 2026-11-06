@@ -1,17 +1,8 @@
 // Learn Tine: an interactive tutorial. Every example is editable and playable.
-import { EditorView } from "@codemirror/view";
-import { evaluate, renderNotes, TineError, formatError, randomSeed, VERSION, Scene } from "../core";
-import { Engine } from "./engine";
-import { Transport } from "./transport";
-import { makeEditor, showError, flash } from "./editor";
-import { Roll } from "./roll";
+import { randomSeed, VERSION } from "../core";
 import { CSS, LOGO_SVG } from "./theme";
 import { LESSONS, Lesson, Cell, Exercise } from "./lessons";
-
-const store = {
-  get(k: string) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k: string, v: string) { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
-};
+import { h, store, makeCell, makeExercise, stopAll, CELL_CSS } from "./cells";
 
 const LEARN_CSS = `
 body{min-height:100vh}
@@ -27,17 +18,6 @@ nav .seedbox b{font-family:var(--mono);color:var(--brass2)}
 article{max-width:820px;padding:34px 40px 120px;width:100%}
 article h1{font-family:var(--serif);font-weight:600;font-size:34px;margin:0 0 18px;letter-spacing:-.01em}
 article p,article li{font-size:16px;line-height:1.65}
-.cell{margin:16px 0 22px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--ink2)}
-.cell .cm-editor{border-radius:0;height:auto}
-.cell .cm-content{padding:10px 4px}
-.bar{display:flex;gap:8px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
-.bar .sp{flex:1}
-.cell canvas{width:100%;height:84px;display:block;border-top:1px solid var(--line)}
-.cell .msg{padding:0 12px 10px}
-.ex{border:1px solid color-mix(in srgb,var(--brass) 60%,var(--line));border-radius:12px;padding:14px 16px;margin:22px 0;background:color-mix(in srgb,var(--brass) 6%,transparent)}
-.ex h3{margin:0 0 6px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--brass2)}
-.ex .cell{margin:10px 0 0}
-.ok{color:var(--ok);font-weight:600}
 .pager{display:flex;justify-content:space-between;margin-top:40px}
 .hero{border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:26px;background:linear-gradient(135deg,color-mix(in srgb,var(--brass) 10%,transparent),transparent)}
 .hero p{margin:6px 0}
@@ -47,122 +27,14 @@ article p,article li{font-size:16px;line-height:1.65}
 @media (max-width: 800px){ .wrap{grid-template-columns:1fr} nav{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)} article{padding:20px 16px 80px} }
 `;
 
-function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, any> = {}, ...kids: (Node | string | null | undefined)[]): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k.startsWith("on")) (el as any)[k.toLowerCase()] = v;
-    else if (k === "class") el.className = v;
-    else if (k === "html") el.innerHTML = v;
-    else if (v !== undefined && v !== null && v !== false) el.setAttribute(k, String(v));
-  }
-  for (const c of kids) if (c !== null && c !== undefined) el.append(c);
-  return el;
-}
-
-let engine: Engine | null = null;
-let transport: Transport | null = null;
 let seed = Number(store.get("learn.seed")) || randomSeed();
-let current: { stop: () => void; roll: Roll; bars: number } | null = null;
 const done = new Set<string>((() => { try { return JSON.parse(store.get("learn.done") || "[]"); } catch { return []; } })());
 const seedLabel = h("b", {}, String(seed));
-
-function audio() {
-  if (!engine) { engine = new Engine(); transport = new Transport(engine); }
-  return { engine: engine!, transport: transport! };
-}
-
-function stopAll() { if (current) { current.stop(); current = null; } }
-
-function makeCell(cell: Cell, onScene?: (s: Scene, src: string) => void, extra?: HTMLElement[]): HTMLElement {
-  const bars = cell.bars ?? (/<|every|cat\(|per_bar|arrange|slow|walk|dice|\|/.test(cell.code) ? 4 : 1);
-  const box = h("div", { class: "cell" });
-  const edHost = h("div");
-  const playBtn = h("button", { class: "primary small" }, "▶ play");
-  const stopBtn = h("button", { class: "small" }, "■");
-  const resetBtn = h("button", { class: "small", title: "restore the original example" }, "reset");
-  const info = h("span", { class: "dim" }, "");
-  const canvas = h("canvas");
-  const msg = h("div", { class: "msg" });
-  box.append(edHost, h("div", { class: "bar" }, playBtn, stopBtn, info, h("span", { class: "sp" }), ...(extra ?? []), resetBtn), canvas, msg);
-  const roll = new Roll(canvas);
-  roll.window = Math.max(1, bars);
-  roll.follow = false;
-  let view: EditorView;
-
-  const compile = (): Scene | null => {
-    const src = view.state.doc.toString();
-    msg.innerHTML = "";
-    try {
-      const s = evaluate(src, { seed });
-      const { notes } = renderNotes(s, s.form ? undefined : bars);
-      roll.window = s.form ? Math.max(1, notes.reduce((m, n) => Math.max(m, Math.ceil(n.bar + n.bars - 1e-9)), 1)) : bars;
-      roll.set(notes); roll.head = -1; roll.draw();
-      info.textContent = `${notes.length} notes · seed ${s.seed}`;
-      for (const p of s.prints) msg.append(h("div", { class: "dim" }, p));
-      showError(view, undefined, "");
-      onScene?.(s, src);
-      return s;
-    } catch (e) {
-      const err = e instanceof TineError ? e : new TineError("runtime", (e as Error).message);
-      showError(view, err.span, err.message);
-      msg.append(h("div", { class: "err" }, formatError(src, err, "example")));
-      return null;
-    }
-  };
-
-  const play = async () => {
-    const s = compile(); flash(view);
-    if (!s) return;
-    const { transport, engine } = audio();
-    const wasMine = current?.roll === roll && transport.playing;
-    if (!wasMine) stopAll();
-    transport.mode = s.form ? "form" : "live";
-    transport.loopForm = true;
-    transport.load(s);
-    if (!transport.playing) await transport.start(0);
-    playBtn.classList.add("on");
-    current = { roll, bars, stop: () => { transport.stop(); playBtn.classList.remove("on"); roll.head = -1; roll.draw(); } };
-    const tick = () => {
-      if (current?.roll !== roll || !transport.playing) return;
-      const b = transport.currentBar();
-      roll.head = b % roll.window; roll.draw();
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    void engine;
-  };
-
-  view = makeEditor({ doc: cell.code, parent: edHost, compact: true, onEval: play, onStop: () => stopAll() });
-  playBtn.onclick = play;
-  stopBtn.onclick = () => stopAll();
-  resetBtn.onclick = () => { view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: cell.code } }); compile(); };
-  requestAnimationFrame(() => compile());
-  (box as any).__view = () => view;
-  return box;
-}
-
-function makeExercise(ex: Exercise, lessonId: string, idx: number): HTMLElement {
-  const key = `${lessonId}:${idx}`;
-  const result = h("span", {});
-  let last: { s: Scene; src: string } | null = null;
-  const checkBtn = h("button", { class: "small" }, "check");
-  const showBtn = h("button", { class: "small" }, "show answer");
-  const cellEl = makeCell({ code: store.get(`learn.ex.${key}`) ?? ex.starter, bars: ex.bars }, (s, src) => { last = { s, src }; store.set(`learn.ex.${key}`, src); }, [checkBtn, showBtn]);
-  checkBtn.onclick = () => {
-    const view = (cellEl as any).__view() as EditorView;
-    const src = view.state.doc.toString();
-    try {
-      const s = evaluate(src, { seed });
-      const { notes } = renderNotes(s, ex.bars ?? 1);
-      const problem = ex.check(s, notes);
-      if (problem) { result.className = "err"; result.textContent = problem; }
-      else { result.className = "ok"; result.textContent = "✓ That's it."; done.add(key); store.set("learn.done", JSON.stringify([...done])); renderNav(); }
-    } catch (e) { result.className = "err"; result.textContent = (e as Error).message; }
-  };
-  showBtn.onclick = () => { const view = (cellEl as any).__view() as EditorView; view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: ex.solution } }); };
-  void last;
-  return h("div", { class: "ex" }, h("h3", {}, "Try it"), h("p", { html: ex.task }), cellEl, h("div", { style: "margin-top:8px" }, result));
-}
+const seedOf = () => seed;
+const saveDone = () => { store.set("learn.done", JSON.stringify([...done])); renderNav(); };
+const cellOf = (c: Cell) => makeCell(c, { seed: seedOf });
+const exerciseOf = (ex: Exercise, lessonId: string, idx: number) =>
+  makeExercise(ex, `${lessonId}:${idx}`, { seed: seedOf, done, onDone: saveDone, saveAs: `learn.ex.${lessonId}:${idx}` });
 
 const navEl = h("div");
 function renderNav() {
@@ -208,7 +80,7 @@ function renderPage() {
       h("div", { class: "hero" },
         h("p", { html: "<b>Tine</b> is a programming language for music: for writing grooves and melodies quickly, performing them live, and composing finished pieces. It handles microtonal tunings and arbitrarily complex rhythm, and every random choice is seeded, so anything you hear can be played again exactly." }),
         h("p", { html: `This tutorial has ${LESSONS.length} short lessons. Every example is live: edit it and press <b>▶ play</b> or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>.` })),
-      makeCell({ code: `tempo 96\nkey d dorian\n\nvoice drums = {[kick . . kick . . snare .] [hat*8].vel([.9 .5])}\nvoice bass  = [^1 . ^1 ^5 . ^4 _ ^b3].octave(-2).inst(bass)\nvoice keys  = <^1@7 ^4@7 ^5@7 ^1@9>.strum.vel(.55)\nvoice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .].inst(pluck)`, bars: 4 }),
+      cellOf({ code: `tempo 96\nkey d dorian\n\nvoice drums = {[kick . . kick . . snare .] [hat*8].vel([.9 .5])}\nvoice bass  = [^1 . ^1 ^5 . ^4 _ ^b3].octave(-2).inst(bass)\nvoice keys  = <^1@7 ^4@7 ^5@7 ^1@9>.strum.vel(.55)\nvoice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .].inst(pluck)`, bars: 4 }),
       h("p", { html: `Start with <a href="#${LESSONS[0].id}">${LESSONS[0].title}</a>. Sound needs one click on the page first (browsers require it).` }),
     );
     return;
@@ -219,8 +91,8 @@ function renderPage() {
   let exIdx = 0;
   for (const part of lesson.parts) {
     if (typeof part === "string") article.append(h("div", { html: part }));
-    else if ("exercise" in part) article.append(makeExercise(part.exercise, lesson.id, exIdx++));
-    else article.append(makeCell(part));
+    else if ("exercise" in part) article.append(exerciseOf(part.exercise, lesson.id, exIdx++));
+    else article.append(cellOf(part));
   }
   const prev = LESSONS[idx - 1], next = LESSONS[idx + 1];
   article.append(h("div", { class: "pager" },
@@ -229,7 +101,7 @@ function renderPage() {
 }
 
 function main() {
-  const style = document.createElement("style"); style.textContent = CSS + LEARN_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + LEARN_CSS; document.head.append(style);
   const logo = h("a", { class: "logo", href: "#intro" }); logo.innerHTML = LOGO_SVG + "tine";
   const reroll = h("button", { class: "small", onclick: () => { seed = randomSeed(); seedLabel.textContent = String(seed); store.set("learn.seed", String(seed)); renderPage(); } }, "🎲 new seed");
   const nav = h("nav", {}, logo, navEl, h("div", { class: "seedbox" }, "seed ", seedLabel, " ", reroll, h("p", {}, `Tine ${VERSION}`)));

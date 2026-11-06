@@ -290,7 +290,11 @@ def("degrees", "degrees(p)", "Treat numbers as 0-based scale steps: [0 2 4].degr
 def("key", "key(root, scale) or p.key(root, scale)", "Make a key, or play p in a key. Degrees like ^3 resolve against it.", cat.pitch, (args) => {
   if (args[0] instanceof Pat || args[0] instanceof Degree || args[0] instanceof Chord) {
     const k = args[1] instanceof Key ? args[1] : new Key(args[1], args[2] ?? SCALES.major);
-    return withCtx(P(args[0]), ctx => ({ ...ctx, key: k }));
+    // the key travels on each event (an inner .key wins), since degrees resolve when notes are played
+    const q = withCtx(P(args[0]), ctx => ({ ...ctx, key: k }));
+    const np = mapEv(q, ev => (ev.p.key ? ev : { ...ev, p: { ...ev.p, key: k } }));
+    np.items = q.items;
+    return np;
   }
   if (!(args[0] instanceof Pitch)) throw new TypeError("key needs a root note, like key(d, dorian)");
   return new Key(args[0], args[1] ?? SCALES.major);
