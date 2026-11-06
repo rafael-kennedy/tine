@@ -7,8 +7,11 @@ export const pc = (s: number) => ((Math.round(s) % 12) + 12) % 12;
 export const pcset = (ss: number[]) => [...new Set(ss.map(pc))].sort((a, b) => a - b);
 export const sameSet = (a: number[], b: number[]) => JSON.stringify(pcset(a)) === JSON.stringify(pcset(b));
 const NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-export const nm = (s: number) => NAMES[pc(s)];
-export const nms = (ss: number[]) => ss.map(nm).join(" ");
+const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+// Feedback should spell notes the way the key does: pass "sharps" in sharp keys (A harmonic minor's G#, D major's C#).
+export type Spelling = "flats" | "sharps";
+export const nm = (s: number, sp: Spelling = "flats") => (sp === "sharps" ? SHARP_NAMES : NAMES)[pc(s)];
+export const nms = (ss: number[], sp: Spelling = "flats") => ss.map(x => nm(x, sp)).join(" ");
 
 export const of = (n: TimedNote[], v: string) => n.filter(x => x.voice === v);
 export const inBar = (n: TimedNote[], b: number) => n.filter(x => x.bar >= b - 1e-9 && x.bar < b + 1 - 1e-9);

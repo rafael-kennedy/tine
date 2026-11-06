@@ -29,14 +29,14 @@ export const UNIT1: Unit = {
           check: (_s, n) => {
             const m = need(n, "tune"); if (m) return m;
             const l = line(n, "tune");
-            if (l[0] !== 62) return `Start on D4 (yours starts on ${nms([l[0]])}).`;
+            if (l[0] !== 62) return `Start on D4 (yours starts on ${nms([l[0]], "sharps")}).`;
             for (let i = 1; i < l.length; i++) {
               const d = l[i] - l[i - 1];
               if (d === 2) continue;
-              if (((d % 12) + 12) % 12 === 2) return `Note ${i + 1} (${nms([l[i]])}) is in the wrong octave: it is ${d} half steps from the note before. Octave numbers go up at C, so check its number.`;
-              return `Note ${i + 1} (${nms([l[i]])}) is ${d} half step${Math.abs(d) === 1 ? "" : "s"} from the note before; every step should be 2.`;
+              if (((d % 12) + 12) % 12 === 2) return `Note ${i + 1} (${nms([l[i]], "sharps")}) is in the wrong octave: it is ${d} half steps from the note before. Octave numbers go up at C, so check its number.`;
+              return `Note ${i + 1} (${nms([l[i]], "sharps")}) is ${d} half step${Math.abs(d) === 1 ? "" : "s"} from the note before; every step should be 2.`;
             }
-            return l[l.length - 1] === 74 ? null : `End on D5; you stopped at ${nms([l[l.length - 1]])}.`;
+            return l[l.length - 1] === 74 ? null : `End on D5; you stopped at ${nms([l[l.length - 1]], "sharps")}.`;
           },
         } },
         { quiz: [
@@ -96,22 +96,25 @@ export const UNIT1: Unit = {
     {
       id: "swing", title: "Swing",
       parts: [
-        `<p>Play eighth notes evenly and you get classical, rock or Latin time. Jazz musicians do something else: they <b>swing</b>. Each beat's first eighth stretches and the second shortens, so a pair of eighths sounds long-short, close to the first and last notes of a triplet. Swing is not written down. Charts are notated in even eighths and everybody knows to swing them.</p>
-         <p>Tine's <code>.swing</code> delays every second eighth by a fraction of a step. The default, <code>1/3</code>, gives a 2:1 triplet feel. Listen to the same line straight, then swung.</p>`,
+        `<p>Here is one line played two ways. Listen to the first, then the second.</p>`,
         { code: `tempo 132\nvoice straight = [c5 d5 e5 g5 a5 g5 e5 d5].inst(vibes)`, bars: 1 },
-        { code: `tempo 132\nvoice swung = [c5 d5 e5 g5 a5 g5 e5 d5].inst(vibes).swing`, bars: 1 },
-        `<p>How much to swing depends on the tempo and the player. As tempos rise, the ratio gets lighter. Some ballads swing hard; bossa nova and many modern tunes play even eighths.</p>
+        { code: `tempo 132\n-- now try .swing(0.5) for a heavy shuffle, then .swing(0.2) for a light touch\nvoice swung = [c5 d5 e5 g5 a5 g5 e5 d5].inst(vibes).swing`, bars: 1 },
+        `<p>The first is played evenly, the way classical, rock and Latin music play eighth notes. The second <b>swings</b>. Each beat's first eighth stretches and the second shortens, so a pair sounds long-short, close to the first and last notes of a triplet. Swing is not written down: charts are notated in even eighths, and everybody knows to swing them.</p>
+         <p>Tine's <code>.swing</code> delays every second eighth by a fraction of a step. The default, <code>1/3</code>, gives the 2:1 triplet feel.</p>
          <table class="t"><tr><th>amount</th><th>long : short</th><th>feel</th></tr>
          <tr><td><code>0</code></td><td>1 : 1</td><td>straight</td></tr>
          <tr><td><code>0.2</code></td><td>3 : 2</td><td>light, fast tempos</td></tr>
          <tr><td><code>1/3</code></td><td>2 : 1</td><td>triplet swing, medium tempos</td></tr>
-         <tr><td><code>0.5</code></td><td>3 : 1</td><td>dotted, a shuffle on the edge of stiff</td></tr></table>`,
+         <tr><td><code>0.5</code></td><td>3 : 1</td><td>dotted, a shuffle on the edge of stiff</td></tr></table>
+         <p>How much to swing depends on the tempo and the player. When Friberg and Sundström measured drummers on jazz recordings in 2002, the ratio was widest at slow tempos and narrowed toward even eighths as the tempo climbed. Bossa nova and many modern tunes play even eighths on purpose.</p>`,
+        `<p>Swing is accent as well as timing. Jazz players lean on the short note, the upbeat, the way you would sing "doo-<b>BAH</b> doo-<b>BAH</b>". Sing along with this one.</p>`,
+        { code: `tempo 132\n-- the second eighth of each pair is louder. Swap the numbers (.9 first) and the line goes stiff.\nvoice line = [c5 d5 e5 g5 a5 g5 e5 d5].inst(vibes).swing.vel([.5 .9 .5 .9 .5 .9 .5 .9])`, bars: 1 },
         `<p>The drummer's ride cymbal sets the swing for everyone. Its classic pattern is "ding, ding-a ding, ding-a": quarter notes, with an extra swung eighth after beats 2 and 4. Under it, the hi-hat pedal closes on 2 and 4, the backbeat of jazz. The bass drum often "feathers" quarter notes so softly you feel them more than hear them.</p>`,
-        { code: `tempo 140\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.55)\nvoice hat  = [. pedal . pedal].vel(.6)\nvoice kick = [kick kick kick kick].vel(.18)` },
-        `<p>You can also write the triplet directly. These two parts play the same rhythm.</p>`,
-        { code: `-- the rim clicks land exactly on the swung ride\nvoice a = [ride [ride ride] ride [ride ride]].swing\nvoice b = [rim [rim . rim] rim [rim . rim]].vel(.5)`, bars: 1 },
-        `<p>Put a bass and a pianist on top and you have the sound of a jazz rhythm section. The bass walks quarter notes (unit 2 covers how), and the piano comps in the Charleston rhythm, swung.</p>`,
-        { code: `tempo 140\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.5)\nvoice hat  = [. pedal . pedal].vel(.5)\nvoice bass = <[f2 a2 c3 e3] [eb3 c3 a2 f2]>.inst(upright)\nvoice comp = [f3@7 . . f3@7 . . . .].rootless.swing.vel(.5)`, bars: 2 },
+        { code: `tempo 140\n-- remove .swing from the ride and hear the time go square\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.55)\nvoice hat  = [. pedal . pedal].vel(.6)\nvoice kick = [kick kick kick kick].vel(.18)` },
+        `<p>You can also write the triplet directly. These two parts play exactly the same rhythm, which is a good way to see what <code>.swing</code> does.</p>`,
+        { code: `-- the rim clicks land exactly on the swung ride\nvoice ride = [ride [ride ride] ride [ride ride]].swing\nvoice rim  = [rim [rim . rim] rim [rim . rim]].vel(.5)`, bars: 1 },
+        `<p>Put a bass and a pianist on top and you have the sound of a jazz rhythm section. The bass walks quarter notes (lesson 16 covers how), and the piano comps in the Charleston rhythm from lesson 2, swung.</p>`,
+        { code: `tempo 140\n-- take .swing off the comp: the piano now lands early against the ride\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.5)\nvoice hat  = [. pedal . pedal].vel(.5)\nvoice bass = <[f2 a2 c3 e3] [eb3 c3 a2 f2]>.inst(upright)\nvoice comp = [f3@7 . . f3@7 . . . .].rootless.swing.vel(.5)`, bars: 2 },
         { exercise: {
           task: `<p>Build the drummer's time feel. Write <code>voice ride</code> playing the swung ride pattern ("ding, ding-a ding, ding-a"), and <code>voice hat</code> playing <code>pedal</code> on beats 2 and 4 only.</p>`,
           starter: `voice ride = [ride ride ride ride]\nvoice hat  = [pedal pedal pedal pedal]`,
@@ -120,7 +123,7 @@ export const UNIT1: Unit = {
           check: (_s, n) => {
             const m = need(n, "ride") ?? need(n, "hat"); if (m) return m;
             const hat = groups(inBar(of(n, "hat"), 0)).map(g => g.t);
-            if (JSON.stringify(hat) !== "[0.25,0.75]") return "The hat should close on beats 2 and 4 only.";
+            if (JSON.stringify(hat) !== "[0.25,0.75]") return `The hat closes on beat${hat.length === 1 ? "" : "s"} ${hat.map(t => r3(t * 4 + 1)).join(", ")}. It should close on 2 and 4 only.`;
             const ride = groups(inBar(of(n, "ride"), 0)).map(g => g.t);
             const want = [0, 0.25, r3(5 / 12), 0.5, 0.75, r3(11 / 12)];
             if (ride.length !== 6) return `The ride plays ${ride.length} hits per bar; the pattern has 6.`;
@@ -130,7 +133,9 @@ export const UNIT1: Unit = {
         { quiz: [
           { q: "Listen. Straight or swung?", listen: `tempo 120\nvoice x = [c5 e5 g5 a5 g5 e5 d5 c5].inst(vibes).swing\nvoice r = [ride ride ride ride].vel(.4)`, options: ["Straight", "Swung"], answer: 1, explain: "Long-short pairs." },
           { q: "Listen. Straight or swung?", listen: `tempo 120\nvoice x = [c5 e5 g5 a5 g5 e5 d5 c5].inst(vibes)\nvoice r = [ride ride ride ride].vel(.4)`, options: ["Straight", "Swung"], answer: 0, explain: "Even eighths." },
+          { q: "Listen to the piano (from lesson 2). Which rhythm is it comping?", listen: `tempo 140\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)\nvoice comp = [bb3@7 . . bb3@7 . . . .].rootless.swing.vel(.6)`, options: ["Every beat", "The Charleston", "Only on beat 3"], answer: 1, explain: "Beat 1 and the \"and\" of 2." },
           { q: "On which beats does the hi-hat pedal close in swing time?", options: ["1 and 3", "2 and 4", "Every beat", "Only beat 1"], answer: 1, explain: "Two and four, the backbeat." },
+          { q: "In swing, which eighth of each pair do players usually accent?", options: ["The first, on the beat", "The second, the upbeat", "Neither"], answer: 1, explain: "Doo-BAH: the weight goes on the short upbeat." },
         ] },
       ],
     },
@@ -138,39 +143,44 @@ export const UNIT1: Unit = {
     {
       id: "major", title: "The major scale and keys",
       parts: [
-        `<p>A <b>scale</b> is a set of notes in order, usually spanning an octave. The <b>major scale</b> uses seven of the twelve, chosen by a pattern of whole (W) and half (H) steps: <b>W W H W W W H</b>. On C that is all white keys.</p>`,
-        { code: `voice c_major = [c4 d4 e4 f4 g4 a4 b4 c5]` },
-        `<p>The same pattern can start on any note. Starting on G, the pattern needs F# instead of F. Tine lets you write the scale as <b>degrees</b>, numbered positions in whatever key is current: <code>^1</code> is the first note (the tonic), <code>^5</code> the fifth, <code>^8</code> the octave. Change the <code>key</code> line and the scale moves with it.</p>`,
-        { code: `key g major\nvoice scale = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8]` },
-        `<p>Each degree has a name and a job. You will use these words all the way through this course.</p>
+        `<p>Play this and sing along with the names musicians use for its notes: do, re, mi, fa, sol, la, ti, do.</p>`,
+        { code: `-- the C major scale: all white keys from C to C.\n-- Change f4 to f#4 and listen: one note now sounds out of place.\nvoice c_major = [c4 d4 e4 f4 g4 a4 b4 c5]` },
+        `<p>A <b>scale</b> is a set of notes in order, usually spanning an octave. The <b>major scale</b> uses seven of the twelve half steps, chosen by a pattern of whole (W) and half (H) steps: <b>W W H W W W H</b>. On C that pattern lands on the white keys.</p>
+         <p>Now stop the scale one note early and listen to how it hangs.</p>`,
+        { code: `-- seven notes, then silence. It sounds unfinished. Replace the . with c5 and it lands.\nvoice hang = [c4 d4 e4 f4 g4 a4 b4 .]` },
+        `<p>That pull is the <b>leading tone</b>, the seventh note, a half step below the tonic. It leans so hard toward the tonic that stopping on it feels like a question. Each degree of the scale has a name and a job, and you will use these words all through the course.</p>
          <table class="t"><tr><th>degree</th><th>name</th><th>solfège</th></tr>
          <tr><td>^1</td><td>tonic</td><td>do</td></tr><tr><td>^2</td><td>supertonic</td><td>re</td></tr>
          <tr><td>^3</td><td>mediant</td><td>mi</td></tr><tr><td>^4</td><td>subdominant</td><td>fa</td></tr>
          <tr><td>^5</td><td>dominant</td><td>sol</td></tr><tr><td>^6</td><td>submediant</td><td>la</td></tr>
          <tr><td>^7</td><td>leading tone</td><td>ti</td></tr></table>
-         <p>The <b>leading tone</b> is a half step below the tonic and pulls up into it. That half step is why major sounds so settled when it lands on ^1.</p>`,
+         <p>The same pattern can start on any note. Tine lets you write the scale as <b>degrees</b>, numbered positions in whatever key is current: <code>^1</code> is the tonic, <code>^5</code> the dominant, <code>^8</code> the octave. Change the <code>key</code> line and the scale moves with it.</p>`,
+        { code: `-- G major needs F# to keep the W W H W W W H pattern.\n-- Change the key to bb major, then e major, and play each.\nkey g major\nvoice scale = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8]` },
         `<p>A <b>key signature</b> lists the sharps or flats a key needs. Keys are related by fifths. Go up a perfect fifth (seven half steps) and you add one sharp: C has none, G one, D two, A three, E four, B five, F# six. Go down a fifth and you add a flat: F one, Bb two, Eb three, Ab four, Db five, Gb six. Laid out in a ring, this is the <b>circle of fifths</b>.</p>
-         <p>Sharps are added in the order F C G D A E B, flats in the reverse, B E A D G C F. Jazz lives on the flat side. Trumpets, clarinets and tenor saxophones are pitched in Bb, alto and baritone saxes in Eb, so tunes are written in F, Bb, Eb and Ab far more than in E or B.</p>
-         <p>This plays the same degree pattern in a new key each bar, walking round the circle of fifths.</p>`,
-        { code: `voice circle = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(at([c4 g3 d4 a3 e4 b3 f#3 db4 ab3 eb4 bb3 f4], bar), major))`, bars: 4 },
+         <p>Sharps are added in the order F C G D A E B, flats in the reverse, B E A D G C F. Jazz lives on the flat side. Trumpets, clarinets and tenor saxophones are pitched in Bb, alto and baritone saxes in Eb, so tunes are written in F, Bb, Eb and Ab far more than in E or B.</p>`,
+        { code: `-- the same scale in a new key each bar, walking round the circle of fifths: C, G, D, A, ...\n-- (per_bar and at pick the key for each bar; you will not need to write this yourself.)\nvoice circle = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(at([c4 g3 d4 a3 e4 b3 f#3 db4 ab3 eb4 bb3 f4], bar), major))`, bars: 4 },
+        `<p>Because every major key has the same pattern, a tune keeps its shape in any key. Musicians call moving it <b>transposing</b>. Here is the start of a melody written in degrees, so it plays in whatever key you name.</p>`,
+        { code: `-- change key f major to key eb major: same tune, new key, every note moves together\nkey f major\nvoice tune = <[^5 ^3 ^4 ^5] [^6 ^5 ^3 ^1]>.swing.inst(vibes)`, bars: 2 },
         { exercise: {
-          task: `<p>Write <code>voice scale</code>: the <b>Eb major</b> scale from Eb4 up to Eb5, using note names (no degrees). Work out the sharps or flats yourself from the W W H W W W H pattern.</p>`,
+          task: `<p>Write <code>voice scale</code>: the <b>Eb major</b> scale from Eb4 up to Eb5, using note names (no degrees). Work out the flats yourself from the W W H W W W H pattern.</p>`,
           starter: `voice scale = [eb4]`,
           solution: `voice scale = [eb4 f4 g4 ab4 bb4 c5 d5 eb5]`,
-          hint: `Eb major has three flats: Bb, Eb and Ab.`,
+          hint: `Start on Eb and count the pattern: Eb to F is W, F to G is W, G to Ab is H... Eb major has three flats.`,
           check: (_s, n) => {
             const m = need(n, "scale"); if (m) return m;
             const l = line(n, "scale"), want = [63, 65, 67, 68, 70, 72, 74, 75];
-            if (l.length !== 8) return `That is ${l.length} notes; a scale from Eb to Eb has 8.`;
+            if (l.length !== 8) return `That is ${l.length} note${l.length === 1 ? "" : "s"}; a scale from Eb to Eb has 8.`;
             const bad = l.findIndex((x, i) => x !== want[i]);
             return bad < 0 ? null : `Note ${bad + 1} is ${nms([l[bad]])}; it should be ${nms([want[bad]])}.`;
           },
         } },
         { quiz: [
+          { q: "Listen. The scale stops early. Which degree does it stop on?", listen: `key d major\nvoice x = [^1 ^2 ^3 ^4 ^5 ^6 ^7 _]`, options: ["^5, the dominant", "^7, the leading tone", "^8, the tonic"], answer: 1, explain: "It hangs a half step below the tonic, wanting to go up." },
+          { q: "Listen. A chord sets the key, then a short tune. Does it end on the tonic (finished) or not?", listen: `key bb major\nvoice x = <{^1 ^3 ^5} [^3 ^4 ^3 ^2]>.inst(vibes)`, options: ["It ends on the tonic", "It ends somewhere else and sounds unfinished"], answer: 1, explain: "It stops on ^2, a step above the tonic." },
           { q: "How many sharps are in the key of E major?", options: ["2", "3", "4", "5"], answer: 2, explain: "C, G, D, A, E: four fifths up, four sharps (F# C# G# D#)." },
           { q: "Which major key has three flats?", options: ["Bb", "Eb", "Ab", "F"], answer: 1, explain: "F (1), Bb (2), Eb (3)." },
-          { q: "What is the seventh degree of the major scale called?", options: ["Subtonic", "Submediant", "Leading tone", "Dominant"], answer: 2, explain: "It leads, by half step, to the tonic." },
           { q: "Between which degrees of a major scale are the half steps?", options: ["^2-^3 and ^6-^7", "^3-^4 and ^7-^8", "^1-^2 and ^4-^5", "^4-^5 and ^7-^8"], answer: 1, explain: "W W H W W W H: the half steps come after the third and seventh notes." },
+          { q: "From lesson 3: in swing, a pair of eighth notes sounds...", options: ["even", "long-short", "short-long"], answer: 1 },
         ] },
       ],
     },
@@ -178,33 +188,38 @@ export const UNIT1: Unit = {
     {
       id: "minor", title: "Minor scales and the blues scale",
       parts: [
-        `<p>Start a C major scale on its sixth note, A, and you get the <b>natural minor</b> scale: W H W W H W W. A minor and C major share every note and the key signature. They are <b>relative</b> keys. A minor and A major share a tonic but not notes; they are <b>parallel</b> keys.</p>`,
-        { code: `voice relative = cat([^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(c4, major), [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(a3, minor))`, bars: 2 },
-        `<p>Natural minor has no leading tone. Its seventh degree sits a whole step below the tonic and doesn't pull. Composers fixed that by raising the seventh, making the <b>harmonic minor</b> scale. The raised seventh leaves a gap of three half steps between ^6 and ^7, an augmented second, which gives harmonic minor its exotic edge.</p>
-         <p>Raise the sixth as well and the gap closes: <b>melodic minor</b>. Classical theory uses it only going up and returns to natural minor coming down. Jazz musicians use melodic minor the same way in both directions and treat it as a parent scale as important as major (unit 4). When this course says "melodic minor", it means the jazz version.</p>`,
-        { code: `-- natural, harmonic, melodic: one per bar\nvoice three = cat(\n  [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(a3, minor),\n  [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(a3, harmonic_minor),\n  [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(a3, melodic_minor))`, bars: 3 },
-        `<p>Two more scales run through all of jazz and blues. The <b>minor pentatonic</b> keeps five notes of natural minor (1, b3, 4, 5, b7). Add the flatted fifth and you have the <b>blues scale</b>, whose b5 is the original "blue note".</p>`,
-        { code: `tempo 110\nkey c blues\n-- six notes, so ^7 is already the octave\nvoice riff = cat([^1 ^2 ^3 ^4 ^5 ^6 ^7 .], [^7 ^6 ^5 ^4 ^3 ^2 ^1 .]).swing.inst(vibes)`, bars: 2 },
-        `<p>Blues singers and horn players bend the third and seventh to pitches between the piano keys. Tine can play them: <code>+ 50c</code> adds fifty cents, a quarter tone. Here the third slides from a quarter-flat up to major.</p>`,
-        { code: `voice bend = [c4 eb4 (e4 - 50c) e4 g4 . . .].inst(lead).swing` },
+        `<p>Listen to one tune twice. Only one thing changes between the bars.</p>`,
+        { code: `-- bar 1 in C major, bar 2 in C minor. The third, sixth and seventh drop a half step.\nlet tune = [^1 ^2 ^3 ^5 ^6 ^5 ^3 ^1]\nvoice v = cat(tune.key(c4, major), tune.key(c4, minor)).inst(vibes)`, bars: 2 },
+        `<p>The second bar uses the <b>natural minor</b> scale: W H W W H W W. It sounds darker because its third, sixth and seventh are each a half step lower than major's. C major and C minor share a tonic but not their notes; they are <b>parallel</b> keys.</p>
+         <p>Natural minor also hides inside major. Start a C major scale on its sixth note, A, and you get A natural minor, with every note and the key signature shared. C major and A minor are <b>relative</b> keys.</p>`,
+        { code: `-- C major, then A minor: the same seven notes from a different starting point.\n-- Change minor to major in the second scale: now it is A major, the parallel key, with three sharps.\nvoice relative = cat([^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(c4, major), [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(a3, minor))`, bars: 2 },
+        `<p>Natural minor has no leading tone. Its seventh degree sits a whole step below the tonic and doesn't pull (play the first bar below and listen to the top). Composers fixed that by raising the seventh, making the <b>harmonic minor</b> scale. The raised seventh leaves a gap of three half steps between ^6 and ^7, an augmented second, which gives harmonic minor its exotic edge.</p>
+         <p>Raise the sixth as well and the gap closes: <b>melodic minor</b>. Classical theory uses it only going up and returns to natural minor coming down. Jazz musicians use melodic minor the same way in both directions and treat it as a parent scale as important as major (lesson 29). When this course says "melodic minor", it means the jazz version.</p>`,
+        { code: `-- natural, harmonic, melodic: one per bar. Listen to the top of each.\nvoice three = cat(\n  [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(a3, minor),\n  [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(a3, harmonic_minor),\n  [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(a3, melodic_minor))`, bars: 3 },
+        `<p>Two more scales run through all of jazz and blues. The <b>minor pentatonic</b> keeps five notes of natural minor: 1, b3, 4, 5 and b7. Add the flatted fifth and you have the <b>blues scale</b>. The b3 and b7 are the old "blue notes" of the blues singers. The b5 became a signature sound of bebop in the 1940s.</p>`,
+        { code: `tempo 110\nkey c blues\n-- six notes, so ^7 is already the octave. Change blues to minor_pent and the b5 (F#) disappears (with five notes, ^6 becomes the octave).\nvoice riff = cat([^1 ^2 ^3 ^4 ^5 ^6 ^7 .], [^7 ^6 ^5 ^4 ^3 ^2 ^1 .]).swing.inst(vibes)`, bars: 2 },
+        `<p>Blues singers and horn players bend the third and seventh to pitches between the piano keys. Tine can play them: <code>- 50c</code> lowers a note by fifty cents, a quarter tone. Here the third rises from minor (Eb), through the quarter tone between, to major (E).</p>`,
+        { code: `-- try removing (e4 - 50c) to hear a plain half-step slide instead\nvoice bend = [c4 eb4 (e4 - 50c) e4 g4 . . .].inst(lead).swing` },
         { exercise: {
           task: `<p>Write <code>voice scale</code>: <b>A harmonic minor</b>, ascending from A4 to A5, with note names.</p>`,
           starter: `voice scale = [a4 b4 c5 d5 e5 f5 g5 a5]`,
           solution: `voice scale = [a4 b4 c5 d5 e5 f5 g#5 a5]`,
-          hint: `Natural minor with one note raised a half step.`,
+          hint: `Natural minor with one note raised a half step: the one that should lead up to A.`,
           check: (_s, n) => {
             const m = need(n, "scale"); if (m) return m;
             const l = line(n, "scale"), want = [69, 71, 72, 74, 76, 77, 80, 81];
-            if (l.length !== 8) return `That is ${l.length} notes; you need 8.`;
+            if (l.length !== 8) return `That is ${l.length} note${l.length === 1 ? "" : "s"}; you need 8.`;
             const bad = l.findIndex((x, i) => x !== want[i]);
-            return bad < 0 ? null : `Note ${bad + 1} is ${nms([l[bad]])}; it should be ${nms([want[bad]])}.`;
+            return bad < 0 ? null : `Note ${bad + 1} is ${nms([l[bad]], "sharps")}; it should be ${nms([want[bad]], "sharps")}.`;
           },
         } },
         { quiz: [
+          { q: "Listen. A chord sets the key, then a scale. Major or minor?", listen: `voice x = <{e4 g4 b4} [e4 f#4 g4 a4 b4 c5 d5 e5]>.inst(vibes)`, options: ["Major", "Minor"], answer: 1, explain: "E natural minor: G is a minor third above E." },
+          { q: "Listen. Natural minor or harmonic minor?", listen: `voice x = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(d4, harmonic_minor).inst(pluck)`, options: ["Natural minor", "Harmonic minor"], answer: 1, explain: "Hear the wide step up to the leading tone near the top." },
           { q: "What is the relative minor of Eb major?", options: ["Eb minor", "C minor", "G minor", "F minor"], answer: 1, explain: "The sixth degree of Eb major is C." },
           { q: "Which degree does harmonic minor raise?", options: ["The third", "The sixth", "The seventh", "The sixth and seventh"], answer: 2, explain: "Melodic minor raises the sixth as well." },
-          { q: "Listen. Natural minor or harmonic minor?", listen: `voice x = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(d4, harmonic_minor).inst(pluck)`, options: ["Natural minor", "Harmonic minor"], answer: 1, explain: "Hear the wide step up to the leading tone near the top." },
           { q: "Which note turns a minor pentatonic scale into a blues scale?", options: ["b2", "b5", "#5", "major 3rd"], answer: 1, explain: "The flatted fifth." },
+          { q: "From lesson 4: which degree is the dominant?", options: ["^1", "^4", "^5", "^7"], answer: 2 },
         ] },
       ],
     },
