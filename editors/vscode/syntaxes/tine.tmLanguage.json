@@ -92,7 +92,7 @@
     },
     {
       "name": "support.function.builtin.tine",
-      "match": "\\b(palindrome|scala_file|sometimes|transpose|voicelead|humanize|scramble|rand_int|weighted|note_num|bassnote|rootless|interval|arrange|per_bar|degrade|shuffle|degrees|release|sustain|program|changes|euclid|evolve|rarely|chance|octave|invert|legato|cutoff|attack|reverb|sample|square|filter|concat|repeat|rotate|drop24|early|every|swing|stack|trunc|often|maybe|chord|strum|pitch|ratio|scale|cents|scala|decay|drive|delay|as_cc|noise|drift|range|floor|round|clamp|print|tones|shell|guide|drop2|drop3|fast|slow|late|iter|echo|poly|loop|dice|walk|rand|pick|step|just|mode|gain|inst|midi|held|sine|fold|take|drop|ceil|sqrt|log2|lerp|type|root|name|rev|off|ply|cat|seq|key|arp|edo|vel|pan|res|hpf|lpf|dur|set|ctl|mpe|tri|saw|seg|run|len|map|sum|abs|sin|cos|exp|min|max|str|hz|cc|at)\\b(?=\\s*\\(|)"
+      "match": "\\b(palindrome|scala_file|sometimes|transpose|voicelead|humanize|scramble|rand_int|weighted|note_num|bassnote|rootless|interval|arrange|per_bar|degrade|shuffle|degrees|release|sustain|program|changes|euclid|evolve|rarely|chance|octave|invert|legato|cutoff|attack|reverb|sample|square|filter|concat|repeat|rotate|within|drop24|early|every|swing|stack|trunc|often|maybe|chord|strum|pitch|ratio|scale|cents|scala|decay|drive|delay|as_cc|noise|drift|range|floor|round|clamp|print|tones|shell|guide|drop2|drop3|fast|slow|late|iter|echo|poly|loop|dice|walk|rand|pick|step|just|mode|gain|inst|midi|held|sine|fold|take|drop|ceil|sqrt|log2|lerp|type|root|name|rev|off|ply|cat|seq|key|arp|edo|vel|pan|res|hpf|lpf|dur|set|ctl|mpe|tri|saw|seg|run|len|map|sum|abs|sin|cos|exp|min|max|str|hz|cc|at)\\b(?=\\s*\\(|)"
     },
     {
       "name": "keyword.operator.chord.tine",
