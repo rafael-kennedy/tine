@@ -38,7 +38,7 @@ export const UNIT2: Unit = {
             const spec: [number[], string][] = [[[3, 6], "a tonic substitute (iii or vi)"], [[2, 4], "a predominant (ii or IV)"], [[5, 7], "a dominant (V or vii°)"], [[1], "the I chord"]];
             for (let b = 0; b < 4; b++) {
               if (!c[b]) return `Bar ${b + 1} has no chord.`;
-              if (onDegree(c[b]!, G, spec[b][0]) === null) return `Bar ${b + 1} (${nms(c[b]!, "sharps")}) should be ${spec[b][1]} in G major.`;
+              if (onDegree(c[b]!, G, spec[b][0]) === null) return `Bar ${b + 1} (${nms(c[b]!)}) should be ${spec[b][1]} in G major.`;
             }
             return null;
           },
@@ -77,8 +77,8 @@ export const UNIT2: Unit = {
           check: (_s, n) => {
             const m = need(n, "prog"); if (m) return m;
             const c = barChords(n, "prog", 2);
-            if (!c[0] || onDegree(c[0], 2, [5]) === null) return `Bar 1 should be V in D major (A or A7); you have ${c[0] ? nms(c[0], "sharps") : "nothing"}.`;
-            if (!c[1] || onDegree(c[1], 2, [6]) === null) return `Bar 2 should be vi in D major (Bm or Bm7); you have ${c[1] ? nms(c[1], "sharps") : "nothing"}.`;
+            if (!c[0] || onDegree(c[0], 2, [5]) === null) return `Bar 1 should be V in D major (A or A7); you have ${c[0] ? nms(c[0]) : "nothing"}.`;
+            if (!c[1] || onDegree(c[1], 2, [6]) === null) return `Bar 2 should be vi in D major (Bm or Bm7); you have ${c[1] ? nms(c[1]) : "nothing"}.`;
             return null;
           },
         } },

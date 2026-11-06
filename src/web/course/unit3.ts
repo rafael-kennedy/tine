@@ -12,20 +12,21 @@ export const UNIT3: Unit = {
     {
       id: "secondary", title: "Secondary dominants",
       parts: [
-        `<p>A dominant seventh resolves to the chord a fifth below it. Nothing says that chord has to be I. Any major or minor diatonic chord can be preceded by <b>its own dominant</b>, borrowed for a moment from the key where it would be tonic. This is <b>tonicization</b>: making a chord sound like a temporary home.</p>
-         <p>The names follow the target. In C major:</p>
-         <table class="t"><tr><th>chord</th><th>name</th><th>resolves to</th><th>new note</th></tr>
+        `<p>Four chords in C major. One of them has a note that is not in the key. Listen for the chord that sounds brighter than it should, and where it pulls.</p>`,
+        { code: `-- Cmaj7, A7, Dm7, G7.\n-- Change A7 to Am7 (the diatonic vi) and the pull into Dm7 goes slack.\ntempo 120\nlet tune = changes("Cmaj7 | A7 | Dm7 | G7")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 4 },
+        `<p>A7 is not in C major: its third, C#, is the leading tone of D. It acts as a dominant of Dm7, borrowed for a moment from D minor. A dominant aimed at a chord other than I is a <b>secondary dominant</b>, and making a chord sound like a temporary home is <b>tonicization</b>. The name follows the target: A7 here is <b>V7/ii</b>, "five of two".</p>
+         <table class="t"><tr><th>chord in C</th><th>name</th><th>resolves to</th><th>new note</th></tr>
          <tr><td>A7</td><td>V7/ii</td><td>Dm7</td><td>C#</td></tr><tr><td>B7</td><td>V7/iii</td><td>Em7</td><td>D#</td></tr>
          <tr><td>C7</td><td>V7/IV</td><td>Fmaj7</td><td>Bb</td></tr><tr><td>D7</td><td>V7/V</td><td>G7</td><td>F#</td></tr>
          <tr><td>E7</td><td>V7/vi</td><td>Am7</td><td>G#</td></tr></table>
-         <p>Each brings one chromatic note, usually the leading tone of its target. vii° can't be tonicized, because a diminished chord can't sound like a home.</p>`,
-        { code: `tempo 120\nlet tune = changes("Cmaj7 | A7 | Dm7 | G7")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>On degrees, a number counts diatonic tones, so <code>^6@7</code> would be Am7. To get the secondary dominant, name the quality: <code>^6@dom7</code>.</p>`,
-        { code: `key eb major\nvoice comp = <^1@maj7 ^6@dom7 ^2@m7 ^5@dom7>.voicelead\nvoice bass = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>Secondary dominants chain. If E7 goes to A7 instead of Am7, and A7 to D7, and D7 to G7, you get a run of <b>extended dominants</b>, each one the V of the next, falling by fifths to the tonic. Ragtime and swing are full of them.</p>`,
-        { code: `tempo 150\nlet tune = changes("E7 | A7 | D7 | G7 | C6 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 6 },
-        `<p>In jazz, a secondary dominant usually brings its own ii along, a <b>related ii</b>. Instead of A7 to Dm7 you get Em7b5 A7 to Dm7: a little minor ii-V into ii. Whole bridges are built from these.</p>`,
-        { code: `tempo 130\nlet tune = changes("Cmaj7 | Em7b5 A7 | Dm7 | G7")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
+         <p>Each brings one chromatic note, usually the leading tone of its target. vii° is never tonicized, because a diminished chord cannot sound like home.</p>`,
+        { code: `-- On degrees, name the quality: ^6@dom7 is a dominant seventh on ^6, where ^6@7 would be the diatonic Cm7 in Eb.\n-- Change ^6@dom7 to ^3@dom7 (and ^6 to ^3 in the bass): G7 wants to resolve to Cm, but Fm7 comes next. Hear it miss.\nkey eb major\nvoice comp = <^1@maj7 ^6@dom7 ^2@m7 ^5@dom7>.voicelead\nvoice bass = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>A secondary dominant only works when its target follows. In Eb, C7 (^6) resolves down a fifth to Fm7 (^2). G7 (^3) wants Cm, which is not the next chord.</p>`,
+        { code: `-- Every chord is the V of the next: E7, A7, D7, G7, then home.\n-- Change E7 to Em7: the chain starts one link later.\ntempo 150\nlet tune = changes("E7 | A7 | D7 | G7 | C6 | %")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 6 },
+        `<p>That chain is <b>extended dominants</b>, each the V of the next, falling by fifths to the tonic. Ragtime and swing are full of them.</p>`,
+        { code: `-- A7 with its own ii in front: Em7b5 A7 into Dm7.\n-- Delete Em7b5 from bar 2 and A7 takes the whole bar again.\ntempo 130\nlet tune = changes("Cmaj7 | Em7b5 A7 | Dm7 | G7")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
+        `<p>In jazz a secondary dominant usually brings its own ii, a <b>related ii</b>. Em7b5 A7 is a little minor ii-V into Dm7. Whole bridges are built from these.</p>`,
+        { code: `-- Partly done, in G major: I, V7/vi, vi, V7. Bar 2 is empty.\n-- Fill it with B7, the dominant of Em7.\nvoice comp = changes("Gmaj7 | N.C. | Em7 | D7").voicelead`, bars: 4 },
         { exercise: {
           task: `<p>In <b>F major</b>, write <code>voice comp</code>: four bars, <b>I, V7/ii, ii, V7</b>, one chord per bar.</p>`,
           starter: `voice comp = changes("Fmaj7 | Dm7 | Gm7 | C7")`,
@@ -41,9 +42,11 @@ export const UNIT3: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. The first chord is home. Is the second chord minor (vi7) or dominant (V7/ii)?", listen: `voice c = <c4@maj7 a3@7 d4@m7 g3@7>.voicelead\nvoice b = <c2 a1 d2 g1>.inst(upright)`, bars: 4, options: ["Minor (vi7)", "Dominant (V7/ii)"], answer: 1, explain: "Hear the C# pulling up to D." },
+          { q: "Listen. The first chord is home. Which chord is chromatic?", listen: `voice c = <g3@maj7 e3@m7 e3@7 a3@m7>.voicelead\nvoice b = <g1 e2 e2 a1>.inst(upright)`, bars: 4, options: ["The second", "The third", "The fourth"], answer: 1, explain: "E7 has G#, the leading tone of A. It is V7/ii in G." },
           { q: "In C major, what is V7/V?", options: ["G7", "D7", "A7", "F7"], answer: 1 },
           { q: "In C major, E7 tonicizes which chord?", options: ["Em", "Am", "A7", "B°"], answer: 1, explain: "E is the dominant of A. Its G# is the leading tone of A." },
-          { q: "Listen. Is the second chord minor or dominant?", listen: `voice c = <c4@maj7 a3@7 d4@m7 g3@7>.voicelead\nvoice b = <c2 a1 d2 g1>.inst(upright)`, bars: 4, options: ["Minor (vi7)", "Dominant (V7/ii)"], answer: 1, explain: "Hear the C# pulling up to D." },
+          { q: "From the ii-V-I lesson: in Em7b5 A7 Dm7, which two notes of A7 form its tritone?", options: ["A and E", "C# and G", "E and G", "A and C#"], answer: 1, explain: "The 3rd and 7th, C# and G, resolve to D and F." },
         ] },
       ],
     },
@@ -51,13 +54,13 @@ export const UNIT3: Unit = {
     {
       id: "minor251", title: "The minor ii-V-i",
       parts: [
-        `<p>In a minor key, the diatonic chords from harmonic minor give a darker ii-V: <b>iiø7, V7, i</b>. The ii is half-diminished, and the dominant picks up the flat sixth of the key as its <b>b9</b>. In C minor that is Dm7b5, G7b9, Cm.</p>
-         <p>Tine's diatonic chords show where it comes from. In C harmonic minor, the ninth chord on ^5 is G7b9 without asking.</p>`,
-        { code: `key c harmonic_minor\nprint(name([^2@7 ^5@9 ^1@7]))\nvoice comp = <^2@7 ^5@9 ^1@m6 ^1@m6>.voicelead\nvoice bass = <^2 ^5 ^1 ^1>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>Jazz musicians choose the minor tonic for color. <b>m6</b> and <b>mmaj7</b> come from melodic minor and sound settled; <b>m7</b> and <b>m9</b> come from dorian and sound open, good for a vamp. The dominant varies too: <b>7b9</b>, <b>7b9b13</b>, or the fully <b>altered</b> 7alt (lesson 29).</p>`,
-        { code: `tempo 110\nlet tune = changes("Dm7b5 | G7alt | Cmmaj7 | Cm6")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>Major and minor ii-Vs mix freely, and the minor one often resolves to a major chord or vice versa. A minor ii-V into a major tonic is softer than it looks on paper; a major ii-V into a minor tonic sounds like a door opening onto a darker room.</p>`,
-        { code: `tempo 120\nlet tune = changes("Dm7b5 | G7b9 | Cmaj7 | % | Dm7 | G7 | Cm9 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 8 },
+        `<p>The same ii-V-i, twice. First in C major, then in C minor. Listen to the first chord of each and to where they land.</p>`,
+        { code: `-- Major: Dm7 G7 Cmaj7. Minor: Dm7b5 G7b9 Cm6.\n-- Change Cm6 to Cmaj7 at the end: a minor ii-V landing on a major chord, a bittersweet arrival.\ntempo 110\nlet tune = changes("Dm7 | G7 | Cmaj7 | % | Dm7b5 | G7b9 | Cm6 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 8 },
+        `<p>In a minor key, the chords from harmonic minor give a darker ii-V: <b>iiø7, V7, i</b>. The ii is <b>half-diminished</b> (m7b5), and the dominant picks up the key's flat sixth as its <b>b9</b>. In C minor that is Dm7b5, G7b9, Cm. Tine's degree chords show where it comes from.</p>`,
+        { code: `-- In C harmonic minor, the ninth chord on ^5 is G7b9 without asking.\n-- Change key c harmonic_minor to key c major and run it: Dm7, G9, Cmaj7.\nkey c harmonic_minor\nprint(name([^2@7 ^5@9 ^1@7]))\nvoice comp = <^2@7 ^5@9 ^1@m6 ^1@m6>.voicelead\nvoice bass = <^2 ^5 ^1 ^1>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>Jazz musicians choose the minor tonic for color. <b>m6</b> and <b>mmaj7</b> come from melodic minor and sound settled. <b>m7</b> and <b>m9</b> come from dorian and sound open, good for a vamp. The dominant varies too: <b>7b9</b>, <b>7b9b13</b>, or the fully <b>altered</b> 7alt (lesson 29).</p>`,
+        { code: `-- An altered dominant and two minor tonics.\n-- Change Cmmaj7 to Cm7: the tonic sounds more open and less settled.\ntempo 110\nlet tune = changes("Dm7b5 | G7alt | Cmmaj7 | Cm6")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)`, bars: 4 },
+        { code: `-- Partly done, in G minor: bar 1 is the minor ii. Fill bar 2 with the dominant, D7b9.\nvoice comp = changes("Am7b5 | N.C. | Gm6 | %").voicelead`, bars: 4 },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: a minor ii-V-i in <b>A minor</b>. Bar 1 <b>Bm7b5</b>, bar 2 <b>E7b9</b>, bars 3 and 4 <b>Am6</b>. Play the full chords (roots included).</p>`,
           starter: `voice comp = changes("Bm7 | E7 | Am7 | %")`,
@@ -72,9 +75,11 @@ export const UNIT3: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. Major ii-V-I or minor ii-V-i?", listen: `voice c = changes("Em7b5 | A7b9 | Dm6 | %").rootless.voicelead\nvoice b = changes("Em7b5 | A7b9 | Dm6 | %").root.octave(-1).inst(upright)`, bars: 4, options: ["Major", "Minor"], answer: 1 },
+          { q: "Listen. A minor ii-V. Does it land on a minor or a major tonic?", listen: `voice c = changes("Gm7b5 | C7b9 | Fmaj7 | %").rootless.voicelead\nvoice b = changes("Gm7b5 | C7b9 | Fmaj7 | %").root.octave(-1).inst(upright)`, bars: 4, options: ["Minor", "Major"], answer: 1, explain: "Fmaj7: the dark approach opens onto a bright chord." },
           { q: "What quality is ii in a minor key?", options: ["Minor seventh", "Half-diminished", "Dominant", "Major seventh"], answer: 1 },
           { q: "In C minor, the b9 of G7b9 is...", options: ["A", "Ab", "Bb", "Db"], answer: 1, explain: "The flat sixth of C minor." },
-          { q: "Listen. Major ii-V-I or minor ii-V-i?", listen: `voice c = changes("Em7b5 | A7b9 | Dm6 | %").rootless.voicelead\nvoice b = changes("Em7b5 | A7b9 | Dm6 | %").root.octave(-1).inst(upright)`, bars: 4, options: ["Major", "Minor"], answer: 1 },
+          { q: "From the minor-key lesson: which form of minor raises ^7 but not ^6?", options: ["Natural", "Harmonic", "Melodic", "Dorian"], answer: 1, explain: "Harmonic minor raises ^7 to make V major, which is where V7b9 comes from." },
         ] },
       ],
     },
@@ -82,13 +87,13 @@ export const UNIT3: Unit = {
     {
       id: "mixture", title: "Borrowed chords",
       parts: [
-        `<p><b>Modal interchange</b>, or <b>mixture</b>, borrows chords from the parallel key. In C major, the chords of C minor are all available as colors: <b>iv</b> (Fm), <b>iiø7</b> (Dm7b5), <b>bIIImaj7</b> (Ebmaj7), <b>bVImaj7</b> (Abmaj7) and <b>bVII7</b> (Bb7). The tonic stays major. The borrowed chord darkens the moment and the major tonic brightens again on arrival.</p>
-         <p>The most famous is the minor iv, the sound of the minor plagal cadence: IV, then iv, then I.</p>`,
-        { code: `tempo 80\nlet tune = changes("Cmaj7 | Fmaj7 | Fm6 | Cmaj7")\nvoice comp = tune.voicelead.inst(keys)\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>On degrees, an altered degree takes an accidental: <code>^b6</code>, <code>^b7</code>. On an altered degree a number names the quality, so <code>^b7@7</code> is a dominant seventh and <code>^b6@maj7</code> a major seventh.</p>`,
-        { code: `key c major\nvoice comp = <^1@maj7 ^b6@maj7 ^b7@7 ^1@maj7>.voicelead\nvoice bass = <^1 ^b6 ^b7 ^1>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>The <b>backdoor ii-V</b> is iv7 to bVII7 to I: in C, Fm7 Bb7 Cmaj7. The bVII7 shares its tritone with nothing in C and arrives at the tonic from a whole step below, so it sounds like coming home by a side entrance. It is everywhere in ballads.</p>`,
-        { code: `tempo 100\nlet tune = changes("Cmaj7 | Am7 | Fm7 | Bb7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 6 },
+        `<p>A slow progression in C major. The third chord has one note from somewhere else. Listen for the moment the light dims.</p>`,
+        { code: `-- Cmaj7, Fmaj7, Fm6, Cmaj7.\n-- Change Fm6 to Fmaj7: the dimming is gone.\ntempo 80\nlet tune = changes("Cmaj7 | Fmaj7 | Fm6 | Cmaj7")\nvoice comp = tune.voicelead.inst(keys)\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
+        `<p>Fm6 is the iv chord of <b>C minor</b>. Its Ab is borrowed from the parallel minor, the key with the same tonic. Borrowing chords this way is <b>modal interchange</b>, or <b>mixture</b>. In C major the most common borrowed chords are <b>iv</b> (Fm), <b>iiø7</b> (Dm7b5), <b>bIIImaj7</b> (Ebmaj7), <b>bVImaj7</b> (Abmaj7) and <b>bVII7</b> (Bb7). The tonic stays major, so the borrowed chord darkens the moment and the tonic brightens it again. IV, iv, I is the minor plagal cadence you heard in the cadence lesson.</p>`,
+        { code: `-- On an altered degree a number names the quality: ^b6@maj7 is Abmaj7, ^b7@7 is Bb7.\n-- Change ^b6@maj7 to ^6@7 (the diatonic Am7) and hear the progression brighten.\nkey c major\nvoice comp = <^1@maj7 ^b6@maj7 ^b7@7 ^1@maj7>.voicelead\nvoice bass = <^1 ^b6 ^b7 ^1>.octave(-2).inst(upright)`, bars: 4 },
+        { code: `-- Fm7 Bb7 into Cmaj7.\n-- Change Fm7 | Bb7 to Dm7 | G7 and compare the front door with this side entrance.\ntempo 100\nlet tune = changes("Cmaj7 | Am7 | Fm7 | Bb7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 6 },
+        `<p>That is the <b>backdoor ii-V</b>: iv7, bVII7, I. Bb7 has no leading tone. It reaches C from a whole step below in the bass, and its Ab falls to G. So it sounds like coming home by a side entrance. Ballads use it constantly.</p>`,
+        { code: `-- Partly done, in F major: the backdoor ii-V is Bbm7 Eb7. Bar 3 is empty.\n-- Fill it with Eb7.\nvoice comp = changes("Fmaj7 | Bbm7 | N.C. | Fmaj7").voicelead`, bars: 4 },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: a <b>backdoor cadence in G major</b>. Bar 1 <b>iv7</b>, bar 2 <b>bVII7</b>, bars 3 and 4 <b>Gmaj7</b>.</p>`,
           starter: `voice comp = changes("Am7 | D7 | Gmaj7 | %")`,
@@ -103,9 +108,11 @@ export const UNIT3: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. The first chord is home. Is the third chord IV or iv?", listen: `voice c = <c4@maj f4@maj f4@m c4@maj>.voicelead\nvoice b = <c2 f2 f2 c2>.inst(upright)`, bars: 4, options: ["IV (major)", "iv (minor)"], answer: 1, explain: "The A drops to Ab." },
+          { q: "Listen. The first chord is home. Is the cadence the front door (ii-V) or the backdoor (iv7 bVII7)?", listen: `voice c = changes("Ebmaj7 | Abm7 | Db7 | Ebmaj7").rootless.voicelead\nvoice b = changes("Ebmaj7 | Abm7 | Db7 | Ebmaj7").root.octave(-1).inst(upright)`, bars: 4, options: ["Front door", "Backdoor"], answer: 1, explain: "Db7 rises a whole step to Eb." },
           { q: "In C major, which chord is bVII7?", options: ["B7", "Bb7", "Bbmaj7", "Bdim7"], answer: 1 },
           { q: "Borrowed chords come from...", options: ["the relative minor", "the parallel minor", "the dominant key", "the whole-tone scale"], answer: 1, explain: "Same tonic, minor mode." },
-          { q: "Listen. Is the third chord IV or iv?", listen: `voice c = <c4@maj f4@maj f4@m c4@maj>.voicelead\nvoice b = <c2 f2 f2 c2>.inst(upright)`, bars: 4, options: ["IV (major)", "iv (minor)"], answer: 1, explain: "The A drops to Ab." },
+          { q: "From the secondary-dominant lesson: in C major, C7 is V7/IV. Which of its notes is outside the key?", options: ["C", "E", "G", "Bb"], answer: 3, explain: "Bb, the seventh, pulls down to A in Fmaj7." },
         ] },
       ],
     },
@@ -113,20 +120,22 @@ export const UNIT3: Unit = {
     {
       id: "modulation", title: "Modulation",
       parts: [
-        `<p>Tonicization borrows a key for a chord or two. <b>Modulation</b> moves the tonic for good, or at least for a section. Three classical methods:</p>
-         <ul><li><b>Pivot chord</b>: a chord that belongs to both keys. Am is vi in C and ii in G, so a progression can arrive on Am as vi and leave it as ii.</li>
-         <li><b>Direct</b> (or phrase) modulation: end a phrase in one key and start the next in another.</li>
-         <li><b>Common tone</b>: hold one note while the harmony shifts under it.</li></ul>`,
-        { code: `-- pivot: Am7 is vi in C, then ii in G\ntempo 110\nlet tune = changes("Cmaj7 | Fmaj7 | Am7 | D7 | Gmaj7 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 6 },
-        `<p>Jazz tunes modulate constantly and almost always the same way: with a <b>ii-V of the new key</b>. The ii-V says where you are going so clearly that no pivot is needed. Common moves are up a fourth (to IV), down a whole step, and by thirds, which reach distant keys in a single step.</p>`,
-        { code: `tempo 140\nlet tune = changes("Cmaj7 | % | Fm7 | Bb7 | Ebmaj7 | % | Abm7 | Db7 | Gbmaj7 | % | Dm7 | G7")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 12 },
-        `<p>Because Tine degrees resolve against the key, a section can restate the same material in a new key by changing one line. This is also how to practice a progression in all twelve keys.</p>`,
-        { code: `tempo 160\nsection home 4\n  key c major\n  voice comp = <^2@m7 ^5@dom7 ^1@maj7 ^1@maj7>.rootless.voicelead\nsection up 4\n  key eb major\n  voice comp = <^2@m7 ^5@dom7 ^1@maj7 ^1@maj7>.rootless.voicelead\nform home up` },
+        `<p>Listen to where this progression starts, and where it ends up. By bar 5 the home chord has changed.</p>`,
+        { code: `-- Starts in C, ends in G. Am7 in bar 3 belongs to both keys.\n-- Change D7 to G7 and Gmaj7 to Cmaj7: the music stays in C.\ntempo 110\nlet tune = changes("Cmaj7 | Fmaj7 | Am7 | D7 | Gmaj7 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 6 },
+        `<p>Tonicization borrows a key for a chord or two. <b>Modulation</b> moves the tonic for good, or at least for a section. That example used a <b>pivot chord</b>: Am7 is vi in C and ii in G, so the progression arrives on it in one key and leaves it in the other.</p>`,
+        { code: `-- The same four bars in C, then in Eb, with nothing between them.\n-- Change key eb major to key a major and the second half jumps somewhere else.\ntempo 160\nsection home 4\n  key c major\n  voice comp = <^2@m7 ^5@dom7 ^1@maj7 ^1@maj7>.rootless.voicelead\nsection up 4\n  key eb major\n  voice comp = <^2@m7 ^5@dom7 ^1@maj7 ^1@maj7>.rootless.voicelead\nform home up` },
+        `<p>That is a <b>direct</b>, or phrase, modulation: end a phrase in one key and start the next in another. Because Tine degrees resolve against the key, a section can restate the same material in a new key by changing one line. It is also how to practice a progression in all twelve keys.</p>`,
+        { code: `-- The top note G never moves. Under it, C major becomes Eb major.\n-- Change eb3@maj to e3@m: G is still shared, and E minor is a much nearer key.\ntempo 90\nvoice hold = [g4].vel(.7).inst(vibes)\nvoice pad  = <c3@maj c3@maj eb3@maj eb3@maj>.inst(pad).vel(.4)`, bars: 4 },
+        `<p>A <b>common-tone</b> modulation holds one note while the harmony shifts under it. It can reach distant keys smoothly, because the ear follows the held note.</p>`,
+        { code: `-- C, then a ii-V into Eb, a ii-V into Gb, and a ii-V back to C.\n-- Change Abm7 | Db7 | Gbmaj7 to Cm7 | F7 | Bbmaj7 and the third key is a step down instead.\ntempo 140\nlet tune = changes("Cmaj7 | % | Fm7 | Bb7 | Ebmaj7 | % | Abm7 | Db7 | Gbmaj7 | % | Dm7 | G7")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 12 },
+        `<p>Jazz tunes modulate constantly, almost always with a <b>ii-V of the new key</b>. The ii-V says where you are going so clearly that no pivot is needed. That example rose by minor thirds, C to Eb to Gb. Other common moves are up a fourth (to IV) and down a whole step.</p>`,
+        { code: `-- Partly done: Fmaj7, then a ii-V into Db. Bar 4 is empty.\n-- Fill it with Dbmaj7.\nvoice comp = changes("Fmaj7 | Ebm7 | Ab7 | N.C.").voicelead`, bars: 4 },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: four bars that start in <b>F major</b> and end in <b>Ab major</b>. Bar 1 <b>Fmaj7</b>, then a <b>ii-V of Ab</b> (bars 2 and 3), then <b>Abmaj7</b>.</p>`,
           starter: `voice comp = changes("Fmaj7 | Gm7 | C7 | Fmaj7")`,
           solution: `voice comp = changes("Fmaj7 | Bbm7 | Eb7 | Abmaj7").voicelead`,
           bars: 4,
+          hint: `ii of Ab is a whole step above Ab. V is a fifth above Ab.`,
           check: (_s, n) => {
             const m = need(n, "comp"); if (m) return m;
             const c = barChords(n, "comp", 4);
@@ -136,9 +145,11 @@ export const UNIT3: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. The first chord is home. Does the music end in the key it started in?", listen: `tempo 120\nlet tune = changes("Cmaj7 | % | Fm7 | Bb7 | Ebmaj7 | %")\nvoice c = tune.rootless.voicelead\nvoice b = tune.root.octave(-1).inst(upright)`, bars: 6, options: ["Yes, C", "No, it moved"], answer: 1, explain: "Fm7 Bb7 is a ii-V of Eb, and it lands there." },
           { q: "In a pivot modulation from C to G, Am is vi in C. What is it in G?", options: ["iii", "ii", "IV", "vi"], answer: 1 },
           { q: "How do jazz tunes most often announce a new key?", options: ["A pivot chord", "A ii-V of the new key", "A long pause", "A key signature"], answer: 1 },
           { q: "Modulating from C major to Eb major moves the tonic...", options: ["up a minor third", "up a major third", "down a minor third", "up a fourth"], answer: 0 },
+          { q: "From the borrowed-chord lesson: Ebmaj7 in C major is bIIImaj7, borrowed from C minor. What makes a passage a modulation to Eb instead?", options: ["Eb becomes the new home, usually after its own ii-V", "Any Eb chord at all", "A slower tempo", "A minor chord before it"], answer: 0 },
         ] },
       ],
     },

@@ -11,7 +11,37 @@ const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#",
 // Feedback should spell notes the way the key does: pass "sharps" in sharp keys (A harmonic minor's G#, D major's C#).
 export type Spelling = "flats" | "sharps";
 export const nm = (s: number, sp: Spelling = "flats") => (sp === "sharps" ? SHARP_NAMES : NAMES)[pc(s)];
-export const nms = (ss: number[], sp: Spelling = "flats") => ss.map(x => nm(x, sp)).join(" ");
+// With no spelling given, a set of notes that names as a chord is spelled from its root by letter (D7 is D F# A C, Bdim7 is B D F Ab); anything else falls back to flats.
+export const nms = (ss: number[], sp?: Spelling) => (sp ? null : spellChord(ss)) ?? ss.map(x => nm(x, sp ?? "flats")).join(" ");
+const LETTERS = "CDEFGAB", LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
+export function spellChord(ss: number[]): string | null {
+  if (ss.length < 3) return null;
+  let sym: string;
+  try { sym = nameOf(ss); } catch { return null; }
+  const m = /^([A-G])([b#]?)/.exec(sym ?? "");
+  if (!m) return null;
+  const li0 = LETTERS.indexOf(m[1]), rpc = (LETTER_PC[li0] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0) + 12) % 12;
+  // Try the root as named and its enharmonic twin (Ab and G#), and keep the spelling with fewer odd names (Cb, E#, double accidentals).
+  const tries = [li0, ...(m[2] === "b" ? [(li0 + 6) % 7] : m[2] === "#" ? [(li0 + 1) % 7] : [])].map(li => spellFrom(ss, sym, li, rpc)).filter((x): x is string => !!x);
+  const odd = (x: string) => (x.match(/Cb|Fb|E#|B#|bb|##/g) ?? []).length;
+  return tries.sort((a, b) => odd(a) - odd(b))[0] ?? null;
+}
+function spellFrom(ss: number[], sym: string, li: number, rpc: number): string | null {
+  const dim7 = /dim7|o7/.test(sym), aug = /aug|\+|#5/.test(sym), sharp11 = /#11/.test(sym), sharp9 = /#9|alt/.test(sym);
+  const STEP = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6];
+  const out = ss.map(x => {
+    const iv = (pc(x) - rpc + 12) % 12;
+    let st = STEP[iv];
+    if (iv === 9 && dim7) st = 6;
+    if (iv === 8 && aug) st = 4;
+    if (iv === 6 && sharp11 && !/b5|m7b5|dim/.test(sym)) st = 3;
+    if (iv === 3 && sharp9 && !/^[A-G][b#]?m(?!aj)/.test(sym)) st = 1;
+    const L = (li + st) % 7, d = ((pc(x) - LETTER_PC[L] + 18) % 12) - 6;
+    if (Math.abs(d) > 2) return null;
+    return LETTERS[L] + (d > 0 ? "#".repeat(d) : "b".repeat(-d));
+  });
+  return out.includes(null) ? null : out.join(" ");
+}
 
 export const of = (n: TimedNote[], v: string) => n.filter(x => x.voice === v);
 export const inBar = (n: TimedNote[], b: number) => n.filter(x => x.bar >= b - 1e-9 && x.bar < b + 1 - 1e-9);
