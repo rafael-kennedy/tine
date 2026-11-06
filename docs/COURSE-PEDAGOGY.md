@@ -44,10 +44,8 @@ A reviewer who did not write the lesson scores each category from 0 to 10. A les
 
 ## How the review is run
 
-**Chosen: one reviewer, in the thread that wrote the course, with a mechanical audit first.** Separate reviewer agents would read each lesson without having written it, which catches more, but they cost many times the tokens and nobody asked for that spend. The loop for each lesson:
+**Chosen: separate reviewer agents, one per unit, after a first pass by the author.** Rafael picked this on the decision card. A reviewer that did not write a lesson catches more than its author does, and that is worth the extra tokens. The loop:
 
-1. A script renders the lesson as a learner meets it: each paragraph, then each example with the exact notes it plays (voice, bar, beat, pitch, length), each challenge with what its starter and solution produce and what the check says about each, and each quiz. It also flags rubric problems a machine can find: runs of prose with no sound, examples that suggest no edit, ear questions with no key set first, quizzes that never reach back to an earlier lesson.
-2. The reviewer scores the ten categories against that output, not against the source, and lists every point below 10 with the specific fix.
-3. The fixes go in, the tests run, and the loop repeats until every category is 10.
-
-If a separate reviewer is wanted later, the same audit output is what it reads.
+1. The author's pass: a script renders each lesson as a learner meets it (each paragraph; each example with the exact notes it plays; each challenge with what its starter and solution produce and what the check says; each quiz with its listen notes). It flags what a machine can find: runs of prose with no sound, too few examples or suggested edits, no ear question, too few quiz questions. The author fixes those and every accuracy problem found by running the code.
+2. Five reviewer agents, one per unit, read the same rendered output plus the source. They run any code they doubt, score the ten categories, and list every point below 10 with the exact fix.
+3. The author applies the fixes, runs the tests, and sends the changed lessons back for another review. This repeats until every category is 10.
