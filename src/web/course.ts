@@ -16,7 +16,7 @@ nav .unit span{color:var(--mute);letter-spacing:.02em;text-transform:none;font-s
 nav a.l{display:flex;gap:6px;align-items:baseline;padding:5px 8px;border-radius:8px;color:var(--text);text-decoration:none;font-size:14px;line-height:1.35}
 nav a.l:hover{background:var(--ink2)}
 nav a.l.act{background:var(--ink3);box-shadow:inset 3px 0 var(--brass)}
-nav a.l .n{width:22px;flex:none;color:var(--mute);font-variant-numeric:tabular-nums;font-size:12.5px}
+nav a.l .n{width:26px;flex:none;color:var(--mute);font-variant-numeric:tabular-nums;font-size:12.5px}
 nav a.l .tick{width:14px;color:var(--ok);flex:none;margin-left:auto}
 nav .seedbox{margin-top:22px;font-size:13px;color:var(--mute)}
 nav .seedbox b{font-family:var(--mono);color:var(--brass2)}
@@ -36,7 +36,7 @@ table.t th{color:var(--mute);font-weight:500;font-size:13px}
 .ucard h3{margin:2px 0 4px;font-family:var(--serif);font-weight:600;font-size:19px}
 .ucard .code{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--brass2)}
 .ucard p{font-size:14px;color:var(--mute);margin:4px 0 8px;line-height:1.5}
-.ucard ol{margin:0;padding-left:22px;font-size:14px}
+.ucard ul.ls{margin:0;padding:0;list-style:none;font-size:14px}.ucard ul.ls li{display:flex;gap:6px}.ucard ul.ls .n{width:24px;flex:none;color:var(--mute);font-variant-numeric:tabular-nums}
 .ucard li{line-height:1.6;font-size:14px}
 .bar-progress{height:6px;border-radius:4px;background:var(--ink3);overflow:hidden;margin:8px 0 2px}
 .bar-progress i{display:block;height:100%;background:var(--ok)}
@@ -83,7 +83,7 @@ function renderNav() {
   for (const u of UNITS) {
     navEl.append(h("div", { class: "unit" }, u.code, h("span", {}, u.title)));
     for (const l of COURSE_LESSONS.filter(x => x.unit === u)) {
-      navEl.append(h("a", { class: "l" + (cur === l.id ? " act" : ""), href: `#${l.id}` }, h("span", { class: "n" }, String(l.n)), l.title, h("span", { class: "tick" }, complete(l.id) ? "✓" : "")));
+      navEl.append(h("a", { class: "l" + (cur === l.id ? " act" : ""), href: `#${l.id}` }, h("span", { class: "n" }, l.label), l.title, h("span", { class: "tick" }, complete(l.id) ? "✓" : "")));
     }
   }
   navEl.append(h("div", { class: "unit" }, "Appendix"));
@@ -104,13 +104,13 @@ function renderHome(article: HTMLElement) {
   );
   const units = h("div", { class: "units" });
   for (const u of UNITS) {
-    const ol = h("ol", { start: String(COURSE_LESSONS.find(l => l.unit === u)!.n) });
-    for (const l of COURSE_LESSONS.filter(x => x.unit === u)) ol.append(h("li", {}, h("a", { href: `#${l.id}` }, l.title), complete(l.id) ? h("span", { class: "ok" }, " ✓") : null));
+    const ol = h("ul", { class: "ls" });
+    for (const l of COURSE_LESSONS.filter(x => x.unit === u)) ol.append(h("li", {}, h("span", { class: "n" }, l.label), h("a", { href: `#${l.id}` }, l.title), complete(l.id) ? h("span", { class: "ok" }, " ✓") : null));
     units.append(h("div", { class: "ucard" }, h("div", { class: "code" }, u.code), h("h3", {}, u.title), h("p", {}, u.blurb), ol));
   }
   article.append(units);
   article.append(h("p", { html: `<b>A note on spelling.</b> Tine works in sounding pitch: C# and Db are the same note to it, and it has no staff notation. Theory often cares which spelling a chord uses, because spelling records function. The course says so wherever it matters (augmented sixths, lesson 23, are the clearest case) and otherwise uses the spellings a jazz lead sheet would.` }));
-  article.append(h("p", {}, "Start with ", h("a", { href: `#${COURSE_LESSONS[0].id}` }, `1. ${COURSE_LESSONS[0].title}`), ". Browsers need one click on the page before they make sound."));
+  article.append(h("p", {}, "Start with ", h("a", { href: `#${COURSE_LESSONS[0].id}` }, `${COURSE_LESSONS[0].label}. ${COURSE_LESSONS[0].title}`), ". Browsers need one click on the page before they make sound."));
 }
 
 function renderReference(article: HTMLElement) {
@@ -144,8 +144,8 @@ function renderPage() {
   const idx = COURSE_LESSONS.findIndex(l => l.id === id);
   if (idx < 0) { renderHome(article); return; }
   const lesson = COURSE_LESSONS[idx];
-  document.title = `${lesson.n}. ${lesson.title} · Tine Theory`;
-  article.append(h("div", { class: "kicker" }, `${lesson.unit.code} · Lesson ${lesson.n}`), h("h1", {}, lesson.title));
+  document.title = `${lesson.label}. ${lesson.title} · Tine Theory`;
+  article.append(h("div", { class: "kicker" }, `${lesson.unit.code} · Lesson ${lesson.label}`), h("h1", {}, lesson.title));
   let e = 0, q = 0;
   for (const part of lesson.parts) {
     if (typeof part === "string") article.append(h("div", { html: part }));
@@ -155,8 +155,8 @@ function renderPage() {
   }
   const prev = COURSE_LESSONS[idx - 1], next = COURSE_LESSONS[idx + 1];
   article.append(h("div", { class: "pager" },
-    prev ? h("a", { href: `#${prev.id}` }, `← ${prev.n}. ${prev.title}`) : h("a", { href: "#home" }, "← Course home"),
-    next ? h("a", { href: `#${next.id}` }, `${next.n}. ${next.title} →`) : h("a", { href: "#reference" }, "Harmony reference →")));
+    prev ? h("a", { href: `#${prev.id}` }, `← ${prev.label}. ${prev.title}`) : h("a", { href: "#home" }, "← Course home"),
+    next ? h("a", { href: `#${next.id}` }, `${next.label}. ${next.title} →`) : h("a", { href: "#reference" }, "Harmony reference →")));
 }
 
 function main() {

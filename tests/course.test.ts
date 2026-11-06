@@ -17,8 +17,10 @@ for (const lesson of COURSE_LESSONS) {
         expect(e.task.includes("—")).toBe(false);
         const s = evaluate(e.solution, { seed: 1 });
         expect(e.check(s, renderNotes(s, e.bars ?? 1).notes)).toBeNull();
-        const s0 = evaluate(e.starter, { seed: 1 });
-        expect(e.check(s0, renderNotes(s0, e.bars ?? 1).notes)).not.toBeNull();
+        // a starter must not pass; one that does not even run (a fix-the-code task) counts as failing
+        let verdict: string | null = "error";
+        try { const s0 = evaluate(e.starter, { seed: 1 }); verdict = e.check(s0, renderNotes(s0, e.bars ?? 1).notes); } catch { /* fails, as it should */ }
+        expect(verdict).not.toBeNull();
       });
     } else if ("quiz" in part) {
       const k = q++;
@@ -33,6 +35,10 @@ for (const lesson of COURSE_LESSONS) {
             expect(renderNotes(s, s.form ? undefined : qq.bars ?? 2).notes.length).toBeGreaterThan(0);
           }
         }
+      });
+    } else if (part.broken) {
+      test(`${lesson.id} example ${i} shows an error on purpose`, () => {
+        expect(() => renderNotes(evaluate(part.code, { seed: 1 }), 1)).toThrow();
       });
     } else {
       test(`${lesson.id} example ${i}`, () => {

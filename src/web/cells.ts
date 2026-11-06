@@ -7,7 +7,7 @@ import { Transport } from "./transport";
 import { makeEditor, showError, flash } from "./editor";
 import { Roll } from "./roll";
 
-export interface Cell { code: string; bars?: number }
+export interface Cell { code: string; bars?: number; broken?: boolean } // broken: an example that shows an error on purpose
 export interface Exercise { task: string; starter: string; solution: string; bars?: number; hint?: string; check: (s: Scene, n: TimedNote[]) => string | null }
 export interface Question { q: string; options: string[]; answer: number; explain?: string; listen?: string; bars?: number }
 
