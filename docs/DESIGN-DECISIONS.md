@@ -346,3 +346,23 @@ An arrangement written in Tine against 1.0 found three rough edges, now fixed:
 
 - `tine xml` now writes a chord symbol (`<harmony>`) above each new chord in a part. Notes from a chord symbol carry their root, so `changes("Gm7 C7")` is named exactly as written. Other stacks of three or more pitch classes are named by the same identifier as `name()`. A symbol is written only when it changes, which is how lead sheets read. Kinds MusicXML names (minor-seventh, dominant, half-diminished and so on) use its vocabulary; the rest are written as "other" with the symbol as text, so nothing is lost.
 - The slash note of a chord symbol (`F/A`) used to sit just below that chord's root, so a line of slash chords jumped between octaves with the roots. It now sits in one fixed octave under the chords (C2 to B2 for chords at octave 3). A bass line read from slash chords stays in one register, which is how a bassist reads them. Use `within` or an explicit octave (`c@7/e3`) to place it elsewhere.
+
+## 39. Active voices: opt-in, immediate code swaps
+
+- By default an edit is heard when you evaluate, at the next bar line. That protects the groove, but it is slow when you are steering one voice by hand. Writing `active voice lead = ...` opts that one voice out: every edit that leaves it valid is heard straight away, with no evaluating.
+- **What "valid" means.** Editing a file passes through broken states (`[c e` before the `]`). About 150 ms after the last keystroke the DAW evaluates the file quietly; an active voice swaps only if the file evaluates and the voice can play its next two bars without an error. Until then it keeps its last good code, and the error is underlined as usual.
+- **Where the swap lands.** The choices were: at once even mid-note, on the next beat, or on the voice's next note. Tine swaps at the edge of what is already scheduled (the look-ahead, 120 ms at most) and the new pattern takes over from that same point in the bar. Because a pattern is a function of time, "the same point in the bar" is well defined, so the new code does not restart from the downbeat and stays in time. Notes already sounding ring out instead of being cut, and a note of the new pattern that would have started before the swap is not started late. In practice this is "the voice's next note", with at most a quarter of a second between typing and hearing. The next beat was rejected because it adds up to a beat of delay for no musical gain; cutting notes was rejected because it clicks.
+- Only active voices change. Tempo, key and every other voice still wait for an evaluation and the bar line, so typing in one voice can never move the others. Deleting an active voice's line stops it at once; breaking it does not.
+- The tradeoff is that you hear your intermediate states. `.fast(2)` on the way to `.fast(24)` plays at 2 for a moment. That is why it is opt-in and per voice.
+- `active` is a keyword only directly before `voice`, so existing code that uses `active` as a name keeps working.
+
+## 40. Performance toggles: blocks of code on a button
+
+- Live sets need to bring whole ideas in and out: a fill, a second drum layer, a counter-melody spread over several voices. Commenting lines by hand is slow and mistakes are audible. A toggle is a named block of lines that a key or a MIDI button switches off and on.
+- **The name lives in the code**, as a comment: `-- @fill` opens a block that `-- @end` or a blank line closes, and `-- @hats` at the end of a line names that line. Names survive editing, line moves and saving, because they move with the text. Line numbers or editor selections would not.
+- **Switched-off lines get `--~ `**, not `-- `. The tilde marks code that a toggle turned off, so ordinary comments inside a block come back as comments, and a block switches back on exactly as it was. This is tested.
+- **Bindings live in the DAW, not the file.** Which pad you hit is a fact about your controller and your set, not about the piece. They are kept per browser and shown next to each block under Tracks, with learn and clear buttons. A binding is a key, a MIDI note, or a CC that fires when it rises through the middle, so a button that sends 127 then 0 fires once and a wobbly fader does not chatter.
+- Plain keys fire only when the editor is not focused, so you can still type the letter. Keys with Ctrl, Cmd or Alt fire anywhere.
+- A toggle is an edit plus an evaluation, so it lands like any change: on the next bar, or at once inside active voices. The piece is always exactly what the text says, which keeps takes and replay honest.
+- Commenting by hand stays on Ctrl/Cmd + / in every Tine editor and in VS Code.
+

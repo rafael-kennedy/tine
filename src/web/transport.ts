@@ -2,7 +2,7 @@
 // that begins in the next ~120 ms, using exact audio-clock timestamps. New
 // code is swapped in on the next bar line (or beat, or immediately), so
 // re-evaluating never disturbs the groove.
-import { Scene, liveNotes, formNotes, timeline, barSeconds, TimedNote, Inputs } from "../core";
+import { Scene, VoiceDef, liveNotes, formNotes, timeline, barSeconds, TimedNote, Inputs } from "../core";
 import { Engine } from "./engine";
 import { ClockFollower, CLOCK, START, CONTINUE, STOP } from "./clockin";
 
@@ -114,6 +114,33 @@ export class Transport {
     const t = this.timeOfBar(atBar);
     this.anchorBar = atBar; this.anchorTime = t;
     this.barSec = barSeconds(this.scene, this.tempo());
+  }
+
+  // Active voices (`active voice x = ...`) take new code right away instead
+  // of at the bar line. Only those voices change: everything else keeps
+  // playing what it was, and still waits for an evaluation and the next bar.
+  // Notes already scheduled (at most the look-ahead, 120 ms) still play; from
+  // there on the new pattern plays from the same point in the bar, because a
+  // pattern is a function of time. A note that is already ringing rings out.
+  // `present` names every voice still written in the code, so a deleted
+  // active voice stops but a broken one keeps its last good version.
+  swapActive(next: Scene, present: Set<string>): string[] {
+    const swapped: string[] = [];
+    const merge = (into: Scene): Scene => {
+      const out: Scene = { ...into, voices: new Map(into.voices), sections: new Map([...into.sections].map(([k, v]) => [k, { ...v, voices: new Map(v.voices) }])) };
+      const apply = (dst: Map<string, VoiceDef>, src: Map<string, VoiceDef> | undefined) => {
+        for (const [name, v] of src ?? []) if (v.active) { dst.set(name, v); if (!swapped.includes(name)) swapped.push(name); }
+        for (const [name, v] of dst) if (v.active && !present.has(name) && !src?.has(name)) dst.delete(name);
+      };
+      apply(out.voices, next.voices);
+      for (const [k, sec] of out.sections) apply(sec.voices, next.sections.get(k)?.voices);
+      return out;
+    };
+    if (!this.scene) return [];
+    this.scene = merge(this.scene);
+    if (this.pending) this.pending = merge(this.pending);
+    this.preparedTo = this.scheduledTo;
+    return swapped;
   }
 
   launch(section: string | null) { this.pendingSection = section; if (!this.playing) { this.section = section ?? undefined; this.sectionStart = 0; this.onSection?.(this.section); } }

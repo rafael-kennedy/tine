@@ -7,6 +7,10 @@
   ],
   "patterns": [
     {
+      "name": "entity.name.tag.toggle.tine",
+      "match": "--\\s*@[A-Za-z0-9_]+\\s*$"
+    },
+    {
       "name": "comment.line.double-dash.tine",
       "match": "--.*$"
     },
@@ -22,12 +26,15 @@
       ]
     },
     {
-      "match": "^\\s*(voice|section)\\s+([A-Za-z_][A-Za-z0-9_#]*)",
+      "match": "^\\s*(?:(active)\\s+)?(voice|section)\\s+([A-Za-z_][A-Za-z0-9_#]*)",
       "captures": {
         "1": {
-          "name": "keyword.declaration.tine"
+          "name": "storage.modifier.tine"
         },
         "2": {
+          "name": "keyword.declaration.tine"
+        },
+        "3": {
           "name": "entity.name.section.tine"
         }
       }

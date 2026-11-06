@@ -436,6 +436,7 @@ function lex(src) {
   return toks;
 }
 // ../../src/core/parser.ts
+var STATEMENT_KW = new Set(["voice", "let", "section", "form", "meter", "use"]);
 var sp = (a, b) => ({ start: a.start, end: b.end });
 function parse(src) {
   const p = new Parser(src, lex(src));
@@ -560,6 +561,11 @@ class Parser {
       const value = this.valueOrBlock();
       return { t: "let", name: nameTok.text, params, value, span: sp(this.spanOf(t), value.span), nameSpan: this.spanOf(nameTok) };
     }
+    let active = false;
+    if (t.type === "ident" && t.text === "active" && this.peek()?.type === "kw" && this.peek()?.text === "voice") {
+      this.next();
+      active = true;
+    }
     if (this.isKw("voice")) {
       this.next();
       const nameTok = this.tok;
@@ -568,7 +574,7 @@ class Parser {
       this.next();
       this.expectOp("=");
       const value = this.valueOrBlock();
-      return { t: "voice", name: nameTok.text, value, span: sp(this.spanOf(t), value.span), nameSpan: this.spanOf(nameTok) };
+      return { t: "voice", name: nameTok.text, value, span: sp(this.spanOf(t), value.span), nameSpan: this.spanOf(nameTok), ...active ? { active } : {} };
     }
     if (t.type === "kw" && ["tempo", "seed", "tuning"].includes(t.text) && !this.isOp("(", this.peek())) {
       this.next();
@@ -888,6 +894,8 @@ class Parser {
     while (!this.isOp(close)) {
       if (this.tok.type === "eof" || this.tok.type === "newline" || this.tok.type === "dedent")
         this.err(`unclosed '${open}'`, s, `add a matching '${close}'`);
+      if (this.tok.type === "kw" && STATEMENT_KW.has(this.tok.text))
+        this.err(`unclosed '${open}': the next line starts with '${this.tok.text}' before it was closed`, s, `add a matching '${close}' at the end of this line`);
       if (this.isOp("_")) {
         const h = this.next();
         if (!items.length)
@@ -3087,7 +3095,7 @@ class Interp {
         this.beginStatement(`voice:${st.name}`);
         const v = this.eval(st.value, env);
         const pat = this.asPattern(v, st.value.span);
-        const def = { name: st.name, pat, span: st.span, section: sec?.name };
+        const def = { name: st.name, pat, span: st.span, section: sec?.name, active: st.active };
         (sec ? sec.voices : this.scene.voices).set(st.name, def);
         return pat;
       }

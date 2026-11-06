@@ -14,6 +14,7 @@ const tineMode = StreamLanguage.define<{ inPhrase: number }>({
   startState: () => ({ inPhrase: 0 }),
   token(stream: StringStream, state) {
     if (stream.eatSpace()) return null;
+    if (stream.match(/^--\s*@[A-Za-z0-9_]+\s*$/)) return "labelName"; // a performance toggle tag
     if (stream.match("--")) { stream.skipToEnd(); return "comment"; }
     if (stream.match(/^"(?:[^"\\]|\\.)*"?/)) return "string";
     if (stream.match(/^\^(?:#|b)*-?\d+/)) return "atom";
@@ -21,6 +22,7 @@ const tineMode = StreamLanguage.define<{ inPhrase: number }>({
     if (stream.match(/^[A-Za-z_][A-Za-z0-9_#]*/)) {
       const w = stream.current();
       if (NOTE_RE.test(w)) return "atom";
+      if (w === "active" && stream.match(/^\s+voice\b/, false)) return "keyword";
       if (KEYWORDS.has(w)) return w === "true" || w === "false" ? "bool" : "keyword";
       if (w in DRUMS) return "special";
       if (builtins.has(w)) return "function";
@@ -44,6 +46,7 @@ const tineMode = StreamLanguage.define<{ inPhrase: number }>({
 export const tineHighlight = HighlightStyle.define([
   { tag: t.comment, color: "var(--c-comment)", fontStyle: "italic" },
   { tag: t.keyword, color: "var(--c-keyword)", fontWeight: "600" },
+  { tag: t.labelName, color: "var(--teal)", fontWeight: "600" },
   { tag: t.atom, color: "var(--c-note)" },
   { tag: t.number, color: "var(--c-number)" },
   { tag: t.string, color: "var(--c-string)" },

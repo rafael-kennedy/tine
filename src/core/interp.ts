@@ -11,7 +11,7 @@ import { hashStr, Stream, rand01 } from "./rng";
 import { Env, Closure, Builtin, Rec, typeName, show, num, isNum, truthy } from "./values";
 import { makeChord, registerBuiltins } from "./builtins";
 
-export interface VoiceDef { name: string; pat: Pat; span: Span; section?: string }
+export interface VoiceDef { name: string; pat: Pat; span: Span; section?: string; active?: boolean }
 export interface SectionDef { name: string; bars: number; voices: Map<string, VoiceDef>; tempo?: number; key?: Key; span: Span }
 
 export interface Scene {
@@ -130,7 +130,7 @@ export class Interp {
         this.beginStatement(`voice:${st.name}`);
         const v = this.eval(st.value, env);
         const pat = this.asPattern(v, st.value.span);
-        const def: VoiceDef = { name: st.name, pat, span: st.span, section: sec?.name };
+        const def: VoiceDef = { name: st.name, pat, span: st.span, section: sec?.name, active: st.active };
         (sec ? sec.voices : this.scene.voices).set(st.name, def);
         return pat;
       }

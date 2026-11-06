@@ -28,7 +28,7 @@ export interface PItem { node: Node; weight: number; span: Span }
 
 export type Stmt =
   | { t: "let"; name: string; params: string[] | null; value: Node; span: Span; nameSpan: Span; doc?: string }
-  | { t: "voice"; name: string; value: Node; span: Span; nameSpan: Span }
+  | { t: "voice"; name: string; value: Node; span: Span; nameSpan: Span; active?: boolean }
   | { t: "directive"; name: "tempo" | "meter" | "key" | "seed" | "tuning"; args: Node[]; span: Span }
   | { t: "section"; name: string; bars: Node; body: Stmt[]; span: Span; nameSpan: Span }
   | { t: "form"; items: { name: string; times: number; span: Span }[]; span: Span }
@@ -136,6 +136,10 @@ class Parser {
       const value = this.valueOrBlock();
       return { t: "let", name: nameTok.text, params, value, span: sp(this.spanOf(t), value.span), nameSpan: this.spanOf(nameTok) };
     }
+    // `active voice x = ...`: a voice that takes edits as soon as they are good.
+    // "active" is only special right before `voice`, so it stays usable as a name.
+    let active = false;
+    if (t.type === "ident" && t.text === "active" && this.peek()?.type === "kw" && this.peek()?.text === "voice") { this.next(); active = true; }
     if (this.isKw("voice")) {
       this.next();
       const nameTok = this.tok;
@@ -144,7 +148,7 @@ class Parser {
       this.next();
       this.expectOp("=");
       const value = this.valueOrBlock();
-      return { t: "voice", name: nameTok.text, value, span: sp(this.spanOf(t), value.span), nameSpan: this.spanOf(nameTok) };
+      return { t: "voice", name: nameTok.text, value, span: sp(this.spanOf(t), value.span), nameSpan: this.spanOf(nameTok), ...(active ? { active } : {}) };
     }
     if (t.type === "kw" && ["tempo", "seed", "tuning"].includes(t.text) && !this.isOp("(", this.peek())) {
       this.next();

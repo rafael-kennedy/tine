@@ -3,6 +3,9 @@ if exists("b:current_syntax") | finish | endif
 syn match   tineComment  "--.*$"
 syn region  tineString   start=+"+ skip=+\\"+ end=+"+
 syn keyword tineKeyword  let voice section form if then else and or not use
+syn match tineKeyword "^\s*\zsactive\ze\s\+voice\>"
+syn match tineToggle "--\s*@\w\+\s*$"
+hi def link tineToggle Label
 syn keyword tineDirective tempo meter key seed tuning
 syn keyword tineBool     true false silence
 syn match   tineDegree   "\^\%(#\|b\)*-\?\d\+"

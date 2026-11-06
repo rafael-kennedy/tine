@@ -7,6 +7,7 @@ A Tine file (`.tine`) is a list of statements, one per line. Blocks are indented
 | Statement | Meaning |
 | --- | --- |
 | `voice name = pattern` | A named part. Top-level voices loop forever. |
+| `active voice name = pattern` | A voice that plays your edits as soon as they are good, without evaluating, and without waiting for the bar line. |
 | `let name = value` | Name a value. |
 | `let fn(x, y) = expression` | Define a function. The body may be an indented block whose last line is the result. |
 | `tempo 120` | Beats per minute, where a beat is the meter's denominator. |
@@ -102,6 +103,16 @@ Every random decision is a hash of the seed, the voice name, the random site, th
 Fractional pitches are sent as pitch bend with a range of 2 semitones, reset after each microtonal note. Exported MIDI files contain one track per voice, tempo and meter, program and control changes, and the seed in a text event.
 
 In the DAW's MIDI panel, *send MIDI clock* makes other gear follow Tine, and *follow MIDI clock* makes Tine follow other gear: its tempo (measured from the clock and smoothed), start, continue and stop. Following works on tempo and phase in live mode; in form mode it follows start and stop only.
+
+## Performing
+
+| In the code | Effect |
+| --- | --- |
+| `active voice lead = ...` | edits to this voice are heard within about a quarter of a second of the last keystroke, from the same point in the bar |
+| `-- @fill` ... `-- @end` | names a block of lines (a blank line also ends it) |
+| `voice hats = [hat*8]  -- @hats` | names one line |
+
+Named blocks appear under *toggles* in the DAW's Tracks panel. Bind each to a key or a MIDI button or pad, and it switches the block's lines off (prefixing them with `--~ `) and on again. A switch takes effect like an evaluation: on the next bar, or at once for active voices. Plain keys work when the editor is not focused; keys with Ctrl, Cmd or Alt work anywhere. `Ctrl/Cmd + /` comments the selected lines in any Tine editor.
 
 ## Effects
 

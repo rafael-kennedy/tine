@@ -1,17 +1,19 @@
 // Tine DAW: a live-coding workstation in the browser.
 import { EditorView } from "@codemirror/view";
 import {
-  evaluate, Scene, TineError, formatError, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, builtinList,
+  evaluate, Scene, VoiceDef, TineError, formatError, makeCtx, R, hashStr, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, builtinList,
 } from "../core";
 import { Engine } from "./engine";
 import { Transport, Quantize } from "./transport";
 import { makeEditor, showError, flash } from "./editor";
+import { findToggles, toggleEdits, comboOf, hasModifier, describe as describeBinding, matches as bindingMatches, Trigger, Binding } from "./toggles";
 import { Roll } from "./roll";
 import { CSS, LOGO_SVG } from "./theme";
 import { captureToCode, Captured } from "./capture";
 
 const DEFAULT_CODE = `-- Welcome to the Tine DAW.
 -- Ctrl/Cmd+Enter evaluates (changes land on the next bar). Ctrl/Cmd+. stops.
+-- An 'active voice' plays each edit as soon as it is valid. Ctrl/Cmd+/ comments lines.
 tempo 92
 key d dorian
 
@@ -64,6 +66,8 @@ aside{border-left:1px solid var(--line);display:flex;flex-direction:column;min-h
 .dot{width:10px;height:10px;border-radius:50%;flex:none}
 .led{width:8px;height:8px;border-radius:50%;background:var(--ink3);flex:none;transition:background .15s}
 .led.hit{background:var(--brass2);transition:none}
+.led.live{box-shadow:0 0 0 2px var(--teal)}
+.tag-active{font-size:10px;color:var(--teal);border:1px solid var(--teal);border-radius:4px;padding:0 4px;margin-left:4px}
 .dest{font-size:11.5px;color:var(--mute);font-family:var(--mono)}
 h4{margin:14px 0 6px;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
 h4:first-child{margin-top:0}
@@ -159,13 +163,42 @@ export async function startDaw() {
   const view: EditorView = makeEditor({
     doc: initial, parent: edWrap,
     onEval: () => run(true), onStop: () => stop(), onSave: () => save(),
-    onChange: d => store.set("tine.code", d),
+    onChange: d => { store.set("tine.code", d); scheduleLive(); },
   });
   const code = () => view.state.doc.toString();
   const setCode = (s: string) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: s } });
 
   // ---------- evaluation ----------
-  const voiceNamesIn = (src: string) => [...src.matchAll(/^\s*voice\s+([A-Za-z_][A-Za-z0-9_#]*)/gm)].map(m => m[1]);
+  const voiceNamesIn = (src: string) => [...src.matchAll(/^\s*(?:active\s+)?voice\s+([A-Za-z_][A-Za-z0-9_#]*)/gm)].map(m => m[1]);
+
+  // Active voices: every edit that leaves the code in a good state is heard
+  // at once, without Ctrl/Cmd+Enter. "Good" means the file evaluates and the
+  // voice can play its next bar; until then the voice keeps its last good code.
+  let liveTimer: any = null;
+  function scheduleLive() {
+    if (liveTimer) clearTimeout(liveTimer);
+    liveTimer = setTimeout(liveEval, 150);
+  }
+  function liveEval() {
+    liveTimer = null;
+    const src = code();
+    if (!transport.playing || !/^\s*active\s+voice\b/m.test(src)) return;
+    let scene: Scene;
+    try { scene = evaluate(src, { seed, keepGoing: true }); } catch (e) { const err = e as TineError; showError(view, err.span, err.message); return; }
+    if (scene.errors.length) showError(view, scene.errors[0].span, scene.errors[0].message); else showError(view, undefined, "");
+    // a voice that fails while playing its next bar is not swapped in
+    const bar = Math.floor(transport.currentBar());
+    const ctx = makeCtx(scene.seed, 0, scene.key, new R(0), transport.inputs);
+    const check = (m: Map<string, VoiceDef>) => { for (const [name, v] of m) if (v.active) { try { v.pat.query(new R(bar), new R(bar + 2), { ...ctx, voice: hashStr(name) }); } catch (e) { m.delete(name); showError(view, v.span, `voice ${name}: ${(e as Error).message}`); } } };
+    check(scene.voices);
+    for (const sec of scene.sections.values()) check(sec.voices);
+    const swapped = transport.swapActive(scene, new Set(voiceNamesIn(src)));
+    if (swapped.length) flashActive(swapped);
+  }
+  const activeLed = new Map<string, number>();
+  function flashActive(names: string[]) {
+    for (const n of names) { const led = activity.get(n); if (led) { led.classList.add("live"); clearTimeout(activeLed.get(n)); activeLed.set(n, setTimeout(() => led.classList.remove("live"), 300) as any); } }
+  }
 
   function compile(): Scene | null {
     const src = code();
@@ -265,7 +298,7 @@ export async function startDaw() {
 
   // ---------- tracks ----------
   const allVoices = (s: Scene) => {
-    const out: { name: string; section?: string; dest: string }[] = [];
+    const out: { name: string; section?: string; dest: string; active?: boolean }[] = [];
     const destOf = (v: any) => {
       try {
         const ns = renderNotes({ ...s, form: null } as Scene, 1).notes.filter(n => n.voice === v.name);
@@ -273,8 +306,8 @@ export async function startDaw() {
         return p.midi !== undefined ? `MIDI ch ${p.midi}${p.port ? ` · ${p.port}` : ""}${p.mpe ? " · mpe" : ""}` : String(p.inst ?? "keys");
       } catch { return ""; }
     };
-    for (const v of s.voices.values()) out.push({ name: v.name, dest: destOf(v) });
-    for (const sec of s.sections.values()) for (const v of sec.voices.values()) out.push({ name: v.name, section: sec.name, dest: "" });
+    for (const v of s.voices.values()) out.push({ name: v.name, dest: destOf(v), active: v.active });
+    for (const sec of s.sections.values()) for (const v of sec.voices.values()) out.push({ name: v.name, section: sec.name, dest: "", active: v.active });
     return out;
   };
   function renderTracks() {
@@ -289,13 +322,68 @@ export async function startDaw() {
       if (!activity.has(v.name)) activity.set(v.name, led);
       const m = h("button", { class: "small" + (transport.muted.has(v.name) ? " on" : ""), title: "mute", onclick: () => { transport.muted.has(v.name) ? transport.muted.delete(v.name) : transport.muted.add(v.name); renderTracks(); } }, "M");
       const so = h("button", { class: "small" + (transport.soloed.has(v.name) ? " on" : ""), title: "solo", onclick: () => { transport.soloed.has(v.name) ? transport.soloed.delete(v.name) : transport.soloed.add(v.name); renderTracks(); } }, "S");
-      p.append(h("div", { class: "row" }, h("span", { class: "dot", style: `background:${roll.color(v.name)}` }), led, h("span", { class: "name" }, v.name), h("span", { class: "dest" }, v.dest), m, so));
+      p.append(h("div", { class: "row" }, h("span", { class: "dot", style: `background:${roll.color(v.name)}` }), led, h("span", { class: "name" }, v.name, v.active ? h("span", { class: "tag-active", title: "active: edits play as soon as they are good" }, "active") : null), h("span", { class: "dest" }, v.dest), m, so));
     }
+    renderToggles(p);
     p.append(h("h4", {}, "sounds"));
     const sl = h("div", {});
     for (const [k, d] of Object.entries(INSTRUMENT_DOCS)) sl.append(h("div", { class: "dest" }, `${k}: ${d}`));
     for (const k of engine.samples.keys()) sl.append(h("div", { class: "dest" }, `sample("${k}")  loaded sample`));
     p.append(sl, h("div", { class: "drop" }, "Drop audio files anywhere to load them as samples. Use them with .sample(\"name\") or .sample(\"name\", fit: true) for loops."));
+  }
+
+  // ---------- performance toggles (see toggles.ts) ----------
+  const bindings = new Map<string, Binding>(Object.entries((() => { try { return JSON.parse(store.get("tine.toggles") ?? "{}"); } catch { return {}; } })()));
+  const saveBindings = () => store.set("tine.toggles", JSON.stringify(Object.fromEntries(bindings)));
+  let learning: string | null = null;
+  const trigger = new Trigger();
+
+  function toggle(tag: string) {
+    const doc = view.state.doc;
+    const edits = toggleEdits(doc.toString(), tag);
+    if (!edits.length) return;
+    view.dispatch({ changes: edits.map(e => { const l = doc.line(e.line + 1); return { from: l.from + e.from, to: l.from + e.to, insert: e.insert }; }) });
+    const on = findToggles(code()).find(t => t.tag === tag)?.on;
+    log(`${tag} ${on ? "on" : "off"}`, "i");
+    if (transport.playing) void run(false); else renderTracks();
+  }
+  function bind(tag: string, b: Binding) {
+    for (const [k, v] of bindings) if (k !== tag && describeBinding(v) === describeBinding(b)) bindings.delete(k); // one control, one block
+    bindings.set(tag, b); learning = null; saveBindings();
+    log(`${tag} is on ${describeBinding(b)}`, "i"); renderTracks();
+  }
+  function renderToggles(p: HTMLElement) {
+    const ts = findToggles(code());
+    p.append(h("h4", {}, "toggles"));
+    if (!ts.length) { p.append(h("p", { class: "dim" }, "Name a block with a line like -- @fill (end it with -- @end or a blank line), or end one line with -- @hats. Then bind it to a key or a MIDI button here, and switch it on and off while you play.")); return; }
+    for (const t of ts) {
+      const b = bindings.get(t.tag);
+      const sw = h("button", { class: "small" + (t.on ? " on" : ""), title: "switch on or off", onclick: () => toggle(t.tag) }, t.on ? "on" : "off");
+      const learn = h("button", { class: "small" + (learning === t.tag ? " on" : ""), title: "bind a key or MIDI control", onclick: () => { learning = learning === t.tag ? null : t.tag; renderTracks(); } }, learning === t.tag ? "press a key or a MIDI button…" : b ? describeBinding(b) : "bind");
+      const un = b ? h("button", { class: "small", title: "remove binding", onclick: () => { bindings.delete(t.tag); saveBindings(); renderTracks(); } }, "×") : null;
+      p.append(h("div", { class: "row" }, sw, h("span", { class: "name" }, `@${t.tag}`), h("span", { class: "dest" }, `${t.lines.length} line${t.lines.length === 1 ? "" : "s"}`), learn, un));
+    }
+  }
+  window.addEventListener("keydown", e => {
+    const combo = comboOf(e);
+    if (learning) {
+      if (e.key === "Escape") { learning = null; renderTracks(); e.preventDefault(); return; }
+      if (!combo) return;
+      e.preventDefault(); e.stopPropagation(); bind(learning, { kind: "key", combo }); return;
+    }
+    if (!combo) return;
+    const typing = view.hasFocus || (e.target as HTMLElement)?.closest?.("input, select, textarea");
+    for (const [tag, b] of bindings) if (b.kind === "key" && b.combo === combo && (hasModifier(combo) || !typing)) { e.preventDefault(); e.stopPropagation(); toggle(tag); return; }
+  }, true);
+  function toggleMidi(msg: { type: string; note?: number; vel?: number; cc?: number; value?: number; ch: number }) {
+    const rising = msg.type === "cc" ? trigger.cc(msg.cc!, msg.ch, msg.value!) : msg.type === "on";
+    if (learning) {
+      if (msg.type === "on") bind(learning, { kind: "note", note: msg.note!, ch: msg.ch });
+      else if (msg.type === "cc" && rising) bind(learning, { kind: "cc", cc: msg.cc!, ch: msg.ch });
+      return;
+    }
+    if (!rising) return;
+    for (const [tag, b] of bindings) if (bindingMatches(b, msg)) toggle(tag);
   }
 
   // ---------- scenes ----------
@@ -377,6 +465,7 @@ export async function startDaw() {
       h("div", { class: "dest" }, "held(8).arp  arpeggiate the keys you hold"));
   }
   engine.onMidiIn = msg => {
+    toggleMidi(msg);
     if (msg.type === "cc") {
       lastCc.innerHTML = "";
       lastCc.append(`cc ${msg.cc} = ${msg.value!.toFixed(2)} (ch ${msg.ch})  `, h("button", { class: "small", onclick: () => insertAtCursor(`cc(${msg.cc})`) }, `insert cc(${msg.cc})`));

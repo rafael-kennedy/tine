@@ -8,9 +8,10 @@ const g = {
   $schema: "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   name: "Tine", scopeName: "source.tine", fileTypes: ["tine"],
   patterns: [
+    { name: "entity.name.tag.toggle.tine", match: "--\\s*@[A-Za-z0-9_]+\\s*$" },
     { name: "comment.line.double-dash.tine", match: "--.*$" },
     { name: "string.quoted.double.tine", begin: "\"", end: "\"", patterns: [{ name: "constant.character.escape.tine", match: "\\\\." }] },
-    { match: "^\\s*(voice|section)\\s+([A-Za-z_][A-Za-z0-9_#]*)", captures: { 1: { name: "keyword.declaration.tine" }, 2: { name: "entity.name.section.tine" } } },
+    { match: "^\\s*(?:(active)\\s+)?(voice|section)\\s+([A-Za-z_][A-Za-z0-9_#]*)", captures: { 1: { name: "storage.modifier.tine" }, 2: { name: "keyword.declaration.tine" }, 3: { name: "entity.name.section.tine" } } },
     { match: "^\\s*(let)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\()", captures: { 1: { name: "keyword.declaration.tine" }, 2: { name: "entity.name.function.tine" } } },
     { match: "^\\s*(let)\\s+([A-Za-z_][A-Za-z0-9_]*)", captures: { 1: { name: "keyword.declaration.tine" }, 2: { name: "variable.other.definition.tine" } } },
     { name: "keyword.control.tine", match: "\\b(if|then|else|and|or|not)\\b" },
