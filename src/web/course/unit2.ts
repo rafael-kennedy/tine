@@ -50,7 +50,7 @@ export const UNIT2: Unit = {
         `<p>Those three jobs have names. Each diatonic chord does one of them, and that job is its <b>function</b>.</p>
          <ul><li><b>Tonic</b> (T): home. <b>I</b>, and its stand-ins <b>vi</b> and <b>iii</b>, which share two of its three notes.</li>
          <li><b>Predominant</b> (PD), also called subdominant: leaving home and heading for the dominant. <b>IV</b> and <b>ii</b>, which share ^4 and ^6.</li>
-         <li><b>Dominant</b> (D): tension that wants home. <b>V</b> and <b>vii°</b>, both holding the tritone between ^4 and ^7.</li></ul>
+         <li><b>Dominant</b> (D): tension that wants home. <b>V</b> and <b>vii°</b>, which both hold the leading tone ^7. V7 and vii° also hold the tritone between ^4 and ^7.</li></ul>
          <p>The example you just heard is the path most tonal phrases follow: <b>T, PD, D, T</b>.</p>`,
         { code: `-- I vi ii V with a Charleston comp, bass and ride.\n-- Change ^6@7 to ^3@7 (and ^6 to ^3 in the bass): iii is the other tonic stand-in, and the progression still works.\ntempo 150\nkey c major\nvoice comp = ([0 . . 0 . . . .] + <^1@7 ^6@7 ^2@7 ^5@7>).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + <^1 ^6 ^2 ^5>.octave(-2)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)`, bars: 4 },
         `<p>That is T, PD, D again. A second tonic chord, vi, follows I, and ii takes the place of IV. <b>I vi ii V</b> is one of the most common progressions in jazz. It is called a <b>turnaround</b> because it turns the tune back to the top.</p>
@@ -58,7 +58,7 @@ export const UNIT2: Unit = {
         { code: `-- IV V I, then ii V I. Listen to the bass under the first chord of each half.\n-- Change the first ^4@7 to ^2@7 (and ^4 to ^2 in the bass) and both halves become ii V I.\nkey c major\nvoice chords = <^4@7 ^5@7 ^1@7 . ^2@7 ^5@7 ^1@7 .>.voicelead\nvoice bass   = <^4 ^5 ^1 . ^2 ^5 ^1 .>.octave(-2).inst(upright)`, bars: 8 },
         `<p>Jazz prefers <b>ii</b> to IV as its predominant. ii goes to V by root motion of a fifth (D down to G, or up a fourth, the same move), the strongest root motion in tonal music. IV goes to V by a step. ii7 also shares three of its four notes with IV, so it does the same job.</p>
          <p>Classical harmony avoids moving backwards from D to PD. The blues does it on purpose: V7, IV7, I7 near the end of a basic blues chorus. <code>^4@dom7</code> below asks for a dominant seventh on ^4. A plain number after a degree counts scale tones, so <code>^4@7</code> would give Fmaj7. A name such as <code>dom7</code> gives a fixed quality.</p>`,
-        { code: `-- V7 IV7 I7, the end of a blues chorus.\n-- Change ^4@dom7 to ^4@7 (Fmaj7): it is still legal harmony, but the bluesy grit goes.\ntempo 120\nkey c major\nvoice comp = ([0 . . 0 . . . .] + <^5@dom7 ^4@dom7 ^1@dom7 ^1@dom7>).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + <^5 ^4 ^1 ^1>.octave(-2)).inst(upright)`, bars: 4 },
+        { code: `-- V7 IV7 I7, the end of a blues chorus.\n-- Change ^4@dom7 to ^4@7 (Fmaj7): Eb becomes E, and the bluesy grit goes.\ntempo 120\nkey c major\nvoice comp = ([0 . . 0 . . . .] + <^5@dom7 ^4@dom7 ^1@dom7 ^1@dom7>).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + <^5 ^4 ^1 ^1>.octave(-2)).inst(upright)`, bars: 4 },
         { code: `-- Partly done: bar 3 is empty. Put a dominant there (^5@7, and ^5 in the bass) and the phrase closes.\n-- Then try ^4@7 instead (and ^4 in the bass): it still gets home, but gently, with no tritone to resolve.\nkey c major\nvoice chords = <^6@7 ^2@7 . ^1@7>.voicelead\nvoice bass   = <^6 ^2 . ^1>.octave(-2).inst(upright)`, bars: 4 },
         { exercise: {
           task: `<p>In <b>G major</b>, write <code>voice prog</code>: four bars, one chord per bar, following <b>T, PD, D, T</b>. Bar 1 must be a tonic-function chord <b>other than I</b>, bar 2 a predominant, bar 3 a dominant, bar 4 the I chord. Triads or seventh chords are fine.</p>`,
@@ -80,7 +80,7 @@ export const UNIT2: Unit = {
         } },
         { quiz: [
           { q: "What is the function of vi?", options: ["Tonic", "Predominant", "Dominant"], answer: 0, explain: "It shares two notes with I and often replaces it." },
-          { q: "Which two chords have dominant function?", options: ["I and V", "V and vii°", "ii and IV", "iii and vii°"], answer: 1, explain: "Both hold the tritone between ^4 and ^7." },
+          { q: "Which two chords have dominant function?", options: ["I and V", "V and vii°", "ii and IV", "iii and vii°"], answer: 1, explain: "Both hold the leading tone, ^7, which pulls up to ^1. V7 and vii° also hold the tritone ^4-^7." },
           { q: "Listen. The first chord is home. Does the phrase end on a tonic or a dominant?", listen: `key f major\nvoice x = <^1@3 ^6@3 ^2@3 ^5@3>.voicelead\nvoice b = <^1 ^6 ^2 ^5>.octave(-2).inst(upright)`, bars: 4, options: ["Tonic", "Dominant"], answer: 1, explain: "It stops on V (C major in F), so it sounds unfinished." },
           { q: "Listen. The first chord is home. Which family does the second chord belong to?", listen: `key bb major\nvoice x = <^1@7 ^2@7 ^5@7 ^1@7>.voicelead\nvoice b = <^1 ^2 ^5 ^1>.octave(-2).inst(upright)`, bars: 4, options: ["Tonic", "Predominant", "Dominant"], answer: 1, explain: "It is ii (Cm7 in Bb), leaving home on the way to V." },
           { q: "From the seventh-chord lesson: in a major key, what quality is the seventh chord built on ^5?", options: ["maj7", "m7", "Dominant 7", "m7b5"], answer: 2, explain: "V7 is the only dominant seventh in the major scale. That is why it pulls home so hard." },
@@ -113,8 +113,8 @@ export const UNIT2: Unit = {
             const m = need(n, "prog"); if (m) return m;
             const c = [0, 1].map(b => heard(n, "prog", b));
             if (c[0] && JSON.stringify(pcset(c[0])) === JSON.stringify([2, 5, 7, 11])) return "That is G7, V of C major. Without a key line, degrees count from C. Put key d major at the top.";
-            if (!c[0] || degreeOf(c[0], 2, [5]) === null) return `Bar 1 should be V in D major (A or A7); you have ${c[0] ? nms(c[0]) : "nothing"}.`;
-            if (!c[1] || degreeOf(c[1], 2, [6]) === null) return `Bar 2 should be vi in D major (Bm or Bm7); you have ${c[1] ? nms(c[1]) : "nothing"}.`;
+            if (!c[0] || degreeOf(c[0], 2, [5]) === null) return `Bar 1 should be V in D major (A or A7); you have ${c[0] ? nms(c[0]) : "single notes or a rest, not a chord (write ^5@7, not ^5)"}.`;
+            if (!c[1] || degreeOf(c[1], 2, [6]) === null) return `Bar 2 should be vi in D major (Bm or Bm7); you have ${c[1] ? nms(c[1]) : "single notes or a rest, not a chord (write ^6@7, not ^6)"}.`;
             return null;
           },
         } },
@@ -365,6 +365,7 @@ export const UNIT2: Unit = {
           check: (_s, n) => {
             const all = groups(of(n, "cycle")).filter(g => g.semis.length >= 2);
             if (all.length < 8) return `I hear ${all.length} chord${all.length === 1 ? "" : "s"}; the cycle has eight, two a bar.`;
+            if (all.slice(0, 8).some(g => pcset(g.semis).length < 4)) return "Use seventh chords, four notes each: ^1@7 rather than ^1@3, or Dm7 rather than Dm.";
             const v = all[6];
             if (v && isChord(v.semis, 9, "m7")) return "Chord 7 is Am7, the minor v of natural minor. Make it A7 with ^5@dom7, so its C# leads up to D.";
             const why = expectChords(n, "cycle", [[2, "m7"], [7, "m7"], [0, "7"], [5, "maj7"], [10, "maj7"], [4, "m7b5"], [9, "7"], [2, "m7"]]); if (why) return why;

@@ -17,7 +17,7 @@ export const UNIT0: Unit = {
         `<p>This course teaches music theory: the names musicians give to what they hear, and the patterns behind them. You do not need to read music, play an instrument or know how to program. Every idea comes with a few lines of code that make sound. You change the code and hear what changes.</p>
          <p>Press <b>▶ play</b> under the box below. Browsers stay silent until you click something on the page, so the first press can take a moment.</p>`,
         { code: `voice hello = [c4 e4 g4 c5]` },
-        `<p>Four notes, each higher than the last, over and over until you press <b>■</b>. The picture under the code is a <b>piano roll</b>: time runs left to right, higher notes sit higher up, and the moving line shows where the music is.</p>
+        `<p>Four notes, each higher than the last, over and over until you press <b>■</b>. The picture under the code is a <b>piano roll</b>: time runs left to right, higher notes sit higher up, and the moving line shows where the music is. The strip on its left edge is a piano keyboard turned on its side.</p>
          <p>Here is what the line says:</p>
          <ul><li><code>voice</code> means "here is a part to play". A piece can have many voices, the way a band has many players.</li>
          <li><code>hello</code> is a name for this voice. Most single words work; lesson 0.6 covers the few that do not.</li>
@@ -47,7 +47,7 @@ export const UNIT0: Unit = {
         { quiz: [
           { q: "Listen. Does this tune go up or down?", listen: `voice x = [c5 a4 f4 d4]`, options: ["Up", "Down"], answer: 1, explain: "Each note is lower than the one before." },
           { q: "Listen. How many notes are in each bar?", listen: `voice x = [c4 e4 g4]`, options: ["Two", "Three", "Four"], answer: 1 },
-          { q: "In the piano roll, where are the higher notes?", options: ["Further left", "Further right", "Higher up", "Lower down"], answer: 2, explain: "Up is higher in pitch. Left to right is time." },
+          { q: "In the piano roll, two notes sit side by side at the same height. What do you hear?", options: ["The same note twice, one after the other", "Two different notes at once", "One note, then a higher one"], answer: 0, explain: "Same height means same pitch. Side by side means one after the other." },
           { q: "Listen. Which bar has the shorter notes?", listen: `voice x = <[c4 e4 g4 c5] [c4 e4 g4 c5 g4 e4 c4 e4]>`, bars: 2, options: ["The first", "The second"], answer: 1, explain: "Eight notes share the second bar, so each is half as long." },
         ] },
       ],
@@ -62,12 +62,12 @@ export const UNIT0: Unit = {
          <p>How high a note sounds is its <b>pitch</b>, and pitch comes from how fast something vibrates. The higher A you heard vibrates 440 times a second. The lower A vibrates exactly half as fast, 220 times a second. That 2 to 1 ratio is why the two blend so well.</p>`,
         `<p>The piano keyboard repeats a pattern of seven white keys and five black keys from bottom to top. The white keys are named with seven letters, <b>A B C D E F G</b>, and after G the letters start again at A. Here are the white keys from the note called <b>middle C</b> up to the next C.</p>`,
         { code: `-- the white keys from middle C up. Add d5 e5 at the end: the names start over.\nvoice white = [c4 d4 e4 f4 g4 a4 b4 c5]` },
-        `<p>Tine names every key with its letter and an <b>octave number</b>. Middle C is <code>c4</code>. To find C on a real keyboard, look at the black keys: they come in groups of two and three, and C is the white key just left of each group of two.</p>
-         <p>Note that <b>the octave number goes up at C, not at A</b>. The A and B just above middle C are <code>a4</code> and <code>b4</code>, and the next C is <code>c5</code>. The B just below middle C is <code>b3</code>.</p>`,
+        `<p>Tine names every key with its letter and an <b>octave number</b>. Middle C is <code>c4</code>. To find C on a real keyboard, look at the black keys: they come in groups of two and three, and C is the white key just left of each group of two. The strip on the left of each piano roll is a keyboard on its side: low keys at the bottom, black keys short and dark, and the Cs labeled. There, C sits just below each group of two black keys.</p>
+         <p>The <b>octave number goes up at C, not at A</b>. The A and B just above middle C are <code>a4</code> and <code>b4</code>, and the next C is <code>c5</code>. The B just below middle C is <code>b3</code>.</p>`,
         { code: `-- across middle C: b3 is just below it, d4 just above\nvoice across = [a3 b3 c4 d4]` },
         `<p>Now the black keys. Here are the five between middle C and the C above.</p>`,
         { code: `-- the five black keys between c4 and c5.\n-- Change eb4 to d#4: the same key under its other name, so it sounds the same.\nvoice black = [c#4 eb4 f#4 ab4 bb4 .]` },
-        `<p>Each black key is named after a white key beside it. A <b>sharp</b>, written <code>#</code>, means the key just above. A <b>flat</b>, written <code>b</code> after the letter, means the key just below. The black key between C and D is <code>c#4</code> ("C sharp") and also <code>db4</code> ("D flat"): two names for one key. <code>bb4</code> is B flat: the letter B, then the flat sign b. Jazz musicians mostly use the flat names (Bb, Eb, Ab). Trumpets and saxophones are built in Bb and Eb, so many jazz tunes sit in those keys.</p>`,
+        `<p>Each black key is named after a white key beside it. A <b>sharp</b>, written <code>#</code>, means the key just above. A <b>flat</b>, written <code>b</code> after the letter, means the key just below. The black key between C and D is <code>c#4</code> ("C sharp") and also <code>db4</code> ("D flat"): two names for one key. <code>bb4</code> is B flat: the letter B, then the flat sign b. Jazz musicians mostly use the flat names (Bb, Eb, Ab). Trumpets and saxophones are built in Bb and Eb, so jazz tunes often use Bb or Eb as their home note.</p>`,
         { code: `-- two pairs of notes. Which pair sounds tighter?\n-- Then put b3 c4 in place of e4 f4: just as tight, because no black key sits between B and C.\nvoice steps = [c4 d4 . . e4 f4 . .]` },
         `<p>The second pair is tighter. The distance from one key to the very next, black or white, is a <b>half step</b>. Two half steps make a <b>whole step</b>. C to D is a whole step, because C# sits between them. E to F is a half step, because there is no black key between E and F. B to C is a half step for the same reason.</p>`,
         { exercise: {
@@ -183,7 +183,7 @@ export const UNIT0: Unit = {
               if (x.semi !== s) return `Note ${i + 1} should be ${octaveName(s)}; yours is ${octaveName(x.semi)}.`;
               if (Math.abs(r3(x.bars) - d) > 0.01) {
                 const next = ns[i + 1]?.bar ?? 1;
-                if (x.bars < d && next - (x.bar + x.bars) > 0.01) return `${octaveName(s)} stops after ${beats(x.bars)} because <code>.</code> is a rest. Use <code>_</code> to keep it ringing.`;
+                if (x.bars < d && next - (x.bar + x.bars) > 0.01) return `${octaveName(s)} stops after ${beats(x.bars)} because "." is a rest. Use "_" to keep it ringing.`;
                 return `${octaveName(s)} lasts ${beats(x.bars)}; it should last ${beats(d)}.`;
               }
               if (Math.abs(r3(x.bar) - t) > 0.01) return `${octaveName(s)} starts on beat ${r3(x.bar * 4 + 1)}; it should start on beat ${t * 4 + 1}.`;

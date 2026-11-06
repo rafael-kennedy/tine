@@ -173,20 +173,21 @@ export const UNIT1: Unit = {
          <tr><td>^7</td><td>leading tone</td><td>ti</td></tr></table>
          <p>The same pattern can start on any note. Tine lets you write the scale as <b>degrees</b>, numbered positions in whatever key is current: <code>^1</code> is the tonic, <code>^5</code> the dominant, <code>^8</code> the octave. Change the <code>key</code> line and the scale moves with it.</p>`,
         { code: `-- G major needs F# to keep the W W H W W W H pattern.\n-- Change the key to bb major, then e major, and play each.\nkey g major\nvoice scale = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8]` },
-        { code: `-- the same scale in a new key each bar. Each new key changes exactly one note of the one before.\n-- (per_bar and at pick the key for each bar; you will not need to write this yourself.)\nvoice circle = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(at([c4 g3 d4 a3 e4 b3 f#3 db4 ab3 eb4 bb3 f4], bar), major))`, bars: 4 },
+        { code: `-- the same scale in a new key each bar. Each new key changes exactly one note of the one before.\n-- (per_bar and at pick the key for each bar; you will not need to write this yourself.)\nvoice circle = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(at([c4 g3 d4 a3 e4 b3 f#3 db4 ab3 eb4 bb3 f4], bar), major))`, bars: 12 },
         `<p>That walk is the <b>circle of fifths</b>. A <b>key signature</b> lists the sharps or flats a key needs, and keys are related by fifths. Go up a perfect fifth (seven half steps) and you add one sharp: C has none, G one, D two, A three, E four, B five, F# six. Go down a fifth and you add a flat: F one, Bb two, Eb three, Ab four, Db five, Gb six.</p>
          <p>Sharps are added in the order F C G D A E B, flats in the reverse, B E A D G C F. Jazz lives on the flat side. Trumpets, clarinets and tenor saxophones are pitched in Bb, alto and baritone saxes in Eb, so tunes are written in F, Bb, Eb and Ab far more than in E or B.</p>`,
         `<p>Because every major key has the same pattern, a tune keeps its shape in any key. Musicians call moving it <b>transposing</b>. Here is the start of a melody written in degrees, so it plays in whatever key you name.</p>`,
         { code: `-- change key f major to key eb major: same tune, new key, every note moves together\nkey f major\nvoice tune = <[^5 [^3 ^4] ^5 _] [^6 [^5 ^3] ^1 _]>.swing.inst(vibes)`, bars: 2 },
         { exercise: {
-          task: `<p>Write <code>voice scale</code>: the <b>Eb major</b> scale from Eb4 up to Eb5, using note names (no degrees). Work out the flats yourself from the W W H W W W H pattern, and spell them as flats. Tine plays G# and Ab alike, so only you can get the spelling right.</p>`,
+          task: `<p>Write <code>voice scale</code>: the <b>Eb major</b> scale from Eb4 up to Eb5, using note names (no degrees). Work out the flats yourself from the W W H W W W H pattern, and spell them as flats. Tine plays G# and Ab alike, but the check reads your spelling too.</p>`,
           starter: `voice scale = [eb4]`,
           solution: `voice scale = [eb4 f4 g4 ab4 bb4 c5 d5 eb5]`,
           hint: `Start on Eb and count the pattern: Eb to F is W, F to G is W, G to Ab is H... Eb major has three flats.`,
-          check: (_s, n) => {
+          check: (_s, n, src) => {
             const m = need(n, "scale"); if (m) return m;
             const l = line(n, "scale"), want = [63, 65, 67, 68, 70, 72, 74, 75];
             if (l.length !== 8) return `That is ${l.length} note${l.length === 1 ? "" : "s"}; a scale from Eb to Eb has 8.`;
+            if (src && /\b[a-g]#/i.test(src.replace(/--.*$/gm, ""))) return "Eb major uses only flats: Eb F G Ab Bb C D. Write the black keys as flats (ab4, bb4), not sharps.";
             const bad = l.findIndex((x, i) => x !== want[i]);
             return bad < 0 ? null : `Note ${bad + 1} is ${nmo(l[bad])}; it should be ${nmo(want[bad])}.`;
           },
@@ -265,6 +266,7 @@ export const UNIT1: Unit = {
         `<p>Flipping an interval like that is <b>inverting</b> it: the lower note goes up an octave. The numbers add to nine (a third becomes a sixth) and the half steps add to twelve. Major becomes minor, augmented becomes diminished, and perfect stays perfect. So if you know a minor third (3 half steps), you know a major sixth (9).</p>`,
         { code: `-- three intervals wider than an octave. Change d5 to d4 in the voice line: the same note an octave down, now a plain 2nd, much harsher.\nprint(interval(c4, d5), interval(c4, f5), interval(c4, a5))\nvoice compound = [{c4 d5} {c4 f5} {c4 a5} .]` },
         `<p>Intervals larger than an octave, like those, are <b>compound</b>. A ninth is a second plus an octave, an eleventh a fourth plus an octave, a thirteenth a sixth plus an octave. These are the names of jazz chord extensions: the 9, 11 and 13 in a symbol like <code>G13</code>.</p>`,
+        { code: `tempo 140\n-- G13 as a pianist voices it: G in the bass, then F, B and E (the 7th, the 3rd and the 13th) above it. It resolves to Cmaj9.\n-- Change both e4s to eb4: the 13 becomes a b13, darker and more tense.\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.5)\nvoice comp = <[{g2 f3 b3 e4} . . {g2 f3 b3 e4} . . . .] [{c3 e3 b3 d4} _ _ _ _ _ _ _]>.swing.vel(.6)`, bars: 2 },
         { exercise: {
           task: `<p>Write <code>voice dyads</code> that plays three harmonic intervals in turn: a <b>major 6th above F4</b>, a <b>minor 7th above G3</b>, and a <b>perfect 4th above Bb3</b>.</p>`,
           starter: `voice dyads = [{f4 f4} {g3 g3} {bb3 bb3}]`,
@@ -273,6 +275,7 @@ export const UNIT1: Unit = {
           check: (_s, n) => {
             const m = need(n, "dyads"); if (m) return m;
             const g = groups(of(n, "dyads"));
+            if (g.length && g.every(x => x.semis.length === 1)) return "I hear one note at a time. A harmonic interval sounds both notes together: put each pair in braces, as the starter does.";
             const want = [[65, 74], [55, 65], [58, 63]], names = ["M6 above F4", "m7 above G3", "P4 above Bb3"];
             for (let i = 0; i < 3; i++) {
               if (!g[i]) return `I hear ${g.length} interval${g.length === 1 ? "" : "s"}; I expected 3.`;

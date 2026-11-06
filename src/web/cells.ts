@@ -8,7 +8,7 @@ import { makeEditor, showError, flash } from "./editor";
 import { Roll } from "./roll";
 
 export interface Cell { code: string; bars?: number; broken?: boolean } // broken: an example that shows an error on purpose
-export interface Exercise { task: string; starter: string; solution: string; bars?: number; hint?: string; check: (s: Scene, n: TimedNote[]) => string | null }
+export interface Exercise { task: string; starter: string; solution: string; bars?: number; hint?: string; check: (s: Scene, n: TimedNote[], src?: string) => string | null }
 export interface Question { q: string; options: string[]; answer: number; explain?: string; listen?: string; bars?: number }
 
 export const store = {
@@ -158,7 +158,7 @@ export function makeExercise(ex: Exercise, key: string, o: { seed: () => number;
     try {
       const s = evaluate(src, { seed: o.seed() });
       const { notes } = renderNotes(s, ex.bars ?? 1);
-      const problem = ex.check(s, notes);
+      const problem = ex.check(s, notes, src);
       if (problem) { result.className = "err"; result.textContent = problem; }
       else { result.className = "ok"; result.textContent = "✓ That's it."; o.done.add(key); o.onDone(); }
     } catch (e) { result.className = "err"; result.textContent = (e as Error).message; }

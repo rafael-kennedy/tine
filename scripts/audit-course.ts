@@ -41,7 +41,7 @@ for (const l of COURSE_LESSONS.filter(l => !ids.length || ids.includes(l.id))) {
       console.log(`\n  CHALLENGE: ${text(e.task)}`);
       for (const [lab, code] of [["starter", e.starter], ["solution", e.solution]] as const) {
         let verdict = "";
-        try { const s = evaluate(code, { seed: 1 }); verdict = e.check(s, renderNotes(s, e.bars ?? 1).notes) ?? "PASSES"; } catch (x) { verdict = "does not run: " + (x as Error).message.split("\n")[0]; }
+        try { const s = evaluate(code, { seed: 1 }); verdict = e.check(s, renderNotes(s, e.bars ?? 1).notes, code) ?? "PASSES"; } catch (x) { verdict = "does not run: " + (x as Error).message.split("\n")[0]; }
         console.log(`    ${lab}: ${code.replace(/\n/g, " / ")}\n${plays(code, e.bars)}\n      check says: ${verdict}`);
       }
       if (e.hint) console.log(`    hint: ${text(e.hint)}`);
