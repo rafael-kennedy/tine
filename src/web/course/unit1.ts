@@ -2,6 +2,9 @@
 import type { Unit } from "./types";
 import { of, groups, line, r3, expectChords, need, inBar, pcset, nms } from "./check";
 
+// A note name with its octave: Eb4.
+const nmo = (x: number, sp?: "flats" | "sharps") => nms([x], sp) + (Math.floor(x / 12) - 1);
+
 export const UNIT1: Unit = {
   id: "u1", code: "Theory 101", title: "Fundamentals",
   blurb: "Pitch, rhythm and swing, the major and minor scales, intervals, triads and seventh chords, and the chords that live inside a key.",
@@ -11,18 +14,18 @@ export const UNIT1: Unit = {
       id: "pitch", title: "Pitch, octaves and half steps",
       parts: [
         `<p>If you took Theory 100, the first half of this lesson is a fast review. It adds two tools the rest of the course leans on: counting half steps as numbers, and the idea that one piano key can have two names. Start by listening.</p>`,
-        { code: `-- three A's, each an octave above the last. The numbers printed are their frequencies.\n-- Change both a5s to e5: the last number is no longer double 440 (it prints 659.26), and the last note is no longer an A.\nprint(hz(a3), hz(a4), hz(a5))\nvoice octaves = [a3 a4 a5 .]` },
+        { code: `-- three A's, each an octave above the last. The numbers printed are their frequencies.\n-- Change both a5s to e5: the last number is no longer double 440 (it prints 659.255114), and the last note is no longer an A.\nprint(hz(a3), hz(a4), hz(a5))\nvoice octaves = [a3 a4 a5 .]` },
         `<p>A pitch is a frequency. When one note vibrates exactly twice as fast as another (220, 440, 880), the two sound like the same note in a higher or lower register. That distance is the <b>octave</b>, and nearly every musical tradition treats it as special.</p>`,
         { code: `-- every key from middle C up to B: the chromatic scale.\n-- Delete every note that has a # or b in it and play again: what is left is the C major scale.\nvoice chromatic = [c4 c#4 d4 eb4 e4 f4 f#4 g4 ab4 a4 bb4 b4]` },
         `<p>Western music divides the octave into twelve equal steps called <b>half steps</b> (or semitones). The piano shows them as twelve keys, seven white and five black, before the pattern repeats. Two half steps make a <b>whole step</b>.</p>
          <p>In Tine a note is a letter, an optional accidental (<code>#</code> sharp, <code>b</code> flat) and an octave number. <code>c4</code> is middle C, and the octave number goes up at C, not at A. So a scale from D4 runs D4 E4 F#4 G4 A4 B4 C#5 D5.</p>`,
         { code: `-- D up to D. Change a4 to a5 and hear the leap a wrong octave number makes.\nvoice d_scale = [d4 e4 f#4 g4 a4 b4 c#5 d5]` },
         { code: `-- whole, whole, half: the first four notes of a major scale.\n-- Change + 5 to + 6: the fourth note becomes F#, a half step higher than C major's F.\nvoice steps = [c4 (c4 + 2) (c4 + 4) (c4 + 5)]` },
-        `<p>That line did arithmetic with pitches. Underneath, Tine numbers pitches the way MIDI does. Middle C is 60, and each half step adds one. So <code>c4 + 2</code> is D, a whole step up, <code>c4 + 12</code> is the C an octave higher. Parentheses let an expression sit inside a phrase.</p>`,
+        `<p>That line did arithmetic with pitches. Underneath, Tine numbers pitches the way MIDI does. Middle C is 60, and each half step adds one. So <code>c4 + 2</code> is D, a whole step up, and <code>c4 + 12</code> is the C an octave higher. Parentheses let an expression sit inside a phrase.</p>`,
         { code: `-- two names, one piano key. You hear one note, twice. The print says whether Tine treats them as equal.\nprint(c#4 == db4)\nvoice same = [c#4 _ db4 _]` },
         `<p>C# and Db are <b>enharmonic</b>: they share a piano key but not a name. In written music they mean different things: C# is a raised C, Db a lowered D, and theory cares which one a chord "really" contains. Tine works in sounding pitch, so to Tine they are one note. When spelling changes the meaning of something, this course will say so.</p>`,
         `<p>Thelonious Monk liked to end a phrase with a fast run down a scale made only of whole steps. Listen to how it floats.</p>`,
-        { code: `tempo 160\n-- a fast run down the whole-tone scale over a dominant chord, then it settles on G major.\n-- Change the run to [d6 c6 b5 a5 g5 f#5] (ordinary scale steps) and the floating sound is gone.\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.5)\nvoice comp = <[d3@7#5 . . . . . . .] [g3@maj7 . . . . . . .]>.vel(.6)\nvoice run  = <[. . . . [d6 c6 bb5 ab5 gb5 e5]:4] [d5 _ _ .]>.inst(keys)`, bars: 2 },
+        { code: `tempo 160\n-- a tense chord, then a fast run down the whole-tone scale. It settles on G major.\n-- Change the run to [d6 c6 b5 a5 g5 f#5] (ordinary scale steps) and the floating sound is gone.\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.5)\nvoice comp = <[d3@7#5 . . . . . . .] [g3@maj7 . . . . . . .]>.vel(.6)\nvoice run  = <[. . . . [d6 c6 bb5 ab5 gb5 e5]:4] [d5 _ _ .]>.inst(keys)`, bars: 2 },
         { exercise: {
           task: `<p>Write <code>voice tune</code> that climbs from D4 to D5 using <b>only whole steps</b>. You will need seven notes. This six-notes-to-the-octave pattern is the <b>whole-tone scale</b> from the Monk run. Debussy loved it too.</p>`,
           starter: `voice tune = [d4 e4]`,
@@ -31,7 +34,7 @@ export const UNIT1: Unit = {
           check: (_s, n) => {
             const m = need(n, "tune"); if (m) return m;
             const l = line(n, "tune");
-            if (l[0] !== 62) return `Start on D4 (yours starts on ${nms([l[0]], "sharps")}).`;
+            if (l[0] !== 62) return `Start on D4 (yours starts on ${nms([l[0]], "sharps")}${Math.floor(l[0] / 12) - 1}).`;
             for (let i = 1; i < l.length; i++) {
               const d = l[i] - l[i - 1];
               if (d === 2) continue;
@@ -74,7 +77,7 @@ export const UNIT1: Unit = {
         { code: `tempo 120\n-- the rim clicks every beat; the chord hits on 1 and the "and" of 2.\n-- Move the second chord one step later ([c4@maj7 . . . c4@maj7 . . .]): it lands on beat 3, and the syncopation is gone.\nvoice clock = [rim . rim . rim . rim .].vel(.4)\nvoice comp  = [c4@maj7 . . c4@maj7 . . . .]` },
         `<p>That rhythm is the <b>Charleston</b>: a hit on beat 1 and another on the "and" of 2. Putting emphasis where the beat isn't is <b>syncopation</b>, and the Charleston is one of the most common syncopations in jazz. Pianists comp (accompany) with it constantly. Here is another everyday syncopation. Listen for when the second chord arrives.</p>`,
         { code: `voice clock = [rim rim rim rim].vel(.3)\n-- the C6 chord lasts 7 of the 8 eighth notes (:7). The F7 enters on the last eighth.\n-- .dur(4.5) lets it ring for 4.5 beats, across the bar line, like a tie.\nvoice push  = <[c4@6:7 (f4@7).dur(4.5)] [.]>`, bars: 2 },
-        `<p>That was an <b>anticipation</b>, or <b>push</b>: the F7 arrives on the "and" of 4, an eighth note early, and is held across the bar line (a <b>tie</b> joins two notes into one), so it is already sounding when beat 1 comes.</p>`,
+        `<p>That was an <b>anticipation</b>, or <b>push</b>. The F7 arrives on the "and" of 4, an eighth note early. It is tied over the bar line (a <b>tie</b> joins two notes into one), so it is already sounding on beat 1.</p>`,
         { exercise: {
           task: `<p>Turn the Charleston around. Write <code>voice comp</code> that plays a chord (any chord) on the "and" of beat 1 and on beat 3, in 4/4. Players call this the <b>reverse Charleston</b>.</p>`,
           starter: `voice comp = [c4@maj7 . . c4@maj7 . . . .]`,
@@ -161,7 +164,7 @@ export const UNIT1: Unit = {
         { code: `-- the C major scale: all white keys from C to C.\n-- Change f4 to f#4 and listen: one note now sounds out of place.\nvoice c_major = [c4 d4 e4 f4 g4 a4 b4 c5]` },
         `<p>A <b>scale</b> is a set of notes in order, usually spanning an octave. The <b>major scale</b> uses seven of the twelve half steps, chosen by a pattern of whole (W) and half (H) steps: <b>W W H W W W H</b>. On C that pattern lands on the white keys.</p>
          <p>Now stop the scale one note early and listen to how it hangs.</p>`,
-        { code: `-- seven notes, then silence. It sounds unfinished. Replace the . with c5 and it lands.\nvoice hang = [c4 d4 e4 f4 g4 a4 b4 .]` },
+        { code: `-- seven notes, then a bar of silence. It sounds unfinished. Replace the . after b4 with c5 and it lands.\nvoice hang = <[c4 d4 e4 f4 g4 a4 b4 .] .>` },
         `<p>That pull comes from the <b>leading tone</b>, the seventh note. It sits a half step below the tonic, the home note (C here). It leans so hard toward the tonic that stopping on it feels like a question. Each degree of the scale has a name and a job, and you will use these words all through the course.</p>
          <table class="t"><tr><th>degree</th><th>name</th><th>solfège</th></tr>
          <tr><td>^1</td><td>tonic</td><td>do</td></tr><tr><td>^2</td><td>supertonic</td><td>re</td></tr>
@@ -185,12 +188,12 @@ export const UNIT1: Unit = {
             const l = line(n, "scale"), want = [63, 65, 67, 68, 70, 72, 74, 75];
             if (l.length !== 8) return `That is ${l.length} note${l.length === 1 ? "" : "s"}; a scale from Eb to Eb has 8.`;
             const bad = l.findIndex((x, i) => x !== want[i]);
-            return bad < 0 ? null : `Note ${bad + 1} is ${nms([l[bad]])}; it should be ${nms([want[bad]])}.`;
+            return bad < 0 ? null : `Note ${bad + 1} is ${nmo(l[bad])}; it should be ${nmo(want[bad])}.`;
           },
         } },
         { quiz: [
           { q: "In Eb major, how is the fourth note spelled?", options: ["Ab", "G#"], answer: 0, explain: "A major scale uses each letter once: Eb F G Ab Bb C D. G is taken, so the fourth note is Ab." },
-          { q: "Listen. The scale stops early. Which degree does it stop on?", listen: `key d major\nvoice x = [^1 ^2 ^3 ^4 ^5 ^6 ^7 _]`, options: ["^5, the dominant", "^7, the leading tone", "^8, the tonic"], answer: 1, explain: "It hangs a half step below the tonic, wanting to go up." },
+          { q: "Listen. The scale stops early. Which degree does it stop on?", listen: `key d major\nvoice x = <[^1 ^2 ^3 ^4 ^5 ^6 ^7 _] .>`, options: ["^5, the dominant", "^7, the leading tone", "^8, the tonic"], answer: 1, explain: "It hangs a half step below the tonic, wanting to go up." },
           { q: "Listen. A chord sets the key, then a short tune. Does it end on the tonic (finished) or not?", listen: `key bb major\nvoice x = <{^1 ^3 ^5} [^3 ^4 ^3 ^2]>.inst(vibes)`, options: ["It ends on the tonic", "It ends somewhere else and sounds unfinished"], answer: 1, explain: "It stops on ^2, a step above the tonic." },
           { q: "How many sharps are in the key of E major?", options: ["2", "3", "4", "5"], answer: 2, explain: "C, G, D, A, E: four fifths up, four sharps (F# C# G# D#)." },
           { q: "Which major key has three flats?", options: ["Bb", "Eb", "Ab", "F"], answer: 1, explain: "F (1), Bb (2), Eb (3)." },
@@ -227,7 +230,7 @@ export const UNIT1: Unit = {
             if (l.length !== 8) return `That is ${l.length} note${l.length === 1 ? "" : "s"}; you need 8.`;
             const bad = l.findIndex((x, i) => x !== want[i]);
             if (bad === 6 && l[6] === 79) return "Note 7 is G, a whole step below A. Harmonic minor raises it so it leads up to the tonic.";
-            return bad < 0 ? null : `Note ${bad + 1} is ${nms([l[bad]], "sharps")}; it should be ${nms([want[bad]], "sharps")}.`;
+            return bad < 0 ? null : `Note ${bad + 1} is ${nmo(l[bad], "sharps")}; it should be ${nmo(want[bad], "sharps")}.`;
           },
         } },
         { quiz: [
@@ -274,6 +277,7 @@ export const UNIT1: Unit = {
             for (let i = 0; i < 3; i++) {
               if (!g[i]) return `I hear ${g.length} interval${g.length === 1 ? "" : "s"}; I expected 3.`;
               if (JSON.stringify(g[i].semis) !== JSON.stringify(want[i])) {
+                if (g[i].semis.length === 2 && g[i].semis[1] - g[i].semis[0] === want[i][1] - want[i][0]) return `Interval ${i + 1} is the right size, but its lower note should be ${["F4", "G3", "Bb3"][i]}.`;
                 const got = g[i].semis.length === 2 ? `${g[i].semis[1] - g[i].semis[0]} half steps (${nms(g[i].semis)})` : nms(g[i].semis);
                 return `Interval ${i + 1} is ${got}; a ${names[i]} is ${want[i][1] - want[i][0]} half steps, ${nms(want[i])}.`;
               }
@@ -322,8 +326,14 @@ export const UNIT1: Unit = {
           solution: `voice inversions = [f4@maj.invert f4@maj.invert(2)]`,
           hint: `First inversion has A in the bass, second inversion has C in the bass.`,
           check: (_s, n) => {
+            const g = groups(of(n, "inversions")).filter(x => x.semis.length >= 2);
+            const F = [0, 5, 9], nm1 = (x: number) => nms([x]);
+            for (let i = 0; i < 2 && g[i]; i++) {
+              const have = pcset(g[i].semis), miss = F.filter(x => !have.includes(x)), extra = have.filter(x => !F.includes(x));
+              if (miss.length === 1 && extra.length === 1) return `Chord ${i + 1} (${nms(g[i].semis)}) has ${nm1(extra[0])} where F major (F A C) needs ${nm1(miss[0])}.`;
+              if (miss.length || extra.length) return `Chord ${i + 1} is ${nms(g[i].semis)}. Use just the notes of F major: F, A and C.`;
+            }
             const r = expectChords(n, "inversions", [[5, ""], [5, ""]]); if (r) return r;
-            const g = groups(of(n, "inversions"));
             if (g[0].semis[0] % 12 !== 9) return `The first chord's lowest note should be A, the third (it is ${nms([g[0].semis[0]])}).`;
             if (g[1].semis[0] % 12 !== 0) return `The second chord's lowest note should be C, the fifth (it is ${nms([g[1].semis[0]])}).`;
             return null;
@@ -345,7 +355,7 @@ export const UNIT1: Unit = {
       parts: [
         `<p>Here is a C major triad, and then the same triad with one more note on top. The second is the basic sound of jazz harmony.</p>`,
         { code: `-- C, then Cmaj7: B is added a third above G. Change b4 to bb4 and it becomes C7, which wants to move.\nvoice add = [{c4 e4 g4} _ {c4 e4 g4 b4} _]` },
-        `<p>Add a third on top of a triad and you get a <b>seventh chord</b>, named for the interval from root to top. In classical music a seventh is a dissonance that has to resolve. In jazz the seventh chord is the basic unit, and a plain triad sounds bare. Five types cover nearly everything. Listen to all five on C.</p>`,
+        `<p>Add a third on top of a triad and you get a <b>seventh chord</b>, named for the interval from root to top. In classical music a seventh is a dissonance that has to resolve. In jazz a plain triad sounds bare. Five types cover nearly everything. Listen to all five on C.</p>`,
         { code: `print(name([c4@maj7 c4@7 c4@m7 c4@m7b5 c4@dim7]))\n-- Change c4@m7b5 to c4@m7 in both places: only the fifth moves, Gb up to G.\nvoice five = [c4@maj7 c4@7 c4@m7 c4@m7b5 c4@dim7 .].slow(3)`, bars: 3 },
         `<table class="t"><tr><th>name</th><th>triad + 7th</th><th>on C</th><th>symbols</th><th>sounds</th></tr>
          <tr><td>major seventh</td><td>major + M7</td><td>C E G B</td><td>Cmaj7, CΔ7</td><td>restful, glowing; a tonic</td></tr>
