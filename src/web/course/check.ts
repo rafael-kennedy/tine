@@ -24,6 +24,8 @@ export function spellChord(ss: number[]): string | null {
   // Try the root as named and its enharmonic twin (Ab and G#), and keep the spelling with fewer odd names (Cb, E#, double accidentals).
   const tries = [li0, ...(m[2] === "b" ? [(li0 + 6) % 7] : m[2] === "#" ? [(li0 + 1) % 7] : [])].map(li => spellFrom(ss, sym, li, rpc)).filter((x): x is string => !!x);
   const odd = (x: string) => (x.match(/bb|##/g) ?? []).length;
+  // Jazz spells sharp-rooted dominants from the flat side: Gb7, Db7, Ab7, not F#7, C#7, G#7.
+  if (m[2] === "#" && /^[A-G]#(7|9|11|13)/.test(sym) && tries.length > 1) tries.reverse();
   return tries.sort((a, b) => odd(a) - odd(b))[0] ?? null;
 }
 function spellFrom(ss: number[], sym: string, li: number, rpc: number): string | null {
