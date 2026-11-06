@@ -48,3 +48,22 @@ export function expectChords(n: TimedNote[], v: string, want: [number, string][]
 
 // A melody's pitches in order (single notes only).
 export const line = (n: TimedNote[], v: string) => of(n, v).sort((a, b) => a.bar - b.bar).map(x => x.semi);
+
+// Diatonic chord on a degree (1-based) of a scale: its pitch classes.
+export const MAJOR = [0, 2, 4, 5, 7, 9, 11];
+export function diatonic(tonic: number, deg: number, size = 3, steps = MAJOR): number[] {
+  const out: number[] = [];
+  for (let k = 0; k < size; k++) { const i = deg - 1 + 2 * k; out.push(tonic + steps[i % 7] + 12 * Math.floor(i / 7)); }
+  return pcset(out);
+}
+// Does this chord match a diatonic triad or seventh on one of the degrees?
+export function onDegree(semis: number[], tonic: number, degs: number[], steps = MAJOR): number | null {
+  for (const d of degs) for (const size of [3, 4]) if (JSON.stringify(pcset(semis)) === JSON.stringify(diatonic(tonic, d, size, steps))) return d;
+  return null;
+}
+// The first chord (2+ notes) that starts in each bar.
+export function barChords(n: TimedNote[], v: string, bars: number): (number[] | null)[] {
+  return Array.from({ length: bars }, (_, b) => groups(inBar(of(n, v), b)).find(g => g.semis.length >= 2)?.semis ?? null);
+}
+// Total movement between two chords with the same number of notes.
+export const movement = (a: number[], b: number[]) => a.length === b.length ? a.reduce((t, x, i) => t + Math.abs(x - b[i]), 0) : Infinity;

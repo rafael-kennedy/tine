@@ -78,13 +78,18 @@ export interface ChordId { root: number; sym: string; omitted: string[] }
 
 // Identify a chord from its sounding notes. Prefers the bass as the root,
 // then fewer omitted tones, then simpler symbols.
-export function identify(semis: number[]): ChordId | null {
+export function identify(semis: number[], rootHint?: number): ChordId | null {
+  if (rootHint !== undefined) { const id = identifyOn(semis, mod12(rootHint)); if (id) return id; }
+  return identifyOn(semis);
+}
+function identifyOn(semis: number[], only?: number): ChordId | null {
   if (!semis.length) return null;
   const sorted = [...semis].sort((a, b) => a - b);
   const pcs = [...new Set(sorted.map(mod12))];
   const bass = mod12(sorted[0]);
   let best: (ChordId & { score: number }) | null = null;
   for (let r = 0; r < 12; r++) {
+    if (only !== undefined && r !== only) continue;
     const rel = new Set(pcs.map(p => mod12(p - r)));
     NAMED.forEach(({ sym, pcs: q }, rank) => {
       for (const x of rel) if (!q.has(x)) return;
@@ -105,8 +110,9 @@ export function identify(semis: number[]): ChordId | null {
   return { root: b.root, sym: b.sym, omitted: b.omitted };
 }
 
-export function nameOf(semis: number[]): string {
-  const id = identify(semis);
+// rootHint: the chord's known root (from its symbol or voicing), named against first
+export function nameOf(semis: number[], rootHint?: number): string {
+  const id = identify(semis, rootHint);
   if (!id) return `{${semis.map(s => pcName(s).toLowerCase()).join(" ")}}`;
   const bass = mod12(Math.min(...semis));
   let s = pcName(id.root) + id.sym;

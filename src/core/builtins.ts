@@ -545,14 +545,15 @@ def("tones", "tones(chord)", "A chord's notes as a list, low to high.", H_CAT, (
 });
 def("name", "name(x, bars: 1)", "Name a chord, or the chords of a pattern, as a chord symbol: name({e g c5}) is \"C/E\".", H_CAT, ([x, bars], named, call) => {
   const key = call.interp.scene.key as Key;
-  if (x instanceof Chord) return H.nameOf(H.chordSemis(x, key));
+  const hint = (c: Chord, k: Key) => (c.root !== undefined ? H.semisOfValue(c.root, k)[0] : undefined);
+  if (x instanceof Chord) return H.nameOf(H.chordSemis(x, key), hint(x, key));
   if (x instanceof Pat && x.items && !x.items.some(v => v instanceof Pat || v instanceof Chord)) return H.nameOf(x.items.flatMap(v => H.semisOfValue(v, key)));
   const n = Math.max(1, Math.round(N(named.bars ?? bars, 1)));
   const ctx: Ctx = { seed: call.interp.scene.seed, voice: 0, key, offset: ZERO, inputs: { cc: () => 0, held: () => [] } };
   const out: string[] = [];
   for (let b = 0; b < n; b++) {
     const evs = P(x).query(new R(b), new R(b + 1), ctx).filter(e => e.s.ge(new R(b))).sort((u, v) => u.s.toNumber() - v.s.toNumber());
-    out.push(evs.map(e => (e.v instanceof Chord ? H.nameOf(H.chordSemis(e.v, keyOf(e, ctx))) : H.semisOfValue(e.v, keyOf(e, ctx)).map(s => H.pcName(s)).join(""))).filter(Boolean).join(" ") || "N.C.");
+    out.push(evs.map(e => (e.v instanceof Chord ? H.nameOf(H.chordSemis(e.v, keyOf(e, ctx)), hint(e.v, keyOf(e, ctx))) : H.semisOfValue(e.v, keyOf(e, ctx)).map(s => H.pcName(s)).join(""))).filter(Boolean).join(" ") || "N.C.");
   }
   return out.join(" | ");
 });
