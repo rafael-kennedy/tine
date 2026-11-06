@@ -95,17 +95,17 @@ export const UNIT2: Unit = {
         { code: `-- Ending A.\n-- Change the top line's last ^1 to ^3: the melody now ends on A, and the stop is a little less final.\nkey f major\nvoice chords = <^5@7 ^1@3>.voicelead\nvoice bass   = <^5 ^1>.octave(-2).inst(upright)\nvoice top    = <[^2 _ _ ^7.octave(-1)] [^1 _ _ .]>.octave(1).inst(vibes)`, bars: 2 },
         { code: `-- Ending B, played twice. The second time the first chord is minor.\n-- Change ^4@m to ^4@3 and the two halves match.\nkey f major\nvoice chords = <^4@3 ^1@3 ^4@m ^1@3>.voicelead\nvoice bass   = <^4 ^1 ^4 ^1>.octave(-2).inst(upright)`, bars: 4 },
         { code: `-- Ending C. Change ^6@7 to ^1@7 (and ^6 to ^1 in the bass) and the surprise is gone.\nkey f major\nvoice chords = <^2@7 ^5@7 ^6@7 .>.voicelead\nvoice bass   = <^2 ^5 ^6 .>.octave(-2).inst(upright)`, bars: 4 },
-        { code: `-- Ending D. Replace the final . with ^1@3 (and ^1 in the bass): the question gets its answer.\nkey f major\nvoice chords = <^1@3 ^2@7 ^5@7 .>.voicelead\nvoice bass   = <^1 ^2 ^5 .>.octave(-2).inst(upright)`, bars: 4 },
+        { code: `-- Ending D. Replace the final . with ^1@3 (and ^1 in the bass): the question gets its answer.\nkey f major\nvoice chords = <^1@3 ^2@7 ^5@3 .>.voicelead\nvoice bass   = <^1 ^2 ^5 .>.octave(-2).inst(upright)`, bars: 4 },
         `<p>Each of those is a <b>cadence</b>, the harmonic punctuation at the end of a phrase.</p>
          <ul><li>A is <b>authentic</b>: V (or V7) to I. With both chords in root position and the melody ending on the tonic, it is a <b>perfect authentic cadence</b>, the full stop. Ending the melody on ^3, as in the suggested edit, makes it <b>imperfect</b>.</li>
          <li>B is <b>plagal</b>: IV to I, the "amen" at the end of a hymn. Its second half, <b>iv to I</b>, is the minor plagal, all over gospel and ballads.</li>
          <li>C is <b>deceptive</b>: V to vi. The ear expects I and gets its relative minor.</li>
          <li>D is a <b>half cadence</b>: the phrase stops on V. A comma, or a question.</li></ul>`,
-        `<p>Jazz has its own standard cadence, <b>ii-V-I</b>: a predominant, a dominant and a tonic, with roots falling by fifths. Whole tunes are chains of them, and lesson 14 is devoted to it. Jazz also stretches the final chord to <code>maj7</code>, <code>6</code> or <code>69</code>. In a jazz setting a plain triad sounds square.</p>`,
         { code: `-- ii-V-I in Bb. The piano leaves the roots to the bass (rootless voicings, lesson 14).\n-- Change Bb69 to Bb7: the ending stops sounding final, because its seventh, Ab, makes the chord lean on toward Eb.\ntempo 140\nlet tune = changes("Cm9 | F13 | Bb69 | %")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)`, bars: 4 },
+        `<p>That is <b>ii-V-I</b>, jazz's standard cadence: a predominant, a dominant and a tonic, with roots falling by fifths. Whole tunes are chains of them, and lesson 14 is devoted to it. Jazz also stretches the final chord to <code>maj7</code>, <code>6</code> or <code>69</code>. In a jazz setting a plain triad sounds square.</p>`,
         { code: `-- Partly done, in G major: bar 2 is empty.\n-- Put ^1@3 there, and ^1 in the bass, for an authentic cadence. Then try ^6@3 (and ^6 in the bass) for a deceptive one and compare.\nkey g major\nvoice prog = <^5@7 .>.voicelead\nvoice bass = <^5 .>.octave(-2).inst(upright)`, bars: 2 },
         { exercise: {
-          task: `<p>Write <code>voice prog</code>: a <b>deceptive cadence in D major</b>. Bar 1 is the dominant (V or V7), bar 2 the chord the ear did not expect (vi or vi7).</p>`,
+          task: `<p>Write <code>voice prog</code>: a <b>deceptive cadence in D major</b>. Bar 1 is the dominant (V or V7), bar 2 the chord the ear did not expect (vi or vi7). If you use <code>.rootless</code>, add a bass that plays the roots.</p>`,
           starter: `key d major\nvoice prog = <^5@7 ^1@3>`,
           solution: `key d major\nvoice prog = <^5@7 ^6@7>.voicelead`,
           bars: 2,
@@ -113,6 +113,9 @@ export const UNIT2: Unit = {
             const m = need(n, "prog"); if (m) return m;
             const c = [0, 1].map(b => heard(n, "prog", b));
             if (c[0] && JSON.stringify(pcset(c[0])) === JSON.stringify([2, 5, 7, 11])) return "That is G7, V of C major. Without a key line, degrees count from C. Put key d major at the top.";
+            const ps = c.map(x => x ? new Set(pcset(x)) : new Set<number>());
+            if (c[0] && degreeOf(c[0], 2, [5]) === null && ps[0].has(1) && ps[0].has(7) && !ps[0].has(9)) return `Bar 1 has A7's 3rd and 7th (C# and G), but nothing plays its root, A. Put A in the chord, or add a bass that plays it.`;
+            if (c[1] && degreeOf(c[1], 2, [6]) === null && ps[1].has(2) && ps[1].has(6) && !ps[1].has(11)) return `Bar 2 has Bm's 3rd and 5th (D and F#), but nothing plays its root, B. Put B in the chord, or add a bass that plays it.`;
             if (!c[0] || degreeOf(c[0], 2, [5]) === null) return `Bar 1 should be V in D major (A or A7); you have ${c[0] ? nms(c[0]) : "single notes or a rest, not a chord (write ^5@7, not ^5)"}.`;
             if (!c[1] || degreeOf(c[1], 2, [6]) === null) return `Bar 2 should be vi in D major (Bm or Bm7); you have ${c[1] ? nms(c[1]) : "single notes or a rest, not a chord (write ^6@7, not ^6)"}.`;
             return null;

@@ -61,7 +61,10 @@ export const UNIT4: Unit = {
       parts: [
         `<p>Seven scales, all starting on D. Each bar changes one note from the bar before. Listen to the scale get darker.</p>`,
         { code: `-- Brightest to darkest, one per bar.\n-- Change d4 to a4 and d2 to a2 and hear the same ladder from A.\nlet ladder = [lydian ionian mixolydian dorian aeolian phrygian locrian]\nvoice m = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(d4, at(ladder, bar))).inst(vibes)\nvoice drone = d2.inst(pad).vel(.3)`, bars: 7 },
-        `<p>Those are the seven <b>modes</b> of the major scale, each one the major scale started on a different note. Played on one root they form a ladder from bright to dark: <b>lydian, ionian, mixolydian, dorian, aeolian, phrygian, locrian</b>. Each mode matches one diatonic seventh chord. That is <b>chord-scale theory</b>: for each chord, a scale holding its chord tones and its available tensions.</p>
+        `<p>Those are the seven <b>modes</b> of the major scale, each one the major scale started on a different note. Played on one root they form a ladder from bright to dark: <b>lydian, ionian, mixolydian, dorian, aeolian, phrygian, locrian</b>. Ionian is the major scale. Aeolian is the natural minor scale.</p>
+         <p>Tine also builds a mode by number: <code>mode(major, 2)</code> is dorian.</p>`,
+        { code: `-- A line through Dm7 G7 Cmaj7: D dorian, G mixolydian, C lydian.\n-- Change the third bar's lydian to major: F# becomes F, the avoid note, and it rubs against the E in the chord.\ntempo 140\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead.vel(.5)\nvoice bass = tune.root.octave(-1).inst(upright)\nvoice line = <[^1 ^2 ^3 ^5 ^6 ^5 ^3 ^1].key(d4, dorian) [^3 ^4 ^5 ^7 ^9 ^7 ^5 ^4].key(g3, mixolydian) [^4 _ ^3 ^5 ^7 ^9 ^7 ^5].key(c4, lydian) [^1 _ _ _ . . . .].key(c4, major)>.swing.inst(vibes)`, bars: 4 },
+        `<p>You just heard three modes over three chords. Each mode matches one diatonic seventh chord. That is <b>chord-scale theory</b>: for each chord, a scale holding its chord tones and its available tensions.</p>
          <table class="t"><tr><th>mode</th><th>from</th><th>chord</th><th>signature note</th></tr>
          <tr><td>ionian</td><td>^1</td><td>Imaj7</td><td>4 (an avoid note)</td></tr>
          <tr><td>dorian</td><td>^2</td><td>ii7</td><td>natural 6</td></tr>
@@ -70,17 +73,16 @@ export const UNIT4: Unit = {
          <tr><td>mixolydian</td><td>^5</td><td>V7</td><td>b7</td></tr>
          <tr><td>aeolian</td><td>^6</td><td>vi7</td><td>b6</td></tr>
          <tr><td>locrian</td><td>^7</td><td>viiø7</td><td>b2 and b5</td></tr></table>
-         <p>Tine also builds a mode by number: <code>mode(major, 2)</code> is dorian.</p>`,
-        { code: `-- A line through Dm7 G7 Cmaj7: D dorian, G mixolydian, C lydian.\n-- Change the third bar's lydian to major: F# becomes F, the avoid note, and it rubs against the E in the chord.\ntempo 140\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead.vel(.5)\nvoice bass = tune.root.octave(-1).inst(upright)\nvoice line = <[^1 ^2 ^3 ^5 ^6 ^5 ^3 ^1].key(d4, dorian) [^3 ^4 ^5 ^7 ^9 ^7 ^5 ^4].key(g3, mixolydian) [^3 ^4 ^5 ^7 ^9 ^7 ^5 ^4].key(c4, lydian) [^1 _ _ _ . . . .].key(c4, major)>.swing.inst(vibes)`, bars: 4 },
-        `<p>Over a ii-V-I the modes line up: D dorian, G mixolydian, C ionian (or lydian). With ionian, all three are the C major scale, which is why beginners are told "just play C major". The modes matter for which notes land on strong beats, and for the one note that changes, like the F# of lydian.</p>`,
+         <p>With C ionian in place of lydian, all three modes hold the notes of C major, which is why beginners are told "just play C major". The modes matter for which notes land on strong beats, and for the one note that changes, like the F# of lydian.</p>`,
         { code: `-- A D dorian vamp. The B natural is the dorian color.\n-- Change key d dorian to key d aeolian: B becomes Bb, and the vamp turns plain minor.\ntempo 120\nkey d dorian\nvoice pad  = d3@m9.inst(pad).vel(.4)\nvoice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\nvoice line = [^5 ^6 ^5 ^3 ^4 ^6 ^8 ^6].swing.inst(vibes)` },
         `<p>A <b>modal vamp</b> sits on one chord for a long time, and the mode's signature note carries its flavor. On a dorian vamp, lean on the natural 6th. On lydian, the #4. Without them it sounds like plain minor or plain major.</p>`,
         { code: `-- Partly done: a G mixolydian line with two gaps.\n-- Fill them with f5 (the b7, mixolydian's color) and b4.\nvoice pad  = g3@7.inst(pad).vel(.4)\nvoice line = [g4 a4 b4 d5 . d5 . g4].swing.inst(vibes)` },
         { exercise: {
-          task: `<p>Over a <b>Dm7</b> vamp, write <code>voice line</code>: eight notes, all from <b>D dorian</b>, and include the dorian signature note (B natural) at least once.</p>`,
-          starter: `voice pad = d3@m7.inst(pad)\nvoice line = [d5 c5 a4 f4 e4 d4 c4 d4]`,
+          task: `<p>Over a <b>Dm7</b> vamp, write <code>voice line</code>: one bar of eight notes, all from <b>D dorian</b>, and include the dorian signature note (B natural) at least once.</p>`,
+          starter: `voice pad = d3@m7.inst(pad)\nvoice line = [. . . . . . . .]`,
           solution: `voice pad = d3@m7.inst(pad)\nvoice line = [d5 c5 b4 a4 f4 e4 d4 b3]`,
           check: (_s, n) => {
+            if (!of(n, "line").length) return "Write eight notes from D dorian (D E F G A B C).";
             const m = need(n, "line"); if (m) return m;
             const l = groups(inBar(of(n, "line"), 0)).map(g => g.semis[0]);
             if (l.length !== 8) return `That is ${l.length} notes; write 8.`;
@@ -95,7 +97,7 @@ export const UNIT4: Unit = {
           { q: "Listen. A D minor vamp. Dorian or aeolian?", listen: `key d aeolian\nvoice pad = d3@m7.inst(pad).vel(.4)\nvoice line = [^5 ^6 ^5 ^3 ^4 ^6 ^8 ^6].swing.inst(vibes)`, bars: 2, options: ["Dorian", "Aeolian"], answer: 1, explain: "The sixth is Bb, the darker one." },
           { q: "Which mode matches a V7 chord?", options: ["Ionian", "Dorian", "Mixolydian", "Lydian"], answer: 2 },
           { q: "What is <code>mode(major, 6)</code>?", options: ["Dorian", "Lydian", "Aeolian", "Locrian"], answer: 2 },
-          { q: "From the minor-key lesson: aeolian is another name for which scale?", options: ["Harmonic minor", "Natural minor", "Melodic minor", "The blues scale"], answer: 1 },
+          { q: "From the minor-key lesson: which scale has the same notes as A aeolian (A B C D E F G)?", options: ["Harmonic minor", "Natural minor", "Melodic minor", "The blues scale"], answer: 1, explain: "A natural minor is A B C D E F G. Aeolian is the natural minor scale." },
         ] },
       ],
     },
@@ -163,11 +165,11 @@ export const UNIT4: Unit = {
          <li><b>Rootless</b> (<code>rootless</code>): 3, 5, 7, 9 or 7, 9, 3, 5, with the 13th in place of the 5th on dominants. The default sound of a modern trio.</li>
          <li><b>Drop 2</b> (<code>drop2</code>): start from close position (all four notes inside one octave, no chord tone skipped) and drop the second voice from the top an octave. Wider, with a clear top melody. Guitarists and big-band arrangers use it constantly. <code>drop3</code> drops the third voice from the top instead, for an even wider spread.</li>
          <li><b>Guide tones</b> (<code>guide</code>): 3rd and 7th only.</li></ul>`,
-        { code: `-- Partly done: Cmaj7 in close position (all four notes inside one octave), then drop 2. Drop the second voice from the top: change g4 in bar 2 to g3.\nvoice comp = <{c4 e4 g4 b4} {c4 e4 g4 b4}>.inst(keys)`, bars: 2 },
+        { code: `-- Partly done: Cmaj7 in close position, then drop 2. Drop the second voice from the top: change g4 in bar 2 to g3.\nvoice comp = <{c4 e4 g4 b4} {c4 e4 g4 b4}>.inst(keys)`, bars: 2 },
         { code: `-- Five notes stacked in fourths, with a major third on top, over a D bass.\n-- Change the bass to e2: the same shape now sounds like Em7 with an added 11th.\nprint(name({e3 a3 d4 g4 b4}))\nvoice q = {e3 a3 d4 g4 b4}.inst(keys)\nvoice bass = d2.inst(upright)` },
         `<p>That is a <b>quartal voicing</b>: fourths instead of thirds, open and ambiguous. McCoy Tyner and Herbie Hancock made it a modal staple. This one, E A D G B, is the "So What" chord, from Bill Evans's piano on Miles Davis's "So What" (1959). On its own it spells Em7add11. Over a D bass it colors D minor without ever stating the third. Quartal harmony returns in the modal-jazz lesson.</p>`,
         { code: `-- A C7 shell in the left hand, with a triad above: D, A, Ab, F#.\n-- Change ab4@maj to eb4@maj: that triad (Eb G Bb) gives the #9, 5 and b7, a bluesier sound.\nvoice lh = <{c3 e3 bb3} {c3 e3 bb3} {c3 e3 bb3} {c3 e3 bb3}>.inst(keys)\nvoice rh = <d4@maj a4@maj ab4@maj f#4@maj>.inst(keys)\nprint(name({c3 e3 bb3 d4 f#4 a4}))`, bars: 4 },
-        `<p>Those are <b>upper-structure triads</b>: a plain major triad on top of a dominant's shell. The triad is simple, so the ear hears it clearly, and its notes become the tensions. Over C7 (C, E, Bb):</p>
+        `<p>Those are <b>upper-structure triads</b>: a plain major triad on top of a dominant's shell. The triad is simple, so the ear hears it clearly, and its notes become the tensions. The Roman numeral counts from the dominant's root: II over C7 is the triad on D. Over C7 (C, E, Bb):</p>
          <table class="t"><tr><th>triad on top</th><th>tensions</th><th>symbol</th></tr>
          <tr><td>D major (II)</td><td>9, #11, 13</td><td>C13#11</td></tr>
          <tr><td>A major (VI)</td><td>13, b9, 3</td><td>C13b9</td></tr>
@@ -189,6 +191,7 @@ export const UNIT4: Unit = {
             const pcs = pcset(g.semis), extra = pcs.filter(x => !want.includes(x)), missing = [7, 11, 2].filter(x => !pcs.includes(x));
             if (missing.length === 3) return `You have ${g.semis.map(x => SP[((x % 12) + 12) % 12]).join(" ")}. ${pcs.includes(0) ? "Keep the shell, drop the 5th, and put" : "Keep the shell and put"} the major triad a whole step above F on top.`;
             if (extra.includes(10) && missing.includes(11)) return "Bb should be B, the #11. The triad is G major: G B D.";
+            if (extra.includes(0) && extra.includes(4)) return "C E G is the triad a fifth above F. Use the triad a whole step above F: G B D.";
             if (extra.includes(0)) return "C is extra: use six notes, and leave out the 5th.";
             if (extra.length) return `${SP[extra[0]]} is not in upper structure II. The triad on top is the one a whole step above F.`;
             if (missing.length) return `Missing ${ROLE[missing[0]]}.`;
@@ -202,7 +205,7 @@ export const UNIT4: Unit = {
           { q: "Listen. Does the piano play the roots, or leave them to the bass?", listen: `voice x = changes("Dm7 | G7").rootless.voicelead\nvoice b = changes("Dm7 | G7").root.octave(-1).inst(upright)`, bars: 2, options: ["Rootless", "Roots in the piano"], answer: 0, explain: "The piano's lowest notes are C (the 7th of Dm7) and B (the 3rd of G7). The bass plays D and G." },
           { q: "Listen. C7 sounds first, then a triad joins it on top. Which tensions does the triad add?", listen: `voice lh = {c3 e3 bb3}.inst(keys)\nvoice rh = <. a4@maj>.inst(keys)`, bars: 2, options: ["9, #11, 13 (D major)", "13, b9, 3 (A major)", "b13, root, #9 (Ab major)"], answer: 1, explain: "A C# E: the C# (Db, the b9) is the sharpest rub." },
           { q: "Drop 2 drops which voice an octave?", options: ["The top", "The second from the top", "The second from the bottom", "The bass"], answer: 1 },
-          { q: "An F# major triad over C7 adds which tensions?", options: ["#11, b7, b9", "9, #11, 13", "b13, root, #9", "13, b9, 3"], answer: 0, explain: "F# A# C#: the #11, the b7 (A# is Bb) and the b9 (C# is Db)." },
+          { q: "Over G7, which major triad on top gives upper structure II (9, #11, 13)?", options: ["A major", "D major", "E major", "Ab major"], answer: 0, explain: "A C# E: the 9th, #11 and 13th of G7." },
           { q: "From the ii-V-I lesson: a rootless voicing in A form starts on which chord tone?", options: ["The root", "The 3rd", "The 5th", "The 7th"], answer: 1 },
         ] },
       ],
@@ -341,10 +344,10 @@ export const UNIT4: Unit = {
       id: "reharm", title: "Reharmonization",
       parts: [
         `<p>A plain four-bar melody with plain chords. Learn the melody first, because it stays the same for the rest of the lesson.</p>`,
-        { code: `-- The melody: E D | C A | D F | E.\n-- Change Dm G7 to A G7 in bar 3: A major has C#, and the melody's D grinds a half step above it. Then change it back.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet plain = changes("C | Am | Dm G7 | C")\nvoice comp = plain.voicelead.vel(.5)\nvoice bass = plain.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p><b>Reharmonization</b> is choosing new chords under an existing melody. Arrangers use it to make a familiar tune sound new. The one hard rule: each melody note must fit the new chord, as a chord tone or an available tension. That is why the A chord under the D in your edit clashed.</p>`,
+        { code: `-- The melody: E D | C A | D F | E.\n-- Change Dm G7 to A G7 in bar 3: D is not in A major, and it sits a half step above the chord's C#: an avoid note. Then change it back.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet plain = changes("C | Am | Dm G7 | C")\nvoice comp = plain.voicelead.vel(.5)\nvoice bass = plain.root.octave(-1).inst(upright)`, bars: 4 },
+        `<p><b>Reharmonization</b> is choosing new chords under an existing melody. Pianists such as Bill Evans kept a standard's melody and changed the chords under it. The one hard rule: each melody note must fit the new chord, as a chord tone or an available tension. That is why the A chord under the D in your edit clashed.</p>`,
         { code: `-- The same melody, a new chord under almost every note.\n-- Change E7b13 to E7: the chord's C becomes C#, and it clashes with the melody's C.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7 | Dm9 G13 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>Bar 1 moves from Cmaj7 to Bm7b5, which sets up a minor ii-V into Am. E7b13 carries the melody's C as its flat 13th. Dm9 and G13 hold the D and the F. Read each melody note against its chord: every one is a chord tone or a tension.</p>`,
+        `<p>Bar 1 moves from Cmaj7 to Bm7b5, which sets up a minor ii-V into Am. E7b13 carries the melody's C as its flat 13th. Dm9 and G13 hold the D and the F.</p>`,
         { code: `-- Darker: a borrowed bVII7, a borrowed bVI, a tritone substitute.\n-- Change Db13 to G7: the plain dominant returns, and the half-step slide in the bass (D, Db, C) is gone.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bb7 | Abmaj7 Fmaj7 | Dm9 Db13 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
         `<p>Under the D in bar 1, Bb7, a bVII7 borrowed from C minor, holds D as its third. Under the C in bar 2, Abmaj7, a borrowed bVI, holds C as its third, and the A that follows gets Fmaj7. In bar 3, Db13, the tritone substitute for G7, holds the F as its third. The toolbox, with the lesson for each:</p>
          <table class="t"><tr><th>technique</th><th>lesson</th></tr>
@@ -358,11 +361,12 @@ export const UNIT4: Unit = {
          <tr><td>Coltrane and other symmetric cycles</td><td>33</td></tr></table>`,
         { code: `-- Partly done: bars 1, 2 and 4 are reharmonized. Bar 3 is still plain.\n-- Replace Dm7 G7 with Dm9 Db13, or with Bm7b5 Bb7 (Dm9 and Bm7b5 both contain D; Db13 and Bb7 both contain F).\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7 | Dm7 G7 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
         { exercise: {
-          task: `<p>Reharmonize the melody. Write <code>voice comp</code> with <b>two chords in each of bars 1 to 3</b> (and one or two in bar 4), using <b>at least six different chords</b>, and make it your own, with at least two chords that differ from each of the lesson's two reharmonizations. The melody note sounding at the start of each chord must belong to that chord (a chord tone or a tension that you include in the symbol). Play full chords (no <code>.rootless</code>), so the check can hear every note of each chord.</p>`,
+          task: `<p>Reharmonize the melody. Write <code>voice comp</code> with <b>two chords in each of bars 1 to 3</b> and one or two in bar 4. Use <b>at least six different chords</b>. Compared with each of the lesson's two reharmonizations, change at least two of the chords in bars 1 to 3. At the start of each chord, the melody note must be in that chord, as a chord tone or a tension written in the symbol. Play full chords, not <code>.rootless</code>, so the check hears every note.</p>`,
           starter: `voice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nvoice comp = changes("C | Am | Dm G7 | C")`,
           solution: `voice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nvoice comp = changes("Cmaj7 G7 | Abmaj7 Fmaj7 | Bm7b5 Bb7 | Cmaj7").voicelead`,
           bars: 4,
-          check: (_s, n) => {
+          check: (_s, n, src) => {
+            if (src && /rootless/.test(src.replace(/--.*$/gm, ""))) return "Remove .rootless: the check needs every chord tone, roots included.";
             const m = need(n, "comp") ?? need(n, "tune"); if (m) return m;
             const tune = of(n, "tune"), chords = groups(of(n, "comp")).filter(g => g.semis.length >= 2);
             for (let b = 0; b < 3; b++) { const k = groups(inBar(of(n, "comp"), b)).filter(g => g.semis.length >= 2).length; if (k !== 2) return `Bar ${b + 1} has ${k} chord${k === 1 ? "" : "s"}; give it two.`; }
@@ -383,8 +387,9 @@ export const UNIT4: Unit = {
         } },
         { quiz: [
           { q: "Listen. The melody is the one from this lesson. Under its C in bar 2, is the chord major (Abmaj7) or dominant (E7b13)?", listen: `tempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 2, options: ["Abmaj7", "E7b13"], answer: 1, explain: "The bass falls B to E, and the chord pulls toward Am." },
-          { q: "The melody holds D. Which chord clashes with it?", options: ["Bb7", "Bm7b5", "G7", "A major"], answer: 3, explain: "D is a half step above C#, the third of A: the avoid 11th." },
-          { q: "Under a melody note C, which dominant chord holds it as its b13?", options: ["G7", "E7", "A7", "D7"], answer: 1, explain: "A minor sixth above E is C." },
+          { q: "Listen. Under the melody's F, is the chord G13 or Db13?", listen: `tempo 100\nvoice tune = <[d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Dm9 Db13 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 2, options: ["G13", "Db13"], answer: 1, explain: "The bass slides D, Db, C by half steps." },
+          { q: "The melody holds F. Which chord clashes with it?", options: ["Dm7", "Bb7", "Db7", "C major"], answer: 3, explain: "F is a half step above E, the third of C: the avoid 11th." },
+          { q: "Under a melody note Eb, which dominant has it as its b13?", options: ["C7", "G7", "F7", "Bb7"], answer: 1, explain: "A minor sixth above G is Eb." },
           { q: "Which technique replaces G7 with Db7?", options: ["Backdoor", "Tritone substitution", "Modal interchange", "Pedal point"], answer: 1 },
           { q: "From the borrowed-chord lesson: in C major, Abmaj7 is borrowed from which key?", options: ["A minor", "C minor", "G major", "D minor"], answer: 1 },
         ] },

@@ -62,14 +62,16 @@ export const UNIT0: Unit = {
          <p>How high a note sounds is its <b>pitch</b>, and pitch comes from how fast something vibrates. The higher A you heard vibrates 440 times a second. The lower A vibrates exactly half as fast, 220 times a second. That 2 to 1 ratio is why the two blend so well.</p>`,
         `<p>The piano keyboard repeats a pattern of seven white keys and five black keys from bottom to top. The white keys are named with seven letters, <b>A B C D E F G</b>, and after G the letters start again at A. Here are the white keys from the note called <b>middle C</b> up to the next C.</p>`,
         { code: `-- the white keys from middle C up. Add d5 e5 at the end: the names start over.\nvoice white = [c4 d4 e4 f4 g4 a4 b4 c5]` },
-        `<p>Tine names every key with its letter and an <b>octave number</b>. Middle C is <code>c4</code>. To find C on a real keyboard, look at the black keys: they come in groups of two and three, and C is the white key just left of each group of two. The strip on the left of each piano roll is a keyboard on its side: low keys at the bottom, black keys short and dark, and the Cs labeled. There, C sits just below each group of two black keys.</p>
+        `<p>Tine names every key with its letter and an <b>octave number</b>. Middle C is <code>c4</code>. To find C on a real keyboard, look at the black keys: they come in groups of two and three, and C is the white key just left of each group of two. The strip on the left of each piano roll is the same keyboard on its side: low keys at the bottom, black keys short and dark, the Cs labeled.</p>
          <p>The <b>octave number goes up at C, not at A</b>. The A and B just above middle C are <code>a4</code> and <code>b4</code>, and the next C is <code>c5</code>. The B just below middle C is <code>b3</code>.</p>`,
         { code: `-- across middle C: b3 is just below it, d4 just above\nvoice across = [a3 b3 c4 d4]` },
         `<p>Now the black keys. Here are the five between middle C and the C above.</p>`,
         { code: `-- the five black keys between c4 and c5.\n-- Change eb4 to d#4: the same key under its other name, so it sounds the same.\nvoice black = [c#4 eb4 f#4 ab4 bb4 .]` },
         `<p>Each black key is named after a white key beside it. A <b>sharp</b>, written <code>#</code>, means the key just above. A <b>flat</b>, written <code>b</code> after the letter, means the key just below. The black key between C and D is <code>c#4</code> ("C sharp") and also <code>db4</code> ("D flat"): two names for one key. <code>bb4</code> is B flat: the letter B, then the flat sign b. Jazz musicians mostly use the flat names (Bb, Eb, Ab). Trumpets and saxophones are built in Bb and Eb, so jazz tunes often use Bb or Eb as their home note.</p>`,
+        { code: `-- a swung riff on black keys only, with Eb as home. (.swing makes the eighths long-short; you will learn it soon.)\nvoice riff = [eb4 gb4 ab4 bb4 . ab4 gb4 eb4].swing.inst(vibes)` },
         { code: `-- two pairs of notes. Which pair sounds tighter?\n-- Then put b3 c4 in place of e4 f4: just as tight, because no black key sits between B and C.\nvoice steps = [c4 d4 . . e4 f4 . .]` },
         `<p>The second pair is tighter. The distance from one key to the very next, black or white, is a <b>half step</b>. Two half steps make a <b>whole step</b>. C to D is a whole step, because C# sits between them. E to F is a half step, because there is no black key between E and F. B to C is a half step for the same reason.</p>`,
+        { code: `-- Partly done: from E4 down to A3. Fill the three dots; the number drops when you pass C.\nvoice e_down = [e4 d4 . . .]` },
         { exercise: {
           task: `<p>Write <code>voice down</code> that plays the white keys going <b>down</b> from C5 to C4: eight notes in one bar, highest first.</p>`,
           starter: `voice down = [c5]`,
@@ -93,9 +95,9 @@ export const UNIT0: Unit = {
         { quiz: [
           { q: "Listen. Do these two notes have the same letter name?", listen: `voice x = [c4 c5]`, options: ["Yes", "No"], answer: 0, explain: "C4 and C5: the same name, one octave apart." },
           { q: "Listen. After the chord, is the step from the first note to the second a half step or a whole step?", listen: `voice x = <{c4 e4 g4} [e4 f4]>`, bars: 2, options: ["A half step", "A whole step"], answer: 0, explain: "E to F, with no black key between." },
-          { q: "Which note is the white key just below middle C (<code>c4</code>)?", options: ["<code>b4</code>", "<code>b3</code>", "<code>a4</code>", "<code>c3</code>"], answer: 1, explain: "The octave number changes at C, so the B below c4 is b3." },
+          { q: "Which note is the D just below middle C (<code>c4</code>)?", options: ["<code>d4</code>", "<code>d3</code>", "<code>d5</code>", "<code>c3</code>"], answer: 1, explain: "Going down from c4 the number drops to 3 at once: b3 a3 g3 f3 e3 d3." },
           { q: "What letter comes after G?", options: ["H", "A", "C", "G#"], answer: 1, explain: "The letters run A to G and start again." },
-          { q: "What is another name for C#?", options: ["Db", "D", "Cb", "B#"], answer: 0, explain: "C# is the black key just above C, which is also just below D: D flat." },
+          { q: "What is another name for Ab?", options: ["G#", "A#", "Bb", "G"], answer: 0, explain: "Ab is the black key just below A, which is also just above G: G sharp." },
           { q: "From lesson 0.1: what does a line starting with <code>--</code> do?", options: ["Plays louder", "Tine skips it; it is a note for the reader", "Starts a new bar"], answer: 1 },
         ] },
       ],
