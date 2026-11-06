@@ -25,8 +25,8 @@ export const UNIT0: Unit = {
          <li><code>[c4 e4 g4 c5]</code> is the music: four notes inside square brackets. The brackets hold one <b>bar</b>, a short stretch of time (two seconds here), and the notes share it equally.</li></ul>`,
         `<p>Before you play the next one, guess: will it go up or down? Then press play and find out. You can change any example: click in the code, edit it, and play again (or press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>, <kbd>Cmd</kbd>+<kbd>Enter</kbd> on a Mac). You cannot break anything: <b>reset</b> puts the example back.</p>`,
         { code: `-- guess first: up or down?\n-- Then change e4 to a4: now the tune goes down, up, down.\nvoice hello = [c5 g4 e4 c4]` },
-        `<p>The notes share the bar equally, so more notes means shorter notes. These eight fit in the same two seconds as the four above. Delete four of them and listen: the rest get longer.</p>`,
-        { code: `-- eight steps in one bar: each is half as long as before\nvoice hello = [c4 e4 g4 c5 g4 e4 c4 .]` },
+        `<p>The notes share the bar equally, so more notes means shorter notes. These eight fit in the same two seconds as the four above. Delete four of them and listen: the others get longer.</p>`,
+        { code: `-- eight steps in one bar (seven notes, then a silence): each is half as long as before\nvoice hello = [c4 e4 g4 c5 g4 e4 c4 .]` },
         `<p>That <code>.</code> at the end is a moment of silence. You will meet it properly in lesson 0.3. A line that starts with <code>--</code> is a <b>comment</b>: Tine skips it, and it is there for the person reading.</p>
          <p>Each lesson ends with a <b>challenge</b> and a few <b>quiz</b> questions. A challenge gives you a task and a box to write in. Press <b>check</b> and the page listens to what your code plays and tells you what is right and what is not. <b>Hint</b> gives a nudge and <b>show answer</b> shows one solution. Any code that plays the right music passes, even if it looks different from the answer.</p>
          <p>If anything is unclear, use <b>Ask about this lesson</b> at the bottom of the page. Ask in plain words. The answer knows which lesson you are on and what code you have written.</p>
@@ -56,7 +56,7 @@ export const UNIT0: Unit = {
       id: "keyboard", title: "The keyboard and note names",
       parts: [
         `<p>Play this and listen to the two notes.</p>`,
-        { code: `-- two notes, both called A. Change a4 to a5 and play again.\nvoice two = [a3 _ a4 _]` },
+        { code: `-- two notes, both called A. Change a4 to a5 and play again.\nvoice two = [a3 a4]` },
         `<p>The second note is higher, yet the two sound strangely alike, almost like the same note sung by a man and then a child. They share a name, <b>A</b>. The distance between them is an <b>octave</b>.</p>
          <p>How high a note sounds is its <b>pitch</b>, and pitch comes from how fast something vibrates. The higher A you heard vibrates 440 times a second. The lower A vibrates exactly half as fast, 220 times a second. That 2 to 1 ratio is why the two blend so well.</p>`,
         `<p>The piano keyboard repeats a pattern of seven white keys and five black keys from bottom to top. The white keys are named with seven letters, <b>A B C D E F G</b>, and after G the letters start again at A. Here are the white keys from the note called <b>middle C</b> up to the next C.</p>`,
@@ -70,13 +70,14 @@ export const UNIT0: Unit = {
         { code: `-- two pairs of notes. Which pair sounds tighter?\n-- Then try b3 c4 in place of e4 f4 and compare.\nvoice steps = [c4 d4 . . e4 f4 . .]` },
         `<p>The second pair is tighter. The distance from one key to the very next, black or white, is a <b>half step</b>. Two half steps make a <b>whole step</b>. C to D is a whole step, because C# sits between them. E to F is a half step, because there is no black key between E and F. B to C is a half step for the same reason.</p>`,
         { exercise: {
-          task: `<p>Write <code>voice down</code> that plays the white keys going <b>down</b> from C5 to C4: eight notes, highest first.</p>`,
+          task: `<p>Write <code>voice down</code> that plays the white keys going <b>down</b> from C5 to C4: eight notes in one bar, highest first.</p>`,
           starter: `voice down = [c5]`,
           solution: `voice down = [c5 b4 a4 g4 f4 e4 d4 c4]`,
           hint: `Going down from C5 the letters run backwards: C, B, A, G, F, E, D, C. The number changes only when you pass C, so every note after C5 is in octave 4.`,
           check: (_s, n) => {
             const m = need(n, "down"); if (m) return m;
             const want = [72, 71, 69, 67, 65, 64, 62, 60], l = line(n, "down").slice(0, 8);
+            if (JSON.stringify(l) === JSON.stringify([...want].reverse())) return "Your notes go up. Start on C5 and go down to C4.";
             for (let i = 0; i < want.length; i++) {
               if (l[i] === undefined) return `I hear ${l.length} note${l.length === 1 ? "" : "s"}; there should be 8.`;
               if (line(n, "down").length > 8) return `I hear ${line(n, "down").length} notes; there should be 8.`;
@@ -88,11 +89,11 @@ export const UNIT0: Unit = {
           },
         } },
         { quiz: [
-          { q: "Listen. Do these two notes have the same letter name?", listen: `voice x = [c4 _ c5 _]`, options: ["Yes, they are an octave apart", "No, they are different notes"], answer: 0, explain: "C4 and C5: the same name, one octave apart." },
-          { q: "Listen. After the chord, is the step from the first note to the second a half step or a whole step?", listen: `voice x = <{c4 e4 g4} [e4 _ f4 _]>`, bars: 2, options: ["A half step", "A whole step"], answer: 0, explain: "E to F, with no black key between." },
+          { q: "Listen. Do these two notes have the same letter name?", listen: `voice x = [c4 c5]`, options: ["Yes, they are an octave apart", "No, they are different notes"], answer: 0, explain: "C4 and C5: the same name, one octave apart." },
+          { q: "Listen. After the chord, is the step from the first note to the second a half step or a whole step?", listen: `voice x = <{c4 e4 g4} [e4 f4]>`, bars: 2, options: ["A half step", "A whole step"], answer: 0, explain: "E to F, with no black key between." },
           { q: "Which note is the white key just below middle C (<code>c4</code>)?", options: ["<code>b4</code>", "<code>b3</code>", "<code>a4</code>", "<code>c3</code>"], answer: 1, explain: "The octave number changes at C, so the B below c4 is b3." },
           { q: "What letter comes after G?", options: ["H", "A", "C", "G#"], answer: 1, explain: "The letters run A to G and start again." },
-          { q: "C# and Db are...", options: ["two different keys", "the same key with two names", "a whole step apart", "both white keys"], answer: 1 },
+          { q: "What is another name for C#?", options: ["Db", "D", "Cb", "B#"], answer: 0, explain: "C# is the black key just above C, which is also just below D: D flat." },
           { q: "From lesson 0.1: what does a line starting with <code>--</code> do?", options: ["Plays louder", "Tine skips it; it is a note for the reader", "Starts a new bar"], answer: 1 },
         ] },
       ],
@@ -110,7 +111,7 @@ export const UNIT0: Unit = {
          <p>Drums have names in Tine: <code>kick</code> (the bass drum), <code>snare</code>, <code>hat</code> (hi-hat), <code>ride</code> (a cymbal), <code>clap</code> and more. This is the most common drum beat in popular music: kick on 1 and 3, snare on 2 and 4.</p>`,
         { code: `tempo 100\n-- swap kick and snare (snare on 1 and 3) and hear how odd it feels\nvoice kick  = [kick . kick .]\nvoice snare = [. snare . snare]\nvoice hat   = [hat hat hat hat]` },
         `<p>The snare on beats 2 and 4 is the <b>backbeat</b>. In jazz the backbeat is lighter but always there: the drummer closes the hi-hat with a foot pedal on 2 and 4, and the audience snaps there, never on 1 and 3. Snap with this one.</p>`,
-        { code: `tempo 130\n-- snap with the claps on 2 and 4. The pedal hi-hat closes there too.\n-- The ride plays the jazz pattern, "ding, ding-a"; lesson 3 (Swing) explains it.\n-- .vel(.6) plays softer: 1 is full strength. Change .vel(.7) on the claps to .vel(1).\nvoice ride = [ride [ride . ride] ride [ride . ride]].vel(.6)\nvoice hat  = [. pedal . pedal].vel(.5)\nvoice snap = [. clap . clap].vel(.7)` },
+        { code: `tempo 130\n-- snap with the claps on 2 and 4. The pedal hi-hat closes there too.\n-- The ride plays the jazz pattern, "ding, ding-a"; lesson 3 of Theory 101 (Swing) explains it.\n-- .vel(.6) plays softer: 1 is full strength. Change .vel(.7) on the claps to .vel(1): the snaps jump out over the ride.\nvoice ride = [ride [ride . ride] ride [ride . ride]].vel(.6)\nvoice hat  = [. pedal . pedal].vel(.5)\nvoice snap = [. clap . clap].vel(.7)` },
         `<p>Not all music counts in four. Count along with this one.</p>`,
         { code: `meter 3/4\ntempo 120\n-- count along: how many beats before the kick comes back?\n-- Then delete the meter line and listen: the three steps now share four beats.\nvoice oom = [kick . .]\nvoice pah = [. hat hat]` },
         `<p>Three: "<b>1</b> 2 3", a <b>waltz</b>. The <code>meter</code> line tells Tine how many beats each bar has. In <code>meter 3/4</code> the top number is the beats in each bar, so three steps in the brackets each get one beat. Leave the bottom number at 4 for now. Jazz waltzes count in three too.</p>`,
@@ -154,8 +155,8 @@ export const UNIT0: Unit = {
          <tr><td><code>[c4 c4 c4 c4]</code></td><td>one beat</td><td>quarter notes</td></tr>
          <tr><td><code>[c4 c4 c4 c4 c4 c4 c4 c4]</code></td><td>half a beat</td><td>eighth notes</td></tr>
          <tr><td>sixteen in a bar</td><td>a quarter of a beat</td><td>sixteenth notes</td></tr></table>
-         <p>Jazz players do not play eighth notes evenly. They swing them, long then short. Lesson 3 (Swing) teaches it.</p>`,
-        `<p>Real tunes mix long and short. To make one note longer than its neighbours, follow it with <code>_</code>, which means "keep holding". Sing along: "long, short, short", then "short, short, long".</p>`,
+         <p>Jazz players do not play eighth notes evenly. They swing them, long then short. Lesson 3 of Theory 101 (Swing) teaches it.</p>`,
+        `<p>Real tunes mix long and short. To make one note longer than its neighbors, follow it with <code>_</code>, which means "keep holding". Sing along: "long, short, short", then "short, short, long".</p>`,
         { code: `-- C lasts two steps, E and G one each. Then the reverse.\n-- Try [c4 e4 _ g4]: now E is the long one.\nvoice tune = <[c4 _ e4 g4] [e4 d4 c4 _]>`, bars: 2 },
         `<p>A hold and a rest both fill a step, but they sound different. <code>_</code> keeps the note ringing. <code>.</code> stops it and leaves silence. Listen to the difference.</p>`,
         { code: `-- bar 1: one C held for four beats. Bar 2: one short C, then three beats of silence.\n-- Change bar 2 to [c4 _ . .]: the C now rings for two beats, then stops.\nvoice tune = <[c4 _ _ _] [c4 . . .]>`, bars: 2 },
@@ -202,12 +203,12 @@ export const UNIT0: Unit = {
         { code: `-- change c3 to a2 and the same tune feels different, sadder\nvoice melody = [e4 d4 c4 d4 e4 e4 e4 .]\nvoice bass   = [c3].inst(upright)` },
         `<p>Music usually comes in layers. The <b>melody</b> is the part you would sing. The <b>bass</b> is the low part that gives it ground. Each layer is its own voice, and all the voices play together. <code>.inst(upright)</code> picks the instrument: an upright (double) bass, the bass of jazz.</p>
          <p>Listen to three notes at once, then the same three one at a time.</p>`,
-        { code: `-- bar 1: together. Bar 2: one after another.\n-- Change e4 to eb4 in both places: the sound turns darker (that is C minor; lesson 7, Triads, explains why).\nvoice chord = <{c4 e4 g4} [c4 e4 g4 .]>`, bars: 2 },
+        { code: `-- bar 1: together. Bar 2: one after another.\n-- Change e4 to eb4 in both places: the sound turns darker (that is C minor; lesson 7 of Theory 101, Triads, explains why).\nvoice chord = <{c4 e4 g4} [c4 e4 g4 .]>`, bars: 2 },
         `<p>Notes struck at the same moment make a <b>chord</b>. In Tine, curly braces <code>{ }</code> play their notes together. C, E and G together make the <b>C major chord</b>. Now four chords. Which sound calm, and which crunchy?</p>`,
         { code: `-- four chords: which sound calm, which crunchy?\n-- Change {c4 c#4 d4} to {c4 e4 a4} and the second one calms down.\nvoice v = <{c4 e4 g4} {c4 c#4 d4} {c4 e4 g4} {b3 f4 g4}>`, bars: 4 },
         `<p>The first and third are calm. The second clashes, and the fourth clashes in a way that wants to move back to the calm chord. Musicians call the calm kind <b>consonant</b> and the clashing kind <b>dissonant</b>. Neither is wrong. Music moves between calm and tension, and jazz likes a little crunch.</p>`,
-        `<p>Put the layers together and you have a small band: melody, chords and bass.</p>`,
-        { code: `tempo 100\n-- try a different bass note in bar 2, like a2 or f2, and listen to the chord change colour.\n-- Then add b4 to the chord, {c4 e4 g4 b4}: C major 7, the jazz version of C.\nvoice melody = <[e4 d4 c4 d4] [e4 e4 e4 _]>\nvoice chords = {c4 e4 g4}.vel(.45)\nvoice bass   = <[c3] [c3]>.inst(upright)`, bars: 2 },
+        `<p>Put the layers together and you have a small band: melody, chords, a walking bass, and the ride cymbal from lesson 0.3.</p>`,
+        { code: `tempo 120\n-- try a different bass line in bar 2, like [a2 c3 e3 c3], and listen to the chord change color.\n-- Then add b4 to the chord, {c4 e4 g4 b4}: C major 7, a chord jazz players often use in place of plain C.\nvoice ride   = [ride [ride . ride] ride [ride . ride]].vel(.5)\nvoice melody = <[e4 d4 c4 d4] [e4 e4 e4 _]>\nvoice chords = {c4 e4 g4}.vel(.45)\nvoice bass   = <[c3 e3 g3 e3] [c3 e3 g3 e3]>.inst(upright)`, bars: 2 },
         { exercise: {
           task: `<p>Write a voice called <code>chord</code> that plays <b>F4, A4 and C5 together</b>, once per bar. Then add <code>voice bass</code> playing <b>F2</b> on an upright bass.</p>`,
           starter: `voice chord = [f4 a4 c5]`,
@@ -216,12 +217,13 @@ export const UNIT0: Unit = {
           check: (_s, n) => {
             const m = need(n, "chord"); if (m) return m;
             const g = groups(inBar(of(n, "chord"), 0));
+            if (g.length > 1 && g.every(x => sameSet(x.semis, [65, 69, 72]))) return `Your chord plays ${g.length} times in a bar. Play it once: write just {f4 a4 c5}.`;
             if (g.length !== 1) return `The chord voice starts notes at ${g.length} different moments in a bar. All three should start together: use curly braces.`;
             if (!sameSet(g[0].semis, [65, 69, 72]) || g[0].semis.length !== 3) return `The chord is ${nms(g[0].semis)}; it should be F A C.`;
             if (JSON.stringify([...g[0].semis].sort((a, b) => a - b)) !== "[65,69,72]") return `The notes are F, A and C, but in the wrong octave: you have ${g[0].semis.map(octaveName).join(" ")}. Use F4, A4 and C5.`;
             const mb = need(n, "bass"); if (mb) return mb;
             const b = line(n, "bass");
-            if (b[0] === 41) return null;
+            if (b[0] === 41) return of(n, "bass").every(x => x.params?.inst === "upright") ? null : "The bass plays F2, but not on an upright bass. Add .inst(upright) after it.";
             return (b[0] - 41) % 12 === 0 ? `The bass plays F, but in the wrong octave (${octaveName(b[0])}). It should be F2, the low F.` : `The bass plays ${octaveName(b[0])}; it should be F2.`;
           },
         } },
@@ -242,13 +244,15 @@ export const UNIT0: Unit = {
         `<p>Instead of playing, the box shows a message: what went wrong, where (the <code>^</code> points at it), and a <b>hint</b> for fixing it. A place such as <code>1:14</code> means line 1, character 14. The words "syntax error" just mean Tine could not read the line. Here the bracket opened on line 1 is never closed. Add <code>]</code> at the end of line 1 and play again. Brackets always come in pairs: <code>[ ]</code>, <code>{ }</code>, <code>&lt; &gt;</code> and <code>( )</code>.</p>`,
         `<p>Here is a different mistake. Read the hint, fix the word, and play.</p>`,
         { code: `voice bass = [c3].instt(upright)`, broken: true },
-        `<p>Tine noticed that <code>instt</code> is not a word it knows, and suggested the closest one, <code>inst</code>. One more. Notes need spaces between them. Without a space, Tine reads one strange word.</p>`,
+        `<p>Tine noticed that <code>instt</code> is not a word it knows, and suggested the closest one, <code>inst</code>. A <b>name error</b> means Tine read a word it does not know. One more. Notes need spaces between them. Without a space, Tine reads one strange word.</p>`,
         { code: `-- put a space between c4 and e4\nvoice tune = [c4e4 g4 e4]`, broken: true },
         `<p>One last mistake. This voice has a name Tine will not accept.</p>`,
         { code: `-- rename the voice to tune and play again\nvoice tempo = [c4]`, broken: true },
-        `<p>A few words are taken. Words Tine uses for itself, such as <code>voice</code>, <code>tempo</code>, <code>meter</code>, <code>key</code> and <code>let</code>, cannot name a voice, and Tine says "expected a voice name". Any other word of plain letters and digits, starting with a letter, works, even <code>bass</code> or <code>kick</code>. Each <code>voice</code> line stands on its own line.</p>`,
-        { code: `-- bar 1 at full strength, bar 2 the same notes at .vel(.6).\n-- Change .vel(.6) to .vel(.2) and bar 2 all but disappears.\n-- [c e g e] has no octave numbers: a note without a number is in octave 4.\nvoice loud = <[c4 e4 g4 e4] .>\nvoice soft = <. [c e g e]>.vel(.6)`, bars: 2 },
-        `<p>Dots after a part change it. <code>.vel(.6)</code> plays at 60 percent strength (<b>velocity</b> means how hard a key is struck). <code>.inst(upright)</code> picks an instrument: <code>upright</code> is the double bass of a jazz band. Later lessons add more, such as <code>.swing</code>. Unit 1 starts with pitch and octaves in more depth.</p>`,
+        `<p>A few words are taken. Words Tine uses for itself, such as <code>voice</code>, <code>tempo</code>, <code>meter</code>, <code>key</code> and <code>let</code>, cannot name a voice, and Tine says "expected a voice name". Any other word of plain letters and digits, starting with a letter, works, even <code>bass</code> or <code>kick</code>. Put each <code>voice</code> on its own line.</p>`,
+        { code: `-- bar 1 at full strength, bar 2 the same notes at .vel(.6).\n-- Change .vel(.6) to .vel(.2) and bar 2 all but disappears.\nvoice loud = <[c4 e4 g4 e4] .>\nvoice soft = <. [c4 e4 g4 e4]>.vel(.6)`, bars: 2 },
+        `<p>A dot followed by a word, right after a part, changes that part. This is different from a <code>.</code> on its own inside brackets, which is a rest. <code>.vel(.6)</code> plays at 60 percent strength (<b>velocity</b> means how hard a key is struck). Later lessons add more, such as <code>.swing</code>.</p>`,
+        { code: `-- no octave numbers: a note without a number is in octave 4.\n-- Change [c e g e] to [c4 e4 g4 e4]: it sounds the same.\nvoice tune = [c e g e]` },
+        `<p>Theory 101 starts with pitch and octaves in more depth.</p>`,
         { exercise: {
           task: `<p>This code has three mistakes. Fix them so <code>voice tune</code> plays <b>C4, E4, G4, E4</b> and <code>voice low</code> plays <b>C3</b>.</p>`,
           starter: `voice tune = [c4 e4g4 e4\nvoice low = [c2].inst(upright)`,
