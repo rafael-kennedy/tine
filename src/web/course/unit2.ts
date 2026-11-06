@@ -258,16 +258,17 @@ export const UNIT2: Unit = {
     {
       id: "walking", title: "Walking bass",
       parts: [
-        `<p>A <b>walking bass</b> plays steady quarter notes that spell out the harmony and push the time forward. It is the spine of swing. The method most bassists learn:</p>
+        `<p>Two bass lines over the same ii-V-I in C. Listen to how differently they move the time.</p>`,
+        { code: `-- Half notes on roots and fifths: a "two-feel".\n-- Change tempo 130 to tempo 190: at fast tempos the two-feel floats.\ntempo 130\nvoice two  = <[d2 _ a2 _] [g2 _ d2 _] [c2 _ g2 _] [c2 _ e2 _]>.inst(upright)\nvoice comp = changes("Dm7 | G7 | Cmaj7 | %").rootless.voicelead.vel(.5)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 4 },
+        { code: `-- Quarter notes: a walking line.\n-- Change ab2 at the end of bar 1 to f#2: G is now approached from below instead of above.\ntempo 130\nvoice walk = <[d2 f2 a2 ab2] [g2 f2 d2 c#2] [c2 d2 e2 b1] [c2 e2 g2 eb2]>.inst(upright)\nvoice comp = changes("Dm7 | G7 | Cmaj7 | %").rootless.voicelead.vel(.5)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 4 },
+        `<p>The first is a <b>two-feel</b>: half notes on roots and fifths. Bassists use it under a melody to leave room. The second is a <b>walking bass</b>: steady quarter notes that spell out the harmony and push the time forward, the spine of swing. The method most bassists learn:</p>
          <ul><li>Beat 1: the <b>root</b> of the chord.</li>
-         <li>Beats 2 and 3: other <b>chord tones</b> or <b>scale steps</b>.</li>
+         <li>Beats 2 and 3: other chord tones or scale steps.</li>
          <li>Beat 4: an <b>approach note</b> into the next bar's root, a half step above or below, or a scale step.</li></ul>
-         <p>Before walking, bassists often play a <b>two-feel</b>: half notes on roots and fifths, which leaves room during the melody.</p>`,
-        { code: `tempo 130\nvoice two = <[d2 _ a2 _] [g2 _ d2 _] [c2 _ g2 _] [c2 _ e2 _]>.inst(upright)\nvoice comp = changes("Dm7 | G7 | Cmaj7 | %").rootless.voicelead.vel(.5)`, bars: 4 },
-        { code: `-- walking: root, chord tones, approach\ntempo 130\nvoice walk = <[d2 f2 a2 ab2] [g2 b2 d3 db3] [c3 b2 a2 g2] [c2 e2 g2 eb2]>.inst(upright)\nvoice comp = changes("Dm7 | G7 | Cmaj7 | %").rootless.voicelead.vel(.5)`, bars: 4 },
-        `<p>You can also write the method as code. A function gets the bar number, looks up this bar's chord and the next, and builds four notes: the root, the third, the fifth, and a half step below the next root. <code>tones</code> lists a chord's notes from the bottom, so <code>at(tones(now), 1)</code> is its third.</p>`,
-        { code: `tempo 140\nlet chords = [d3@m7 g3@7 c3@maj7 a3@7]\nlet walk(bar) =\n  let now = at(chords, bar)\n  let nxt = at(chords, bar + 1)\n  [root(now) at(tones(now), 1) at(tones(now), 2) (root(nxt) - 1)].octave(-1)\nvoice bass = per_bar(walk).inst(upright)\nvoice comp = per_bar(bar => at(chords, bar)).rootless.voicelead.vel(.5)`, bars: 4 },
-        `<p>Listen for the leaps. The function always picks the same octave, so some approach notes jump. Good bassists choose octaves to keep the line in a comfortable range and mostly stepwise. Try changing the approach to <code>(root(nxt) + 1)</code> (from above) and hear the difference.</p>`,
+         <p>In the line above, every beat 4 is a half step from the next root: Ab into G, C# into C, B into C, Eb into D.</p>`,
+        { code: `-- The method as code. Change (root(nxt) - 1) to (root(nxt) + 1): every approach now comes from above.\ntempo 140\nlet chords = [d3@m7 g3@7 c3@maj7 a3@7]\nlet walk(bar) =\n  let now = at(chords, bar)\n  let nxt = at(chords, bar + 1)\n  [root(now) at(tones(now), 1) at(tones(now), 2) (root(nxt) - 1)].octave(-1)\nvoice bass = per_bar(walk).inst(upright)\nvoice comp = per_bar(bar => at(chords, bar)).rootless.voicelead.vel(.5)`, bars: 4 },
+        `<p>The function gets the bar number, looks up this bar's chord and the next, and builds four notes: root, third, fifth, and a half step below the next root. <code>tones</code> lists a chord's notes from the bottom, so <code>at(tones(now), 1)</code> is its third. Listen for the leap in bar 2, from D3 down to B1, more than an octave. The function always uses the same octave. A bassist picks octaves to keep the line mostly stepwise, as the hand-written line did.</p>`,
+        { code: `-- Partly done: roots on beat 1, chord tones on 2 and 3. Beat 4 is a rest in every bar.\n-- Fill each rest with a half step into the next root: ab2 (or f#2), c#3 (or b2), b2 (or c#3), c#3 (or eb3).\nvoice bass = <[d2 f2 a2 .] [g2 b2 d3 .] [c3 e3 g3 .] [c3 e3 g3 .]>.inst(upright)\nvoice comp = changes("Dm7 | G7 | Cmaj7 | %").rootless.voicelead.vel(.5)`, bars: 4 },
         { exercise: {
           task: `<p>Over <b>Dm7 | G7 | Cmaj7 | Cmaj7</b>, write <code>voice bass</code>: four quarter notes per bar. Beat 1 must be the <b>root</b> of the bar's chord, and beat 4 must be a <b>half step</b> from the next bar's root. (After the last bar, the progression starts again on Dm7.)</p>`,
           starter: `voice bass = [d2 f2 a2 c3].inst(upright)`,
@@ -287,9 +288,11 @@ export const UNIT2: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. Two-feel or walking?", listen: `tempo 140\nvoice b = <[c2 _ g2 _] [f2 _ c3 _]>.inst(upright)\nvoice r = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 2, options: ["Two-feel", "Walking"], answer: 0, explain: "Half notes: two per bar." },
+          { q: "Listen. The bass walks into the next chord on beat 4. Does the approach come from above or below?", listen: `tempo 120\nvoice c = changes("Fmaj7 | Bbmaj7").rootless.voicelead.vel(.5)\nvoice b = <[f2 a2 c3 b2] [bb2 _ _ .]>.inst(upright)`, bars: 2, options: ["From above", "From below"], answer: 0, explain: "B natural falls a half step to Bb." },
           { q: "In a walking line, beat 1 is most often...", options: ["the root", "the seventh", "an approach note", "a rest"], answer: 0 },
           { q: "Which note is a chromatic approach from below into G?", options: ["F", "F#", "A", "Ab"], answer: 1 },
-          { q: "Listen. Two-feel or walking?", listen: `tempo 140\nvoice b = <[c2 _ g2 _] [f2 _ c3 _]>.inst(upright)\nvoice r = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 2, options: ["Two-feel", "Walking"], answer: 0, explain: "Half notes: two per bar." },
+          { q: "From the nonchord-tone lesson: a bass note on beat 4 that slides a half step into the next root is the same device a soloist calls a...", options: ["suspension", "chromatic approach", "escape tone", "pedal"], answer: 1 },
         ] },
       ],
     },
@@ -297,23 +300,28 @@ export const UNIT2: Unit = {
     {
       id: "cycles", title: "Circle progressions and sequences",
       parts: [
-        `<p>Root motion by falling fifths is the strongest progression in tonal music. Run it through every chord of a key and you get the <b>diatonic cycle</b>: I, IV, vii, iii, vi, ii, V, I. To stay in the key, one fifth has to be a tritone (IV down to vii), and nobody notices.</p>`,
-        { code: `key c major\nvoice cycle = <[^1@7 ^4@7] [^7@7 ^3@7] [^6@7 ^2@7] [^5@7 ^1@7]>.voicelead\nvoice bass  = <[^1 ^4] [^7 ^3] [^6 ^2] [^5 ^1]>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>The same cycle in a minor key, i iv VII III VI iiø V i, is the backbone of many standards. It contains two ii-V-Is: one into the relative major (iv, VII, III) and one into the minor tonic (iiø, V, i).</p>`,
-        { code: `tempo 120\nlet cyc = changes("Am7 | Dm7 | G7 | Cmaj7 | Fmaj7 | Bm7b5 | E7 | Am7")\nvoice comp = cyc.rootless.voicelead\nvoice bass = cyc.root.octave(-1).inst(upright)`, bars: 8 },
-        `<p>A <b>sequence</b> is a pattern repeated at another pitch level. Composers use sequences to build momentum and to modulate. In Tine, <code>.step</code> moves a pattern by scale steps (staying in the key), and its argument can itself change bar by bar.</p>`,
-        { code: `key d minor\n-- a four-note motif, stepped down one scale degree each bar\nvoice seq = [^5 ^3 ^4 ^2].step(<0 -1 -2 -3>).inst(vibes)\nvoice bass = <^1 ^7 ^6 ^5>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>Listen to the bass in this progression through every chord of C major. Each root is a fifth below the last (or a fourth above, the same note one octave up).</p>`,
+        { code: `-- Two chords a bar, roots falling in fifths: C F B E A D G C.\n-- Change the last ^1@7 to ^6@7 (and ^1 to ^6 in the bass): the cycle stops short of home.\nkey c major\nvoice cycle = <[^1@7 ^4@7] [^7@7 ^3@7] [^6@7 ^2@7] [^5@7 ^1@7]>.voicelead\nvoice bass  = <[^1 ^4] [^7 ^3] [^6 ^2] [^5 ^1]>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>That is the <b>diatonic cycle of fifths</b>: I, IV, vii, iii, vi, ii, V, I. Root motion by fifth is the strongest in tonal music, and the cycle chains it through the whole key. To stay in the key one fifth has to be a tritone, F to B. The ear accepts it because every other step is a perfect fifth.</p>`,
+        { code: `-- The same cycle in A minor, comped. Its first half is the opening of the standard "Autumn Leaves".\n-- Change E7 to Em7 and the pull back to Am weakens: G# is gone.\ntempo 120\nlet cyc = changes("Am7 | Dm7 | G7 | Cmaj7 | Fmaj7 | Bm7b5 | E7 | Am7")\nvoice comp = ([0 . . 0 . . . .] + cyc).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + cyc.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 8 },
+        `<p>In minor, the cycle is <b>i iv VII III VI iiø V i</b>. It holds two ii-V-Is: one into the relative major (Dm7 G7 Cmaj7) and one into the minor tonic (Bm7b5 E7 Am7).</p>`,
+        { code: `-- A four-note motif, stepped down one scale degree each bar.\n-- Change <0 -1 -2 -3> to <0 1 2 3> and the sequence climbs instead.\nkey d minor\nvoice seq  = [^5 ^3 ^4 ^2].step(<0 -1 -2 -3>).inst(vibes)\nvoice bass = <^8 ^7 ^6 ^5>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>That is a <b>sequence</b>: a pattern repeated at another pitch level. Sequences build momentum and are a common way to change key. In Tine, <code>.step</code> moves a pattern by scale steps, staying in the key, and its argument can change bar by bar.</p>`,
+        { code: `-- Partly done, in F major: bar 1 is written. Fill bars 2 to 4 with the rest of the cycle.\n-- Bar 2 is [^7@7 ^3@7], bar 3 [^6@7 ^2@7], bar 4 [^5@7 ^1@7].\nkey f major\nvoice cycle = <[^1@7 ^4@7] . . .>.voicelead`, bars: 4 },
         { exercise: {
           task: `<p>Write <code>voice cycle</code>: the full <b>diatonic cycle of fifths in C major</b> as seventh chords, two per bar over four bars: Cmaj7 Fmaj7, Bm7b5 Em7, Am7 Dm7, G7 Cmaj7.</p>`,
-          starter: `key c major\nvoice cycle = <[^1@7 ^4@7] [^7@7 ^3@7]>`,
+          starter: `key c major\nvoice cycle = <^1@7>`,
           solution: `key c major\nvoice cycle = <[^1@7 ^4@7] [^7@7 ^3@7] [^6@7 ^2@7] [^5@7 ^1@7]>.voicelead`,
           bars: 4,
           check: (_s, n) => expectChords(n, "cycle", [[0, "maj7"], [5, "maj7"], [11, "m7b5"], [4, "m7"], [9, "m7"], [2, "m7"], [7, "7"], [0, "maj7"]]),
         } },
         { quiz: [
+          { q: "Listen. The first chord is home. Does the bass fall in fifths or move by step?", listen: `key bb major\nvoice c = <^1@7 ^4@7 ^7@7 ^3@7 ^6@7 ^2@7 ^5@7 ^1@7>.voicelead\nvoice b = <^1 ^4 ^7 ^3 ^6 ^2 ^5 ^1>.octave(-2).inst(upright)`, bars: 8, options: ["Fifths", "Steps"], answer: 0, explain: "Bb, Eb, A, D, G, C, F, Bb: the diatonic cycle." },
+          { q: "Listen. Is the second bar a sequence of the first?", listen: `key g major\nvoice m = [^1 ^2 ^3 ^1].step(<0 1>).inst(vibes)\nvoice d = <^1@3 ^2@3>.voicelead.vel(.4)`, bars: 2, options: ["Yes, one step higher", "No, a new idea"], answer: 0, explain: "The same shape, moved up one scale step." },
           { q: "In the diatonic cycle of fifths in a major key, which fifth is diminished?", options: ["I to IV", "IV to vii", "ii to V", "V to I"], answer: 1, explain: "F to B is a tritone." },
           { q: "The minor-key cycle contains a ii-V-I into which key?", options: ["The dominant", "The relative major", "The parallel major", "The subdominant"], answer: 1 },
           { q: "<code>.step(-1)</code> moves a pattern...", options: ["down a half step", "down one scale degree", "down an octave", "one bar earlier"], answer: 1 },
+          { q: "From the ii-V-I lesson: in the C major cycle, which two chords in a row make the ii-V?", options: ["Cmaj7 Fmaj7", "Am7 Dm7", "Dm7 G7", "Bm7b5 Em7"], answer: 2 },
         ] },
       ],
     },
@@ -321,28 +329,37 @@ export const UNIT2: Unit = {
     {
       id: "form", title: "Phrase and song form",
       parts: [
-        `<p>Music is organized in phrases the way prose is organized in sentences. A <b>phrase</b> is a musical thought ending in a cadence, typically four bars. Two phrases where the first ends weakly (a half cadence) and the second strongly (an authentic cadence) make a <b>period</b>: <b>antecedent</b> and <b>consequent</b>, question and answer.</p>`,
-        { code: `tempo 110\nkey g major\nsection ante 4\n  voice m = <[^3 ^4 ^5 ^3] [^2 ^3 ^4 _] [^5 ^3 ^4 ^2] [^2 _ _ .]>.inst(vibes)\n  voice c = <^1@7 ^2@7 ^6@7 ^5@7>.voicelead.vel(.5)\nsection cons 4\n  voice m = <[^3 ^4 ^5 ^3] [^2 ^3 ^4 _] [^5 ^4 ^3 ^2] [^1 _ _ .]>.inst(vibes)\n  voice c = <^1@7 ^2@7 ^5@7 ^1@7>.voicelead.vel(.5)\nform ante cons` },
+        `<p>Two four-bar phrases in G major. They start the same. Listen to how each one ends.</p>`,
+        { code: `-- Change the last melody bar of cons, [^1 _ _ .], to [^3 _ _ .]: the answer still lands home, but less firmly.\ntempo 110\nkey g major\nsection ante 4\n  voice m = <[^3 ^4 ^5 ^3] [^2 ^3 ^4 _] [^5 ^3 ^4 ^2] [^2 _ _ .]>.inst(vibes)\n  voice c = <^1@7 ^2@7 ^6@7 ^5@7>.voicelead.vel(.5)\nsection cons 4\n  voice m = <[^3 ^4 ^5 ^3] [^2 ^3 ^4 _] [^5 ^4 ^3 ^2] [^1 _ _ .]>.inst(vibes)\n  voice c = <^1@7 ^2@7 ^5@7 ^1@7>.voicelead.vel(.5)\nform ante cons` },
+        `<p>Music is organized in <b>phrases</b>, the way prose is organized in sentences. A phrase is a musical thought ending in a cadence, often four bars long. The first phrase you heard ends on V, a half cadence. The second ends V to I, an authentic cadence. A weak ending answered by a strong one is a <b>period</b>: <b>antecedent</b> and <b>consequent</b>, question and answer.</p>
+         <p>In Tine, <code>section</code> names a block of bars and <code>form</code> plays the sections in order.</p>`,
+        { code: `-- A compact AABA, with 4-bar sections to keep it short.\n-- Change the form to main bridge main bridge and hear how the tune loses its return home.\ntempo 160\nsection main 4\n  voice comp = ([0 . . 0 . . . .] + changes("Cmaj7 | Am7 | Dm7 | G7")).rootless.voicelead.swing.vel(.5)\n  voice bass = changes("Cmaj7 | Am7 | Dm7 | G7").root.octave(-1).inst(upright)\nsection bridge 4\n  voice comp = ([0 . . 0 . . . .] + changes("Gm7 | C7 | Fmaj7 | G7")).rootless.voicelead.swing.vel(.5)\n  voice bass = changes("Gm7 | C7 | Fmaj7 | G7").root.octave(-1).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)\nform main main bridge main` },
+        { code: `-- ABAC in miniature: the halves start alike and end differently.\n-- Change the form to open half open half and both halves end on G7, unfinished.\ntempo 150\nsection open 2\n  voice comp = changes("Cmaj7 | A7").rootless.voicelead.vel(.5)\nsection half 2\n  voice comp = changes("Dm7 | G7").rootless.voicelead.vel(.5)\nsection close 2\n  voice comp = changes("Dm7 G7 | Cmaj7").rootless.voicelead.vel(.5)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)\nform open half open close` },
         `<p>Most jazz standards come from the American popular song, and most of those use one of two 32-bar forms built from 8-bar sections.</p>
-         <ul><li><b>AABA</b>: a strain, the same again (often with a stronger ending), a contrasting <b>bridge</b> (also called the B section, or the release), and the strain once more. The bridge often moves to IV or to a distant key.</li>
-         <li><b>ABAC</b>: two halves that start alike and end differently.</li></ul>
-         <p>The twelve-bar blues is the third common jazz form. A performance usually plays the form many times: the melody (the <b>head</b>), solos over the same changes, then the head again. Each pass is a <b>chorus</b>.</p>
-         <p>In Tine, <code>section</code> defines a block of bars and <code>form</code> arranges them into a finished piece. Here is a compact AABA, with 4-bar sections to keep it short.</p>`,
-        { code: `tempo 160\nsection main 4\n  voice comp = changes("Cmaj7 | Am7 | Dm7 | G7").rootless.voicelead.vel(.5)\n  voice bass = changes("Cmaj7 | Am7 | Dm7 | G7").root.octave(-1).inst(upright)\nsection bridge 4\n  voice comp = changes("Gm7 | C7 | Fmaj7 | G7").rootless.voicelead.vel(.5)\n  voice bass = changes("Gm7 | C7 | Fmaj7 | G7").root.octave(-1).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)\nform main main bridge main` },
-        `<p>The bridge above tonicizes IV with its own ii-V (Gm7 C7 to Fmaj7) and returns with V7. That is one of the most common bridges in the repertoire.</p>`,
+         <ul><li><b>AABA</b>: a strain, the same again (often with a stronger ending), a contrasting <b>bridge</b> (also called the B section, or the release), and the strain once more. The bridge often moves to IV or to a distant key. The first example goes to F, the IV of C, through its own ii-V (Gm7 C7), then G7 leads back.</li>
+         <li><b>ABAC</b>: two halves that start alike and end differently, as in the second example.</li></ul>
+         <p>The twelve-bar blues is the third common jazz form. A performance plays the form many times: the melody (the <b>head</b>), solos over the same changes, then the head again. Each pass is a <b>chorus</b>.</p>`,
+        { code: `-- Partly done: the A strain is written, and the form only plays it twice.\n-- Add a bridge section of your own (try changes("Bbmaj7 | C7")) and make the form main main bridge main.\nsection main 2\n  voice comp = changes("Fmaj7 | C7").voicelead\nform main main` },
         { exercise: {
-          task: `<p>The sections are written; arrange them. Make the <code>form</code> an <b>AABA</b> using the sections <code>main</code> (the A strain) and <code>bridge</code>. (Section names can't be a lone letter from a to g, since those are notes.)</p>`,
-          starter: `section main 2\n  voice comp = changes("Fmaj7 | C7").voicelead\nsection bridge 2\n  voice comp = changes("Bbmaj7 | C7").voicelead\nform main main main main`,
+          task: `<p>In F major, write a <code>section bridge</code> of two bars: <b>Bbmaj7</b> (IV) for a bar, then <b>C7</b> (V7) for a bar, in a voice named <code>comp</code>. Then make the <code>form</code> an <b>AABA</b> using <code>main</code> and <code>bridge</code>. (Section names can't be a lone letter from a to g, since those are notes.)</p>`,
+          starter: `section main 2\n  voice comp = changes("Fmaj7 | C7").voicelead\nsection bridge 2\n  voice comp = changes("Fmaj7 | C7").voicelead\nform main main main main`,
           solution: `section main 2\n  voice comp = changes("Fmaj7 | C7").voicelead\nsection bridge 2\n  voice comp = changes("Bbmaj7 | C7").voicelead\nform main main bridge main`,
-          check: (s) => {
+          bars: 8,
+          check: (s, n) => {
             const f = (s.form ?? []).flatMap(i => Array(i.times).fill(i.name));
-            return JSON.stringify(f) === JSON.stringify(["main", "main", "bridge", "main"]) ? null : `Your form plays ${f.join(" ") || "nothing"}. AABA is main, main, bridge, main.`;
+            if (JSON.stringify(f) !== JSON.stringify(["main", "main", "bridge", "main"])) return `Your form plays ${f.join(" ") || "nothing"}. AABA is main, main, bridge, main.`;
+            const c = barChords(n, "comp", 8);
+            if (!c[4] || !(isChord(c[4], 10, "maj7") || isChord(c[4], 10, ""))) return `The bridge's first bar is ${c[4] ? nms(c[4]) : "empty"}; make it Bbmaj7.`;
+            if (!c[5] || !isChord(c[5], 0, "7")) return `The bridge's second bar is ${c[5] ? nms(c[5]) : "empty"}; make it C7.`;
+            return null;
           },
         } },
         { quiz: [
+          { q: "Listen. A in C, A again, then a new section. Where does the new section go?", listen: `tempo 160\nsection main 2\n  voice c = changes("Cmaj7 | G7").rootless.voicelead\n  voice b = changes("Cmaj7 | G7").root.octave(-1).inst(upright)\nsection bridge 2\n  voice c = changes("Fmaj7 | G7").rootless.voicelead\n  voice b = changes("Fmaj7 | G7").root.octave(-1).inst(upright)\nform main main bridge main`, bars: 8, options: ["To IV (F)", "To V (G)", "To vi (Am)"], answer: 0, explain: "The bridge opens on Fmaj7, the IV chord, then G7 leads back to the A section." },
           { q: "In a period, the antecedent phrase usually ends with...", options: ["a perfect authentic cadence", "a half cadence", "a plagal cadence", "no cadence"], answer: 1 },
           { q: "How many bars are in a standard AABA song form?", options: ["12", "16", "24", "32"], answer: 3 },
           { q: "In jazz, one time through the whole form is called a...", options: ["chorus", "verse", "bridge", "head"], answer: 0, explain: "The head is the chorus where the melody is played." },
+          { q: "From the blues lesson: how many bars long is one chorus of a blues?", options: ["8", "12", "16", "32"], answer: 1 },
         ] },
       ],
     },
