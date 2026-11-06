@@ -341,3 +341,8 @@ An arrangement written in Tine against 1.0 found three rough edges, now fixed:
 - A slash-chord chart puts each bass note below its chord's root, so `changes("Bm | F#/A#", octave: 2).bassnote` gives b2 then a#1. A falling bass line needs one octave. `within(p, lo, hi: lo + 12)` moves each note by whole octaves until it sits in the range; `.bassnote.within(e1, e2)` fixes the line.
 - A chord moves as a unit, by its lowest note, so its voicing survives. Folding each chord tone on its own would turn a voicing into a cluster.
 - It is a general pitch function, not a `bassnote` option, because melodies, guitar parts and generated lines need it too. The name `fold` was taken by the list function.
+
+## 38. Chord symbols in scores, and where slash basses sit
+
+- `tine xml` now writes a chord symbol (`<harmony>`) above each new chord in a part. Notes from a chord symbol carry their root, so `changes("Gm7 C7")` is named exactly as written. Other stacks of three or more pitch classes are named by the same identifier as `name()`. A symbol is written only when it changes, which is how lead sheets read. Kinds MusicXML names (minor-seventh, dominant, half-diminished and so on) use its vocabulary; the rest are written as "other" with the symbol as text, so nothing is lost.
+- The slash note of a chord symbol (`F/A`) used to sit just below that chord's root, so a line of slash chords jumped between octaves with the roots. It now sits in one fixed octave under the chords (C2 to B2 for chords at octave 3). A bass line read from slash chords stays in one register, which is how a bassist reads them. Use `within` or an explicit octave (`c@7/e3`) to place it elsewhere.
