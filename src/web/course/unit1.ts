@@ -12,7 +12,8 @@ export const UNIT1: Unit = {
       parts: [
         `<p>A pitch is a frequency. When one note vibrates exactly twice as fast as another, the two sound like the same note in a different register. That distance is the <b>octave</b>, and every musical system on earth treats it as special.</p>
          <p>Western music divides the octave into twelve equal steps called <b>half steps</b> (or semitones). A piano shows them plainly: twelve keys, seven white and five black, then the pattern repeats. Two half steps make a <b>whole step</b>.</p>
-         <p>In Tine a note is a letter, an optional accidental (<code>#</code> sharp, <code>b</code> flat) and an octave number. <code>c4</code> is middle C. Here is every half step from middle C up to the B above it, the <b>chromatic scale</b>.</p>`,
+         <p>In Tine a note is a letter, an optional accidental (<code>#</code> sharp, <code>b</code> flat) and an octave number. <code>c4</code> is middle C. Here is every half step from middle C up to the B above it, the <b>chromatic scale</b>.</p>
+         <p>The octave number goes up at <b>C</b>, not at A. B3 is the key just below middle C, and the A and B above middle C are A4 and B4. So a scale from D4 runs D4 E4 F#4 G4 A4 B4 C#5 D5. Writing <code>a5</code> there would leap up an octave.</p>`,
         { code: `voice chromatic = [c4 c#4 d4 eb4 e4 f4 f#4 g4 ab4 a4 bb4 b4]` },
         `<p>Underneath, Tine numbers pitches the way MIDI does. Middle C is 60, and each half step adds one. So <code>c4 + 2</code> is D, a whole step up, and <code>c4 + 12</code> is the C an octave higher. The <code>hz</code> function shows the frequency. Notice the octave doubling.</p>`,
         { code: `print(hz(a3), hz(a4), hz(a5))\nvoice octaves = [a3 a4 a5 .]` },
@@ -28,7 +29,12 @@ export const UNIT1: Unit = {
             const m = need(n, "tune"); if (m) return m;
             const l = line(n, "tune");
             if (l[0] !== 62) return `Start on D4 (yours starts on ${nms([l[0]])}).`;
-            for (let i = 1; i < l.length; i++) if (l[i] - l[i - 1] !== 2) return `Note ${i + 1} is ${l[i] - l[i - 1]} half steps from the one before; every step should be 2.`;
+            for (let i = 1; i < l.length; i++) {
+              const d = l[i] - l[i - 1];
+              if (d === 2) continue;
+              if (((d % 12) + 12) % 12 === 2) return `Note ${i + 1} (${nms([l[i]])}) is in the wrong octave: it is ${d} half steps from the note before. Octave numbers go up at C, so check its number.`;
+              return `Note ${i + 1} (${nms([l[i]])}) is ${d} half step${Math.abs(d) === 1 ? "" : "s"} from the note before; every step should be 2.`;
+            }
             return l[l.length - 1] === 74 ? null : `End on D5; you stopped at ${nms([l[l.length - 1]])}.`;
           },
         } },
