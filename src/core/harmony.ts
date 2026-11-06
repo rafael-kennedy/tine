@@ -67,7 +67,7 @@ export function parseQuality(q: string): number[] | null {
 const NAMING = [
   "", "m", "7", "maj7", "m7", "m7b5", "dim7", "dim", "aug", "sus4", "sus2", "5", "6", "m6", "mmaj7", "7sus4",
   "9", "maj9", "m9", "69", "m69", "add9", "madd9", "7b9", "7#9", "7#11", "7b13", "7#5", "7b5", "maj7#11", "maj7#5", "9sus4",
-  "13", "maj13", "m11", "11", "m13", "7b9b13", "7#9b13", "7b9#9", "13b9", "13#11", "9#11", "7alt", "mmaj9", "m9b5", "13sus4", "7sus2",
+  "13", "maj13", "m11", "11", "m13", "7b9b13", "7#9b13", "7b9#9", "13b9", "13#11", "9#11", "7alt", "mmaj9", "m9b5", "13sus4", "7sus2", "m7add11", "maj7add13",
 ];
 const NAMED = NAMING.map(sym => ({ sym, pcs: new Set(parseQuality(sym)!.map(mod12)) }));
 
