@@ -109,14 +109,26 @@ export function rootHeard(n: TimedNote[], v: string, t: number, rootPc: number, 
 
 export function expectChords(n: TimedNote[], v: string, want: [number, string][]): string | null {
   const miss = need(n, v); if (miss) return miss;
-  const g = groups(of(n, v)).filter(x => x.semis.length >= 2);
+  const all = groups(of(n, v));
+  const g = all.filter(x => x.semis.length >= 2);
+  const sym = (k: number) => NAMES[pc(want[k][0])] + want[k][1];
+  const matches = (semis: number[], k: number) => { const [r, q] = want[k]; return QUAL[q] ? !fits(semis, sym(k), pc(r), q) : isChord(semis, r, q); };
+  const fail = (msg: string, i: number) => {
+    // A lone note where a chord belongs explains the mismatch better than the chord message.
+    const lone = all.findIndex(x => x.semis.length < 2);
+    if (lone >= 0) return `Hit ${lone + 1} is a single note (${nms(all[lone].semis)}). A chord needs two or more notes sounding together: write it with @, like d4@m, or in curly braces.`;
+    // The right chord in the wrong place.
+    const j = g[i] ? want.findIndex((_, k) => k !== i && matches(g[i].semis, k)) : -1;
+    if (j >= 0) return `Chord ${i + 1} is ${sym(j)}, which belongs in place ${j + 1}. The order is ${want.map((_, k) => sym(k)).join(", ")}.`;
+    return msg;
+  };
   for (let i = 0; i < want.length; i++) {
-    const [root, sym] = want[i];
-    if (!g[i]) return `I hear ${g.length} chord${g.length === 1 ? "" : "s"}; I expected ${want.length}.`;
-    if (QUAL[sym]) { const why = fits(g[i].semis, NAMES[pc(root)] + sym, pc(root), sym); if (why) return `Chord ${i + 1} should be ${NAMES[pc(root)]}${sym}, but ${why}. You have ${nms(g[i].semis)}.`; }
-    if (!rootHeard(n, v, g[i].t, root, g[i].semis)) return `Chord ${i + 1} should be ${NAMES[pc(root)]}${sym}, but nothing plays its root, ${NAMES[pc(root)]}. You have ${nms(g[i].semis)}. Put ${NAMES[pc(root)]} in the chord, or add a bass that plays it.`;
-    if (QUAL[sym]) continue;
-    if (!isChord(g[i].semis, root, sym)) return `Chord ${i + 1} is ${named(g[i].semis)} (${nms(g[i].semis)}); it should be ${NAMES[pc(root)]}${sym}.`;
+    const [root, q] = want[i];
+    if (!g[i]) return fail(`I hear ${g.length} chord${g.length === 1 ? "" : "s"}; I expected ${want.length}.`, i);
+    if (QUAL[q]) { const why = fits(g[i].semis, sym(i), pc(root), q); if (why) return fail(`Chord ${i + 1} should be ${sym(i)}, but ${why}. You have ${nms(g[i].semis)}.`, i); }
+    if (!rootHeard(n, v, g[i].t, root, g[i].semis)) return `Chord ${i + 1} should be ${sym(i)}, but nothing plays its root, ${NAMES[pc(root)]}. You have ${nms(g[i].semis)}. Put ${NAMES[pc(root)]} in the chord, or add a bass that plays it.`;
+    if (QUAL[q]) continue;
+    if (!isChord(g[i].semis, root, q)) return fail(`Chord ${i + 1} is ${named(g[i].semis)} (${nms(g[i].semis)}); it should be ${sym(i)}.`, i);
   }
   return null;
 }
