@@ -134,7 +134,15 @@ export const UNIT2: Unit = {
     {
       id: "nonchord", title: "Melody and nonchord tones",
       parts: [
-        `<p>A melody built only from chord tones sounds like an arpeggio. What makes lines sing are the notes that are <b>not</b> in the chord, placed so the ear hears them as motion between chord tones. Theory names them by how they arrive and leave.</p>
+        `<p>The pad below holds Cmaj7 (C E G B). Listen to the line over it. Two of its notes are not in the chord, yet nothing sounds wrong.</p>`,
+        { code: `-- C D E, then E F E. D and F are not in the chord.\n-- Change f5 to d5: it is still a step away and back, now from below.\nvoice pad = c3@maj7.inst(pad).vel(.4)\nvoice top = [c5 d5 e5 f5 e5 _ _ .].inst(vibes)` },
+        `<p>Notes outside the chord are <b>nonchord tones</b>. The ear accepts them when they move by step between chord tones. D is a <b>passing tone</b>: it steps from C to E in one direction. F is a <b>neighbor tone</b>: it steps up from E and back down to it.</p>`,
+        { code: `-- Cmaj7 for two beats, then G. The C in the top line is held as the chord changes under it.\n-- Change [c5 _ _ b4] to [c5 _ b4 _]: B now arrives with the G chord, and the tension is gone.\nvoice pad = [c3@maj7 g3@maj].inst(pad).vel(.4)\nvoice top = [c5 _ _ b4].inst(vibes)` },
+        `<p>That is a <b>suspension</b>. C belonged to the first chord, was held into the second where it clashes, then fell by step to B, a chord tone of G. C is a fourth above the bass G and B is a third, so this is a <b>4-3 suspension</b>.</p>`,
+        { code: `-- Bar 1 over G: a leap up to E on beat 3, then a step down to D.\n-- Bar 2 over Cmaj7: a step up to F, then a leap down to C.\n-- Change e5 in bar 1 to d5 and the leap lands on a chord tone: no tension at all.\nvoice pad = <g3@maj c3@maj7>.inst(pad).vel(.4)\nvoice top = <[g4 _ e5 d5] [e5 f5 c5 _]>.inst(vibes)`, bars: 2 },
+        `<p>The E in bar 1 is an <b>appoggiatura</b>: reached by leap, on a strong beat, resolved by step. The F in bar 2 is an <b>escape tone</b>: reached by step, left by leap the other way.</p>`,
+        { code: `-- G7 for three beats, then Cmaj7 on beat 4. The top line's C arrives half a beat before its chord.\n-- Change [d5 _ b4 _ _ c5 _ _] to [d5 _ b4 _ _ _ c5 _]: now C waits for the chord.\nvoice pad = [g3@7 _ _ _ _ _ c3@maj7 _].inst(pad).vel(.4)\nvoice top = [d5 _ b4 _ _ c5 _ _].inst(vibes)` },
+        `<p>An early note like that is an <b>anticipation</b>. In jazz it is the push you met in the rhythm lesson. Here are all six side by side.</p>
          <table class="t"><tr><th>name</th><th>approach</th><th>leave</th></tr>
          <tr><td>passing tone</td><td>step</td><td>step, same direction</td></tr>
          <tr><td>neighbor tone</td><td>step</td><td>step back</td></tr>
@@ -142,10 +150,9 @@ export const UNIT2: Unit = {
          <tr><td>appoggiatura</td><td>leap, on a strong beat</td><td>step</td></tr>
          <tr><td>escape tone</td><td>step</td><td>leap the other way</td></tr>
          <tr><td>anticipation</td><td>arrives early</td><td>stays as a chord tone</td></tr></table>`,
-        { code: `-- over Cmaj7: passing tone (D), neighbor (F), suspension of C over G resolving to B\nvoice pad = <c3@maj7 c3@maj7 g3@maj g3@maj>.inst(pad).vel(.4)\nvoice top = <[c5 d5 e5 .] [e5 f5 e5 c5] [c5 _ _ _] [b4 _ _ .]>.inst(vibes)`, bars: 4 },
-        `<p>Jazz players lean on two more devices. A <b>chromatic approach</b> slides into a chord tone from a half step below or above. An <b>enclosure</b> surrounds the target, one note above and one below, and then lands on it. Both aim at a target on a strong beat. The general rule of a bebop line is <b>chord tones on the beat, color between</b>. Enclosures bend it: the note above the target may sit on a beat, as long as the target lands on the next one.</p>`,
-        { code: `tempo 160\nvoice pad = [c3@maj7].inst(pad).vel(.35)\n-- C, then D# approaching E, then G enclosed by A and F#\nvoice line = [c5 d#5 e5 g5 a5 f#5 g5 .].swing.inst(vibes)` },
-        `<p>Classical phrases often begin with a <b>pickup</b> (an upbeat before bar 1) and end with a suspension or appoggiatura that delays the final chord tone. Jazz phrases often begin on an offbeat and end on an offbeat anticipation, the push from lesson 2. Both are ways of keeping the ear leaning forward.</p>`,
+        { code: `-- A bebop line over Cmaj7. Listen for E and for G: each is reached from outside.\n-- Change d#5 to f5: E is now approached from above instead of below.\ntempo 160\nvoice pad = [c3@maj7].inst(pad).vel(.35)\nvoice line = [c5 d#5 e5 g5 a5 f#5 g5 .].swing.inst(vibes)` },
+        `<p>Jazz players lean on two more devices. A <b>chromatic approach</b> slides into a chord tone from a half step away: D# into E. An <b>enclosure</b> surrounds the target, one note above and one below, then lands on it: A and F# around G. The general rule of a bebop line is <b>chord tones on the beat, color between</b>. Enclosures bend it: the note above the target may sit on a beat, as long as the target lands on the next one.</p>`,
+        { code: `-- Partly done: chord tones on every beat, with rests between.\n-- Fill the rests with notes outside the chord: f#5 after e5, a5 after g5, and c#6 or a5 at the end.\nvoice pad = c3@maj7.inst(pad).vel(.4)\nvoice line = [c5 d5 e5 . g5 . b5 .].swing.inst(vibes)` },
         { exercise: {
           task: `<p>Over a bar of <b>Cmaj7</b>, write <code>voice line</code>: eight eighth notes. Every note <b>on a beat</b> (notes 1, 3, 5 and 7) must be a <b>chord tone</b> (C, E, G or B). At least <b>two</b> of the notes between beats must <b>not</b> be chord tones.</p>`,
           starter: `voice pad = c3@maj7.inst(pad)\nvoice line = [c5 e5 g5 b5 g5 e5 c5 e5]`,
@@ -155,15 +162,17 @@ export const UNIT2: Unit = {
             const g = groups(inBar(of(n, "line"), 0));
             if (g.length !== 8) return `That is ${g.length} notes; write 8 eighths.`;
             const ct = new Set([0, 4, 7, 11]);
-            for (let i = 0; i < 8; i += 2) if (!ct.has(pc(g[i].semis[0]))) return `Note ${i + 1} (${nm(g[i].semis[0])}) is on a beat but is not in Cmaj7.`;
+            for (let i = 0; i < 8; i += 2) if (!ct.has(pc(g[i].semis[0]))) return `Note ${i + 1} (${nm(g[i].semis[0], "sharps")}) is on a beat but is not in Cmaj7.`;
             const off = [1, 3, 5, 7].filter(i => !ct.has(pc(g[i].semis[0]))).length;
-            return off >= 2 ? null : `Only ${off} of the offbeat notes is outside the chord; make at least two of them passing, neighbor or approach tones.`;
+            return off >= 2 ? null : `Only ${off} of the notes between beats ${off === 1 ? "is" : "are"} outside the chord; make at least two of them passing, neighbor or approach tones.`;
           },
         } },
         { quiz: [
+          { q: "Listen. The pad holds C major. Which note of the line is not in the chord?", listen: `voice pad = c3@maj.inst(pad).vel(.4)\nvoice top = [c5 e5 f5 e5].inst(vibes)`, bars: 1, options: ["The first", "The second", "The third", "The fourth"], answer: 2, explain: "F, a neighbor tone between two Es." },
           { q: "A note that steps away from a chord tone and steps back is a...", options: ["passing tone", "neighbor tone", "escape tone", "suspension"], answer: 1 },
           { q: "In a 4-3 suspension, the dissonant note...", options: ["leaps up", "resolves down by step", "resolves up by step", "is repeated"], answer: 1, explain: "The fourth above the bass falls to the third." },
-          { q: "An enclosure of the note E could be...", options: ["F, D#, E", "E, F, G", "C, E, G", "E, E, E"], answer: 0, explain: "Above, below, then the target." },
+          { q: "Name the notes of an enclosure of E that approaches from above first.", options: ["F, D#, E", "E, F, G", "C, E, G", "D, E, F"], answer: 0, explain: "Above, below, then the target." },
+          { q: "From the voice-leading lesson: which way does the seventh of a chord tend to move?", options: ["Up by step", "Down by step", "Up a fifth", "It stays put"], answer: 1, explain: "A chordal seventh falls by step, like the F of G7 falling to E." },
         ] },
       ],
     },
@@ -171,17 +180,16 @@ export const UNIT2: Unit = {
     {
       id: "twofive", title: "The ii-V-I",
       parts: [
-        `<p>If you learn one progression in jazz, learn <b>ii7, V7, Imaj7</b>. Roots fall by fifths (D, G, C), each chord's seventh falls to the next chord's third, and the dominant's tritone resolves into the tonic. Standards are built from strings of ii-Vs moving through keys, so jazz musicians practice them in all twelve.</p>
-         <p>Here it is in Bb, the trumpet and tenor key, with the bass on roots and the piano voice-led.</p>`,
-        { code: `tempo 120\nvoice comp = changes("Cm7 | F7 | Bbmaj7 | %").voicelead\nvoice bass = changes("Cm7 | F7 | Bbmaj7 | %").root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>Pianists rarely play roots; the bassist has them. A <b>rootless voicing</b> keeps four notes: the 3rd, 7th and two colors. On ii and I the colors are the 5th and 9th; on V the 13th replaces the 5th. Starting on the 3rd is called the <b>A form</b>, starting on the 7th the <b>B form</b>. In a ii-V-I the forms alternate on their own if each chord moves as little as possible, which is why <code>.rootless.voicelead</code> works so well.</p>`,
-        { code: `print(name(c3@m7.rootless), "|", name(f3@7.rootless), "|", name(bb3@maj7.rootless))\n-- bar 1: A forms, bar 2: B forms\nvoice v = cat([c3@m7 f3@7 bb3@maj7 .].rootless, [c3@m7 f3@7 bb3@maj7 .].rootless(form: "b"))`, bars: 2 },
-        `<p><code>name</code> knows these chords came from Cm7, F7 and Bbmaj7, so it names them against those roots. Hand it the same four notes with no history, and it hears something else.</p>`,
-        { code: `-- the A-form Cm9, without its root\nprint(name({eb3 g3 bb3 d4}))\nvoice x = {eb3 g3 bb3 d4}` },
-        `<p>Cm9 without its root is Ebmaj7. Rootless voicings are ambiguous by design: the bass note decides what they mean.</p>
-         <p>Now comp. Put the voicings in the Charleston rhythm. In Tine, when two patterns are added, <b>the rhythm comes from the left one</b> and the right one supplies the notes, so a rhythm of zeros plus the changes gives chords in that rhythm.</p>`,
-        { code: `tempo 150\nlet charleston = [0 . . 0 . . . .]\nlet tune = changes("Cm7 | F7 | Bbmaj7 | G7")\nvoice comp = (charleston + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)\nvoice hat  = [. pedal . pedal].vel(.5)`, bars: 4 },
-        `<p>That bass only repeats roots. A real bassist walks, which is lesson 16. Notice also the G7 in bar 4: it is the V of the ii (Cm7), turning the progression around to the top. You will meet it again as a secondary dominant.</p>`,
+        `<p>If you learn one progression in jazz, learn this one. Here it is in Bb, the trumpet and tenor key, with the bass on roots.</p>`,
+        { code: `-- Cm7, F7, Bbmaj7. Listen to the bass: each root falls a fifth (or rises a fourth).\n-- Change Bbmaj7 to Bbm7 (both places) and the same move lands in a darker home.\ntempo 120\nlet tune = changes("Cm7 | F7 | Bbmaj7 | %")\nvoice comp = tune.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
+        `<p>That is <b>ii7, V7, Imaj7</b>. Three forces push it forward. The roots fall by fifths (C, F, Bb). Each chord's seventh falls a half step to the next chord's third: Eb to D. The dominant's tritone (A and Eb) resolves into the tonic. Standards are strings of ii-Vs moving through keys, so jazz musicians practice them in all twelve.</p>`,
+        { code: `-- Bar 1: the three chords in rootless A form. Bar 2: B form.\n-- Change form: "b" to form: "a" and both bars match.\nprint(name(c3@m7.rootless), "|", name(f3@7.rootless), "|", name(bb3@maj7.rootless))\nvoice v = cat([c3@m7 f3@7 bb3@maj7 .].rootless, [c3@m7 f3@7 bb3@maj7 .].rootless(form: "b"))`, bars: 2 },
+        `<p>Pianists rarely play roots; the bassist has them. A <b>rootless voicing</b> keeps four notes: the 3rd, the 7th and two colors. On ii and I the colors are the 5th and 9th. On V the 13th replaces the 5th. Starting on the 3rd is the <b>A form</b>, starting on the 7th the <b>B form</b>. In a ii-V-I the forms alternate on their own when each chord moves as little as possible, which is why <code>.rootless.voicelead</code> works so well.</p>`,
+        { code: `-- The A-form Cm9 voicing, alone.\n-- Change the voice line to {c3 eb3 g3 bb3 d4} (add the root back) and print it again.\nprint(name({eb3 g3 bb3 d4}))\nvoice x = {eb3 g3 bb3 d4}` },
+        `<p>Cm9 without its root is Ebmaj7. Rootless voicings are ambiguous by design: the bass note decides what they mean.</p>`,
+        { code: `-- Comping in the Charleston rhythm over a ii-V-I and a G7 back to the top.\n-- Change the charleston to [. . . 0 . . . 0]: chords only on the "and" of 2 and of 4, pushing the bar forward.\ntempo 150\nlet charleston = [0 . . 0 . . . .]\nlet tune = changes("Cm7 | F7 | Bbmaj7 | G7")\nvoice comp = (charleston + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)\nvoice hat  = [. pedal . pedal].vel(.5)`, bars: 4 },
+        `<p>When two patterns are added in Tine, <b>the rhythm comes from the left one</b> and the right one supplies the notes, so a rhythm of zeros plus the changes gives chords in that rhythm. The G7 in bar 4 is the V of Cm7, turning the progression back to the top. You will meet it again as a secondary dominant. The bass only repeats roots; a real bassist walks, which is the lesson after next.</p>`,
+        { code: `-- Partly done, in G: rootless voicings, but each chord jumps.\n-- Add .voicelead at the end and listen to the jumps smooth out.\nvoice comp = changes("Am7 | D7 | Gmaj7 | %").rootless`, bars: 4 },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: a ii-V-I in <b>Eb major</b> (Fm7 for a bar, Bb7 for a bar, Ebmaj7 for two bars) using <b>rootless voicings</b>: every chord must contain its 3rd and 7th, have at least four notes, and leave out its root.</p>`,
           starter: `voice comp = changes("Fm7 | Bb7 | Ebmaj7 | %")`,
@@ -203,9 +211,11 @@ export const UNIT2: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. How many different chords do you hear before it repeats?", listen: `tempo 110\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nvoice c = tune.rootless.voicelead\nvoice b = tune.root.octave(-1).inst(upright)`, bars: 4, options: ["Two", "Three", "Four"], answer: 1, explain: "ii, V, then I held for two bars." },
+          { q: "Listen. The last chord is home. Is the first chord ii or IV?", listen: `tempo 110\nlet tune = changes("Gm7 | C7 | Fmaj7 | %")\nvoice c = tune.rootless.voicelead\nvoice b = tune.root.octave(-1).inst(upright)`, bars: 4, options: ["ii", "IV"], answer: 0, explain: "Gm7 in F: a minor chord, and the bass falls a fifth to C. IV would be a major chord a step below V." },
           { q: "What are the guide tones of G7?", options: ["G and D", "B and F", "D and F", "G and B"], answer: 1, explain: "The 3rd and 7th." },
           { q: "In a rootless voicing for a dominant chord, what usually replaces the 5th?", options: ["The root", "The 13th", "The 11th", "The b9"], answer: 1 },
-          { q: "Listen. How many different chords do you hear before it repeats?", listen: `tempo 110\nvoice c = changes("Dm7 | G7 | Cmaj7 | %").rootless.voicelead\nvoice b = changes("Dm7 | G7 | Cmaj7 | %").root.octave(-1).inst(upright)`, bars: 4, options: ["Two", "Three", "Four"], answer: 1, explain: "ii, V, then I held for two bars." },
+          { q: "From the cadence lesson: ii-V-I ends with which kind of cadence?", options: ["Authentic", "Half", "Plagal", "Deceptive"], answer: 0, explain: "V to I: an authentic cadence with a predominant in front." },
         ] },
       ],
     },
@@ -213,14 +223,16 @@ export const UNIT2: Unit = {
     {
       id: "blues", title: "The twelve-bar blues",
       parts: [
-        `<p>The <b>blues</b> is a twelve-bar form, three four-bar phrases, built on three chords. In the blues every chord is a dominant seventh, including the tonic. That breaks the classical rules (a dominant seventh on I "should" resolve to IV), and the sound is the point.</p>
+        `<p>Here is one chorus of a blues in F: twelve bars, with piano, bass and drums. Count the bars as it plays, and notice where the harmony moves.</p>`,
+        { code: `-- A basic blues in F, with a quick four in bar 2.\n-- Change the Bb7 in bar 2 to F7 and hear the opening chord sit for four bars.\ntempo 120\nlet chorus = changes("F7 | Bb7 | F7 | % | Bb7 | % | F7 | % | C7 | Bb7 | F7 | C7")\nvoice comp = ([0 . . 0 . . . .] + chorus).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + chorus.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)\nvoice hat  = [. pedal . pedal].vel(.5)`, bars: 12 },
+        `<p>The <b>twelve-bar blues</b> is three four-bar phrases on three chords, I, IV and V. Every chord is a dominant seventh, including the tonic. That breaks a classical rule (a dominant seventh on I "should" resolve to IV), and the sound is the point.</p>
          <table class="t"><tr><td>I7</td><td>I7 (or IV7)</td><td>I7</td><td>I7</td></tr><tr><td>IV7</td><td>IV7</td><td>I7</td><td>I7</td></tr><tr><td>V7</td><td>IV7</td><td>I7</td><td>V7</td></tr></table>
-         <p>Playing IV7 in bar 2 is called a <b>quick four</b>. The V7 in the last bar is the turnaround back to the top.</p>`,
-        { code: `tempo 120\nlet chorus = changes("F7 | Bb7 | F7 | % | Bb7 | % | F7 | % | C7 | Bb7 | F7 | C7")\nvoice comp = ([0 . . 0 . . . .] + chorus).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + chorus.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)\nvoice hat  = [. pedal . pedal].vel(.5)`, bars: 12 },
-        `<p>Jazz musicians reharmonize the blues with what you already know. Bar 4 becomes a ii-V into IV. Bar 6 adds a passing diminished chord. Bar 8 tonicizes ii with its own dominant (D7 to Gm7). Bars 9 and 10 become a ii-V. Bars 11 and 12 are a I VI7 ii V turnaround. This is the <b>jazz blues</b>, and lessons 19 to 25 explain every substitution in it.</p>`,
-        { code: `tempo 140\nlet chorus = changes("F7 | Bb7 | F7 | Cm7 F7 | Bb7 | Bdim7 | F7 | D7 | Gm7 | C7 | F7 D7 | Gm7 C7")\nvoice comp = chorus.rootless.voicelead.vel(.6)\nvoice bass = chorus.root.octave(-1).inst(upright)`, bars: 12 },
-        `<p>Blues melody uses the blues scale over all three chords, In F, the blue third (Ab) rubs against the major third of F7 (A), yet it is the seventh of Bb7. One scale, three chords, a different tension on each. Blues phrases are often <b>call and response</b>: a two-bar idea, an answer, the idea again, and a different ending.</p>`,
-        { code: `tempo 120\nkey f blues\nlet riff = [^5 ^6 ^5 ^3 _ ^1 . .]\nvoice horn = cat(riff, [.], riff, [.], riff, [.], riff, [.], [^7 _ ^6 ^5 ^4 ^3 ^2 ^1], [.], [^1 _ _ _], [.]).swing.inst(lead).vel(.55)\nvoice bass = changes("F7 | Bb7 | F7 | % | Bb7 | % | F7 | % | C7 | Bb7 | F7 | C7").root.octave(-1).inst(upright)`, bars: 12 },
+         <p>Playing IV7 in bar 2 is called a <b>quick four</b>. The V7 in the last bar turns the form back to the top.</p>`,
+        { code: `-- The jazz blues in F.\n-- Change Bdim7 in bar 6 back to Bb7 and the climb in the bass (Bb, B, F) becomes a repeat.\ntempo 140\nlet chorus = changes("F7 | Bb7 | F7 | Cm7 F7 | Bb7 | Bdim7 | F7 | D7 | Gm7 | C7 | F7 D7 | Gm7 C7")\nvoice comp = ([0 . . 0 0 . . 0] + chorus).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + chorus.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.45)`, bars: 12 },
+        `<p>Jazz musicians reharmonize the blues with what you already know. Bar 4 becomes a ii-V into IV. Bar 6 adds a passing diminished chord. Bar 8 adds D7, the dominant of Gm7. Bars 9 and 10 become a ii-V. Bars 11 and 12 are a I VI7 ii V turnaround. This is the <b>jazz blues</b>, and Theory 201 explains every substitution in it.</p>`,
+        { code: `-- A blues melody in three phrases: a riff, the same riff over Bb7, and a different answer.\n-- Change ^3 in the riff to ^4 (B natural, the flat five) for more bite.\ntempo 120\nkey f blues\nlet riff = [^5 ^6 ^5 ^3 _ ^1 . .]\nvoice horn = cat(riff, [.], riff, [.], riff, [.], riff, [.], [^7 _ ^6 ^5 ^4 ^3 ^2 ^1], [.], [^1 _ _ _], [.]).swing.inst(lead).vel(.55)\nvoice bass = changes("F7 | Bb7 | F7 | % | Bb7 | % | F7 | % | C7 | Bb7 | F7 | C7").root.octave(-1).inst(upright)`, bars: 12 },
+        `<p>Blues melody uses the blues scale over all three chords. In F, the blue third (Ab) rubs against the major third of F7 (A), yet it is the seventh of Bb7. One scale, three chords, a different tension on each. The form of the melody is often <b>AAB</b>: a four-bar phrase, the same phrase again over IV, and a different answer in the last four bars.</p>`,
+        { code: `-- Partly done, in G: bars 1 to 8 are written.\n-- Add the last four bars, V7 IV7 I7 V7: D7, C7, G7, D7.\nvoice comp = changes("G7 | C7 | G7 | % | C7 | % | G7 | %").rootless.voicelead\nvoice bass = changes("G7 | C7 | G7 | % | C7 | % | G7 | %").root.octave(-1).inst(upright)`, bars: 8 },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: a basic twelve-bar blues in <b>Bb</b>, with a quick four in bar 2 and V7 in the last bar. Every chord is a dominant seventh. (<code>changes</code> with <code>%</code> to repeat a bar will save typing.)</p>`,
           starter: `voice comp = changes("Bb7 | % | % | %")`,
@@ -234,9 +246,11 @@ export const UNIT2: Unit = {
           },
         } },
         { quiz: [
-          { q: "In a basic blues, which chord is in bar 5?", options: ["I7", "IV7", "V7", "ii7"], answer: 1 },
-          { q: "Which classical rule does the blues tonic chord break?", options: ["It has no third", "It is a dominant seventh that does not resolve", "It is minor", "It is in second inversion"], answer: 1 },
-          { q: "Listen. Is this a basic blues or a jazz blues?", listen: `tempo 160\nvoice c = changes("F7 | Bb7 | F7 | Cm7 F7 | Bb7 | Bdim7 | F7 | D7 | Gm7 | C7 | F7 D7 | Gm7 C7").rootless.voicelead\nvoice b = changes("F7 | Bb7 | F7 | Cm7 F7 | Bb7 | Bdim7 | F7 | D7 | Gm7 | C7 | F7 D7 | Gm7 C7").root.octave(-1).inst(upright)`, bars: 12, options: ["Basic blues", "Jazz blues"], answer: 1, explain: "Listen for the ii-V in bars 9 and 10 and the turnaround." },
+          { q: "Listen. The first chord is I7. In which bar does IV7 first arrive?", listen: `tempo 160\nlet chorus = changes("F7 | % | % | % | Bb7 | % | F7 | %")\nvoice c = chorus.rootless.voicelead\nvoice b = chorus.root.octave(-1).inst(upright)`, bars: 8, options: ["Bar 2", "Bar 5", "Bar 9"], answer: 1, explain: "No quick four here: the I chord holds for four bars and IV arrives in bar 5." },
+          { q: "Listen. Is this a basic blues or a jazz blues?", listen: `tempo 160\nlet chorus = changes("F7 | Bb7 | F7 | Cm7 F7 | Bb7 | Bdim7 | F7 | D7 | Gm7 | C7 | F7 D7 | Gm7 C7")\nvoice c = chorus.rootless.voicelead\nvoice b = chorus.root.octave(-1).inst(upright)`, bars: 12, options: ["Basic blues", "Jazz blues"], answer: 1, explain: "Listen for the ii-V in bars 9 and 10 and the turnaround." },
+          { q: "In a basic blues, which chord is in bar 9?", options: ["I7", "IV7", "V7", "ii7"], answer: 2 },
+          { q: "What quality is the I chord in a blues?", options: ["Major seventh", "Dominant seventh", "Minor seventh", "A plain triad"], answer: 1, explain: "Every chord in a basic blues is a dominant seventh." },
+          { q: "From the ii-V-I lesson: in the jazz blues in F, Gm7 C7 in bars 9 and 10 lead to which chord?", options: ["Bb7", "C7", "F7", "D7"], answer: 2, explain: "Gm7 C7 is ii-V of F, and bar 11 is F7." },
         ] },
       ],
     },
