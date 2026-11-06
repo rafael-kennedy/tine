@@ -221,6 +221,7 @@ A hundred and twenty tests cover the core (timing, phrases, pitch, microtonality
 - Tempo changes are steps between sections. There is no gradual accelerando or ritardando yet.
 - MusicXML export writes tuplets as time modifications without bracket marks, writes drum parts as unpitched notes at their General MIDI pitch, and does not attempt beaming. Scores import correctly; engraving is left to the notation program.
 - There is no choir or formant voice, and lists cannot yet hold lists.
+- Inside a sandboxed viewer such as a claude.ai Artifact, the download buttons of the DAW and of packed players do nothing, because the sandbox blocks downloads the page starts itself. Opened as a file or from `tine daw`, they work.
 
 ---
 
