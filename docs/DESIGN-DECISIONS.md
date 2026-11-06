@@ -303,7 +303,7 @@ An arrangement written in Tine against 1.0 found three rough edges, now fixed:
 - `c4@maj7`, `chord("Bb7#11")` and `changes("Dm7 G7 | Cmaj7")` all read one grammar, in `core/harmony.ts`. It is a family (`m`, `-`, `maj`, `M`, `Δ`, `dim`, `o`, `ø`, `m7b5`, `aug`, `+`, `mmaj`), then a number (5, 6, 69, 7, 9, 11, 13), then any modifiers (`sus`, `alt`, `add9`, `no5`, `b9`, `#11`, `b13`, and so on). Named shapes in the old chord table are checked first, so nothing that worked before changed.
 - **Chosen: the lead-sheet spellings musicians already write**, including `-7` and `Δ7`. Real Book charts use all of them, and a course that rejected `C-7` would be teaching Tine instead of jazz.
 - `ma` only counts as major when a digit follows (`Ama7`), so `madd9` is minor add 9.
-- A slash bass (`c4@m7/g`, `"C/E"`) goes below the root unless it names an octave. The other choice, the nearest bass note, puts the bass above the root half the time.
+- A slash bass (`c4@m7/g`, `"C/E"`) goes below the chord unless it names an octave. In a chord symbol it sits in one fixed octave under the chords (section 38 replaced placing it just below each root). The other choice, the nearest bass note, puts the bass above the root half the time.
 - After `@`, the lexer reads a whole symbol token (`@7#9`, `@maj7/e`). That is why `#` and `+` are allowed there and nowhere else.
 - On a scale degree, a bare number still means a diatonic stack (`^2@7` is ii7). On an altered degree (`^b7@7`) the number names the quality, because there is no diatonic chord on a note outside the key.
 
