@@ -565,34 +565,25 @@ def("rootless", "rootless(p, form: \"a\")", "Rootless voicings: four notes witho
 def("drop2", "drop2(p)", "Drop-2 voicings: close position, with the second voice from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => H.dropVoicing(c, k, [2])));
 def("drop3", "drop3(p)", "Drop-3 voicings: close position, with the third voice from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => H.dropVoicing(c, k, [3])));
 def("drop24", "drop24(p)", "Drop-2-and-4 voicings: the second and fourth voices from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => H.dropVoicing(c, k, [2, 4])));
-def("voicelead", "voicelead(p, around: e4)", "Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: the chain is replayed from bar 0.", H_CAT, ([p, around], named) => {
+def("voicelead", "voicelead(p, around: e4)", "Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: built on evolve, so the chain is replayed from bar 0.", H_CAT, ([p, around], named) => {
   const q = P(p), center = pitchOf(named.around ?? around, 64);
-  type Chain = { upTo: number; voiced: Map<string, number[]>; prev: number[] | null };
-  const chains = new Map<string, Chain>();
-  const evKey = (s: R, semis: number[]) => `${s.toString()}:${semis.join(",")}`;
-  return new Pat((a, b, ctx) => {
-    const evs = q.query(a, b, ctx);
-    if (!evs.some(e => e.v instanceof Chord)) return evs;
-    const ck = `${ctx.seed}|${ctx.voice}|${ctx.offset.toString()}|${ctx.key.root.semi}|${ctx.key.scale.steps.join(",")}`;
-    let ch = chains.get(ck);
-    if (!ch) { ch = { upTo: 0, voiced: new Map(), prev: null }; chains.set(ck, ch); if (chains.size > 32) chains.delete(chains.keys().next().value!); }
-    const need = Math.min(b.ceil(), 100000);
-    while (ch.upTo < need) {
-      const bar = ch.upTo, lo = new R(bar);
-      const bevs = q.query(lo, new R(bar + 1), ctx).filter(e => e.v instanceof Chord && e.s.ge(lo)).sort((u, v) => u.s.toNumber() - v.s.toNumber());
-      for (const e of bevs) {
-        const semis = H.chordSemis(e.v, keyOf(e, ctx));
-        const v = H.leadTo(ch.prev, semis, center);
-        ch.voiced.set(evKey(e.s, semis), v); ch.prev = v;
-      }
-      ch.upTo++;
+  // voice the chords that start in bar c, in order, starting from the voicing `prev`
+  const voiceBar = (prev: number[] | null, c: number, ctx: Ctx) => {
+    const lo = new R(c);
+    const evs = q.query(lo, new R(c + 1), ctx).filter(e => e.s.ge(lo)).sort((u, v) => u.s.toNumber() - v.s.toNumber());
+    const out: Ev[] = [];
+    for (const e of evs) {
+      if (!(e.v instanceof Chord)) { out.push(e); continue; }
+      const key = keyOf(e, ctx), v = H.leadTo(prev, H.chordSemis(e.v, key), center);
+      prev = v;
+      out.push({ ...e, v: new Chord(v.map(x => new Pitch(x)), new Pitch(H.rootOf(e.v, key)), e.v.bass) });
     }
-    return evs.map(e => {
-      if (!(e.v instanceof Chord)) return e;
-      const key = keyOf(e, ctx), semis = H.chordSemis(e.v, key);
-      const v = ch!.voiced.get(evKey(e.s, semis)) ?? H.leadTo(null, semis, center);
-      return { ...e, v: new Chord(v.map(x => new Pitch(x)), new Pitch(H.rootOf(e.v, key)), e.v.bass) };
-    });
+    return { out, last: prev };
+  };
+  // state at bar c: the voicing sounding as bar c begins
+  return evolve(null, (prev, c, ctx) => voiceBar(prev, c - 1, ctx).last, (prev, c, ctx) => {
+    const { out } = voiceBar(prev, c, ctx);
+    return new Pat((a, b) => out.filter(e => e.s.ge(a) && e.s.lt(b)));
   });
 });
 def("interval", "interval(a, b, long: false)", "The interval between two pitches by size: interval(c4, e4) is \"M3\"; with long: true, \"major 3rd\". Tine counts semitones, so C-F# and C-Gb are both TT (tritone).", H_CAT, ([a, b, long], named) => {
