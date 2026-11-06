@@ -4,6 +4,7 @@ import { randomSeed, VERSION, builtinList, SCALES, parseQuality } from "../core"
 import { CSS, LOGO_SVG } from "./theme";
 import { h, store, makeCell, makeExercise, makeQuiz, stopAll, CELL_CSS } from "./cells";
 import { UNITS, COURSE_LESSONS } from "./course/index";
+import { makeAsk, ASK_CSS } from "./ask";
 
 const COURSE_CSS = `
 body{min-height:100vh}
@@ -96,8 +97,8 @@ function renderHome(article: HTMLElement) {
     h("div", { class: "kicker" }, "Tine Theory"),
     h("h1", {}, "Music theory, jazz first"),
     h("div", { class: "hero" },
-      h("p", { html: `A college theory sequence, <b>Theory 101 through 202</b>, taught in <b>Tine</b>, a programming language for music. It covers what a first and second year of conservatory theory cover (scales, intervals, chords, function, voice leading, chromatic harmony, form) with jazz as the home language rather than an elective at the end. Swing comes in lesson 3, seventh chords in lesson 8, the ii-V-I in lesson 14 and the blues in lesson 15.` }),
-      h("p", { html: `Every example is live. Edit it and press <b>▶ play</b> or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>. <b>Challenges</b> are checked by what your code plays, so any correct answer passes. <b>Quizzes</b> include ear training: press <b>▶ listen</b> and name what you hear. Progress is saved in this browser.` }),
+      h("p", { html: `A college theory sequence, <b>Theory 101 through 202</b>, with a <b>Theory 100</b> unit in front for anyone starting from zero, all taught in <b>Tine</b>, a programming language for music. It covers what a first and second year of conservatory theory cover (scales, intervals, chords, function, voice leading, chromatic harmony, form) with jazz as the home language rather than an elective at the end. Swing comes in lesson 3, seventh chords in lesson 8, the ii-V-I in lesson 14 and the blues in lesson 15.` }),
+      h("p", { html: `Every example is live. Edit it and press <b>▶ play</b> or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>. <b>Challenges</b> are checked by what your code plays, so any correct answer passes. <b>Quizzes</b> include ear training: press <b>▶ listen</b> and name what you hear. Progress is saved in this browser. Every lesson ends with <b>Ask about this lesson</b>, where you can ask Claude to explain anything in plain words.` }),
       h("p", { html: `If you have never used Tine, the code reads like this: <code>[c e g]</code> divides a bar into three notes, <code>{c e g}</code> plays them together, <code>c4@maj7</code> builds a chord, <code>^5</code> is the fifth degree of the current key, and <code>changes("Dm7 G7 | Cmaj7")</code> reads a lead sheet. Each lesson introduces what it uses.` }),
       h("div", { class: "bar-progress" }, h("i", { style: `width:${(100 * finished / total).toFixed(1)}%` })),
       h("p", { class: "dim" }, `${finished} of ${total} lessons complete`)),
@@ -110,7 +111,8 @@ function renderHome(article: HTMLElement) {
   }
   article.append(units);
   article.append(h("p", { html: `<b>A note on spelling.</b> Tine works in sounding pitch: C# and Db are the same note to it, and it has no staff notation. Theory often cares which spelling a chord uses, because spelling records function. The course says so wherever it matters (augmented sixths, lesson 23, are the clearest case) and otherwise uses the spellings a jazz lead sheet would.` }));
-  article.append(h("p", {}, "Start with ", h("a", { href: `#${COURSE_LESSONS[0].id}` }, `${COURSE_LESSONS[0].label}. ${COURSE_LESSONS[0].title}`), ". Browsers need one click on the page before they make sound."));
+  const first101 = COURSE_LESSONS.find(l => l.unit.code === "Theory 101")!;
+  article.append(h("p", {}, "New to music or to code? Start with ", h("a", { href: `#${COURSE_LESSONS[0].id}` }, `${COURSE_LESSONS[0].label}. ${COURSE_LESSONS[0].title}`), ". If you already read music, start with ", h("a", { href: `#${first101.id}` }, `${first101.label}. ${first101.title}`), ". Browsers need one click on the page before they make sound."));
 }
 
 function renderReference(article: HTMLElement) {
@@ -153,6 +155,13 @@ function renderPage() {
     else if ("quiz" in part) { article.append(makeQuiz(part.quiz, `${lesson.id}:q${q++}`, { seed: seedOf, done, onDone: save })); }
     else article.append(makeCell(part, { seed: seedOf }));
   }
+  const LEVEL: Record<string, string> = { "Theory 100": "an absolute beginner who may never have read music or written code", "Theory 101": "a first-semester college theory student", "Theory 102": "a second-semester college theory student", "Theory 201": "a second-year college theory student", "Theory 202": "an advanced second-year student" };
+  const askBox: HTMLElement = makeAsk({
+    lessonTitle: `${lesson.label}. ${lesson.title}`, unit: `${lesson.unit.code}, ${lesson.unit.title}`, level: LEVEL[lesson.unit.code] ?? "a theory student", seed: seedOf,
+    lessonText: () => [...article.children].filter(el => el !== askBox).map(el => (el as HTMLElement).innerText).join("\n\n"),
+    pageCode: () => [...article.querySelectorAll(".cell")].filter(el => !askBox.contains(el)).map(el => (el as any).view?.().state.doc.toString() ?? ""),
+  });
+  article.append(askBox);
   const prev = COURSE_LESSONS[idx - 1], next = COURSE_LESSONS[idx + 1];
   article.append(h("div", { class: "pager" },
     prev ? h("a", { href: `#${prev.id}` }, `← ${prev.label}. ${prev.title}`) : h("a", { href: "#home" }, "← Course home"),
@@ -160,11 +169,11 @@ function renderPage() {
 }
 
 function main() {
-  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + COURSE_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + COURSE_CSS + ASK_CSS; document.head.append(style);
   const logo = h("a", { class: "logo", href: "#home" }); logo.innerHTML = LOGO_SVG + "tine";
   const toggle = h("button", { class: "small toggle", onclick: () => nav.classList.toggle("open") }, "lessons");
   const reroll = h("button", { class: "small", onclick: () => { seed = randomSeed(); seedLabel.textContent = String(seed); store.set("theory.seed", String(seed)); renderPage(); } }, "🎲 new seed");
-  const nav = h("nav", {}, h("div", {}, logo, toggle), h("div", { class: "sub" }, "THEORY 101 TO 202, JAZZ FIRST"), navEl, h("div", { class: "seedbox" }, "seed ", seedLabel, " ", reroll, h("p", {}, `Tine ${VERSION}`)));
+  const nav = h("nav", {}, h("div", {}, logo, toggle), h("div", { class: "sub" }, "THEORY 100 TO 202, JAZZ FIRST"), navEl, h("div", { class: "seedbox" }, "seed ", seedLabel, " ", reroll, h("p", {}, `Tine ${VERSION}`)));
   document.body.append(h("div", { class: "wrap" }, nav, h("article")));
   window.addEventListener("hashchange", renderPage);
   renderPage();

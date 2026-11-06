@@ -1,0 +1,43 @@
+# How the theory course teaches
+
+This is the research the course leans on, and the rubric every lesson is reviewed against.
+
+## What the research says
+
+**Sound before symbol.** Gordon's Music Learning Theory puts hearing and performing a pattern before naming or reading it, and moves from discrimination (telling two things apart) to inference (making your own musical decisions). Its central idea is *audiation*: hearing music in your head that is not sounding. Imitation without audiation gives correct-looking output without understanding. ([Music Learning Theory in Collegiate Music Education](https://symposium.music.org/volume-31/forum-essays-1752877059/music-learning-theory-in-collegiate-music-education), [Gordon music learning theory](https://en.wikipedia.org/wiki/Gordon_music_learning_theory))
+
+**Jazz is learned like a language.** Solli, Aksdal and Inderberg test Berliner's claim from *Thinking in Jazz* that jazz is learned by aural imitation, like a mother tongue. Their method starts with groove and rhythm, then rhythmic patterns, then pitches. It keeps the body involved (sing, clap), delays analytical labels until the sound is familiar, works harmony by singing roots and chord tones, and ends with personal variation over a groove. ([Learning Jazz Language by Aural Imitation](https://erlingak.folk.ntnu.no/LearningJazzLanguage/LearningJazzLanguage.pdf), [Thinking in Jazz](https://chicagoreference.com/ucp/books/book/chicago/T/bo3697073.html))
+
+**Testing and spacing beat rereading.** Dunlosky and colleagues' review of ten study techniques rates practice testing and distributed practice highest. Rereading, highlighting and summarizing rate low. ([Which Study Strategies Make the Grade?](https://www.psychologicalscience.org/news/releases/which-study-strategies-make-the-grade.html))
+
+**Worked examples, then fade them.** Novices learn more from studying solved problems than from solving cold, especially when they explain the steps to themselves and see varied examples. As expertise grows the benefit reverses, so support should fade: complete part of a problem, then all of it. ([MIT: worked and faded examples](https://openlearning.mit.edu/mit-faculty/research-based-learning-findings/worked-and-faded-examples), [Worked-example effect](https://en.wikipedia.org/wiki/Worked-example_effect))
+
+**Hear intervals in a key.** Musicians identify intervals more accurately in a melodic context than in isolation. A tonal context gives a modest boost to interval judgments, mostly by setting up which pitches to expect. So ear training should establish a key before asking what an interval or chord is. ([Jackson and Oxenham 2017](https://www.frontiersin.org/articles/10.3389/fpsyg.2017.01753/full), [MTO notes citing Wapnick et al.](https://mtosmt.org/issues/mto.00.6.3/mto.00.6.3.karpinski_notes.html))
+
+**Making music teaches code, and code can teach music.** Sonic Pi research credits creative, live-coded participation and teacher partnerships. ([Sonic Pi scoping study](https://www.repository.cam.ac.uk/handle/1810/263177))
+
+## What that means here
+
+- Every new idea is **heard first** in a Tine example, then named, then defined.
+- Examples invite a **specific change with a predicted result**: "change the 3 to a 4 and listen for the darker sound", not "try editing this".
+- Each concept goes **worked example, then a partly done example, then a challenge** written from scratch. Later units fade the support faster.
+- Quizzes **retrieve earlier lessons** as well as the current one, and mix question types.
+- Ear questions **set up a key first** (a tonic or a cadence) before asking about an interval or chord.
+- Rhythm and groove come early and stay present. Jazz examples swing and sound like jazz.
+
+## The rubric
+
+A reviewer who did not write the lesson scores each category from 0 to 10. A lesson ships when every category is 10.
+
+| # | Category | A 10 means |
+| --- | --- | --- |
+| 1 | Accuracy | Every theory claim is correct. Every code example runs and plays what the prose says it plays. No claim a teacher would have to correct. |
+| 2 | Sound before symbol | Each new idea is played before it is named. Nothing is defined in the abstract first. |
+| 3 | Interactivity | There is a live example for every idea, and most of them suggest a specific edit and what it will do. Long stretches of prose without sound do not occur. |
+| 4 | Scaffolding | Worked example, partial example, then a challenge. Steps are small enough for the stated level. Support fades in later units. |
+| 5 | Retrieval and spacing | Quizzes test recall, not recognition of a phrase just read. At least one question reaches back to an earlier lesson. |
+| 6 | Ear training | Listening questions establish a key or context first, and ask the learner to hear something the lesson taught. |
+| 7 | Jazz authenticity | Examples sound idiomatic (swing, voicings, real progressions). The lesson connects the idea to how jazz players use it. |
+| 8 | Clarity for the level | Terms are defined at first use. One new idea at a time. A learner at the unit's level can follow without outside help. |
+| 9 | Challenge quality | The task is unambiguous. The check accepts every correct answer and its feedback names the specific mistake. The starter fails with a useful message. |
+| 10 | Prose | Short, plain sentences. No filler, no clichés, no em-dashes. Nothing said twice. |
