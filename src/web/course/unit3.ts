@@ -1,10 +1,18 @@
 // Unit 3, Theory 201: chromatic harmony. Borrowed, secondary and substitute chords, modulation, and the progressions jazz is built from.
 import type { Unit } from "./types";
-import { of, inBar, groups, need, barChords, isChord, nms, nm, pc, pcset, QUAL, fits } from "./check";
+import { of, inBar, groups, need, barChords, isChord, nms, nm, pc, pcset, QUAL, fits, rootHeard } from "./check";
 
 const has = (semis: number[], pcs: number[]) => { const s = new Set(pcset(semis)); return pcs.every(p => s.has(p)); };
 
 // One chord per bar, each checked by quality. want: [root pc, quality, label].
+// Onset of the first chord (two or more notes) in a bar.
+const chordAt = (n: Parameters<typeof need>[0], v: string, b: number) => groups(inBar(of(n, v), b)).find(g => g.semis.length >= 2)?.t ?? b;
+// A rootless chord counts only if another voice (a bass) sounds its root. where: "Bar 2" or "Chord 2".
+function noRoot(n: Parameters<typeof need>[0], v: string, t: number, r: number, label: string, semis: number[], where: string): string | null {
+  if (rootHeard(n, v, t, r, semis)) return null;
+  const root = label.match(/^[A-G][b#]?/)![0], sym = label.split(" ")[0];
+  return `${where} has no ${root}, so it does not sound like ${sym} (${nms(semis)}). Put ${root} in the chord, or add a bass that plays it.`;
+}
 function chordBars(n: Parameters<typeof need>[0], v: string, want: [number, string, string][]): string | null {
   const m = need(n, v); if (m) return m;
   const c = barChords(n, v, want.length);
@@ -13,15 +21,16 @@ function chordBars(n: Parameters<typeof need>[0], v: string, want: [number, stri
     if (!c[b]) return `Bar ${b + 1} has no chord; it should be ${label}.`;
     const why = fits(c[b]!, label, r, q);
     if (why) return `Bar ${b + 1} should be ${label}, but ${why}. You have ${nms(c[b]!)}.`;
+    const nr = noRoot(n, v, chordAt(n, v, b), r, label, c[b]!, `Bar ${b + 1}`); if (nr) return nr;
   }
   return null;
 }
 // Every chord in order, repeated hits of the same chord counted once.
-function chordList(n: Parameters<typeof need>[0], v: string): number[][] {
-  const out: number[][] = [];
+function chordList(n: Parameters<typeof need>[0], v: string): { semis: number[]; t: number }[] {
+  const out: { semis: number[]; t: number }[] = [];
   for (const g of groups(of(n, v)).filter(g => g.semis.length >= 2)) {
     const prev = out[out.length - 1];
-    if (!prev || JSON.stringify(pcset(prev)) !== JSON.stringify(pcset(g.semis))) out.push(g.semis);
+    if (!prev || JSON.stringify(pcset(prev.semis)) !== JSON.stringify(pcset(g.semis))) out.push({ semis: g.semis, t: g.t });
   }
   return out;
 }
@@ -36,7 +45,7 @@ export const UNIT3: Unit = {
       parts: [
         `<p>Four chords in C major. One of them has a note that is not in the key. Listen for the chord that sounds brighter than it should, and where it pulls.</p>`,
         { code: `-- Cmaj7, A7, Dm7, G7.\n-- Change A7 to Am7 (the diatonic vi) and the pull into Dm7 goes slack.\ntempo 120\nlet tune = changes("Cmaj7 | A7 | Dm7 | G7")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 4 },
-        `<p>A7 is not in C major: its third, C#, is the leading tone of D. It acts as a dominant of Dm7, borrowed for a moment from D minor. A dominant aimed at a chord other than I is a <b>secondary dominant</b>, and making a chord sound like a temporary home is <b>tonicization</b>. The name follows the target: A7 here is <b>V7/ii</b>, "five of two".</p>
+        `<p>A7 is not in C major: its third, C#, is the leading tone of D. It acts as the dominant of Dm7, as if D minor were the key for a moment. A dominant aimed at a chord other than I is a <b>secondary dominant</b>, and making a chord sound like a temporary home is <b>tonicization</b>. The name follows the target: A7 here is <b>V7/ii</b>, "five of two".</p>
          <table class="t"><tr><th>chord in C</th><th>name</th><th>resolves to</th><th>new note</th></tr>
          <tr><td>A7</td><td>V7/ii</td><td>Dm7</td><td>C#</td></tr><tr><td>B7</td><td>V7/iii</td><td>Em7</td><td>D#, F#</td></tr>
          <tr><td>C7</td><td>V7/IV</td><td>Fmaj7</td><td>Bb</td></tr><tr><td>D7</td><td>V7/V</td><td>G7</td><td>F#</td></tr>
@@ -50,7 +59,7 @@ export const UNIT3: Unit = {
         `<p>In jazz a secondary dominant usually brings its own ii, a <b>related ii</b>. Em7b5 A7 is a little minor ii-V into Dm7. Whole bridges are built from these.</p>`,
         { code: `-- Partly done, in G major: I, V7/vi, vi, V7. Bar 2 is empty.\n-- Fill it with B7, the dominant of Em7.\nvoice comp = changes("Gmaj7 | N.C. | Em7 | D7").voicelead`, bars: 4 },
         { exercise: {
-          task: `<p>In <b>F major</b>, write <code>voice comp</code>: four bars, <b>I, V7/ii, ii, V7</b>, one chord per bar.</p>`,
+          task: `<p>In <b>F major</b>, write <code>voice comp</code>: four bars, <b>Imaj7, V7/ii, ii7, V7</b>, one chord per bar.</p>`,
           starter: `voice comp = changes("Fmaj7 | Dm7 | Gm7 | C7")`,
           solution: `voice comp = changes("Fmaj7 | D7 | Gm7 | C7").voicelead`,
           bars: 4,
@@ -75,8 +84,8 @@ export const UNIT3: Unit = {
         `<p>The same ii-V-i, twice. First in C major, then in C minor. Listen to the first chord of each and to where they land.</p>`,
         { code: `-- Major: Dm7 G7 Cmaj7. Minor: Dm7b5 G7b9 Cm6.\n-- Change Cm6 to Cmaj7 at the end: a minor ii-V landing on a major chord, a bittersweet arrival.\ntempo 110\nlet tune = changes("Dm7 | G7 | Cmaj7 | % | Dm7b5 | G7b9 | Cm6 | %")\nvoice comp = tune.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 8 },
         `<p>In a minor key, the chords from harmonic minor give a darker ii-V: <b>iiø7, V7, i</b>. The ii is <b>half-diminished</b> (m7b5), and the dominant picks up the key's flat sixth as its <b>b9</b>. In C minor that is Dm7b5, G7b9, Cm. Tine's degree chords show where it comes from.</p>`,
-        { code: `-- In C harmonic minor, the ninth chord on ^5 is G7b9 without asking.\n-- The diatonic tonic is Cmmaj7; jazz often plays Cm6 instead, as the voice does.\n-- Change key c harmonic_minor to key c major and run it: Dm7, G9, Cmaj7.\nkey c harmonic_minor\nprint(name([^2@7 ^5@9 ^1@7 ^1@m6]))\nvoice comp = <^2@7 ^5@9 ^1@m6 ^1@m6>.voicelead\nvoice bass = <^2 ^5 ^1 ^1>.octave(-2).inst(upright)`, bars: 4 },
-        `<p>Jazz musicians choose the minor tonic for color. <b>m6</b> and <b>mmaj7</b> sound settled: m6 comes from melodic minor or dorian, and mmaj7 from harmonic or melodic minor. <b>m7</b> and <b>m9</b> come from dorian and sound open, good for a vamp. The dominant varies too: <b>7b9</b>, <b>7b9b13</b> (both the b9 and the b13, the key's b6), or the fully <b>altered</b> 7alt (lesson 29).</p>`,
+        { code: `-- In C harmonic minor, the ninth chord on ^5 is G7b9 without asking.\n-- The diatonic tonic is Cmmaj7; jazz often plays Cm6 instead, as the voice does.\n-- Change key c harmonic_minor to key c major: print shows Dm7 G9 Cmaj7, and the comp's dominant loses its Ab. Cm6 is a fixed symbol, so it stays.\nkey c harmonic_minor\nprint(name([^2@7 ^5@9 ^1@7 ^1@m6]))\nvoice comp = <^2@7 ^5@9 ^1@m6 ^1@m6>.voicelead\nvoice bass = <^2 ^5 ^1 ^1>.octave(-2).inst(upright)`, bars: 4 },
+        `<p>Jazz musicians choose the minor tonic for color. <b>m6</b> and <b>mmaj7</b> sound settled: m6 comes from melodic minor or dorian, and mmaj7 from harmonic or melodic minor. <b>m7</b> and <b>m9</b> come from dorian or natural minor and sound open, good for a vamp. The dominant varies too: <b>7b9</b>, <b>7b9b13</b> (adding Eb, the b13; both added notes, Ab and Eb, are in C minor), or the fully <b>altered</b> 7alt (lesson 29).</p>`,
         { code: `-- An altered dominant and two minor tonics.\n-- Change Cmmaj7 to Cm7: the tonic sounds more open and less settled.\ntempo 110\nlet tune = changes("Dm7b5 | G7alt | Cmmaj7 | Cm6")\nvoice comp = ([0 . . 0 . . . .] + tune).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)`, bars: 4 },
         { code: `-- Partly done, in G minor: bar 1 is the minor ii. Fill bar 2 with the dominant, D7b9.\nvoice comp = changes("Am7b5 | N.C. | Gm6 | %").voicelead`, bars: 4 },
         { exercise: {
@@ -102,7 +111,7 @@ export const UNIT3: Unit = {
       parts: [
         `<p>A slow progression in C major. The third chord has one note from somewhere else. Listen for the moment the light dims.</p>`,
         { code: `-- Cmaj7, Fmaj7, Fm6, Cmaj7.\n-- Change Fm6 to Fmaj7: the dimming is gone.\ntempo 80\nlet tune = changes("Cmaj7 | Fmaj7 | Fm6 | Cmaj7")\nvoice comp = tune.voicelead.inst(keys)\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>Fm6 is the iv chord of <b>C minor</b>. Its Ab is borrowed from the parallel minor, the key with the same tonic. Borrowing chords this way is <b>modal interchange</b>, or <b>mixture</b>. In C major the most common borrowed chords are <b>iv</b> (Fm), <b>iiø7</b> (Dm7b5), <b>bIIImaj7</b> (Ebmaj7), <b>bVImaj7</b> (Abmaj7) and <b>bVII7</b> (Bb7). The tonic stays major, so the borrowed chord darkens the moment and the tonic brightens it again. IV, iv, I is the minor plagal cadence you heard in the cadence lesson.</p>`,
+        `<p>Fm6 is the iv chord of <b>C minor</b>. Its Ab is borrowed from the parallel minor, the key with the same tonic. Borrowing chords this way is <b>modal interchange</b>, or <b>mixture</b>. In C major the most common borrowed chords are <b>iv</b> (Fm), <b>iiø7</b> (Dm7b5), <b>bIIImaj7</b> (Ebmaj7), <b>bVImaj7</b> (Abmaj7) and <b>bVII7</b> (Bb7). The tonic stays major, so the borrowed chord darkens the moment and the tonic brightens it again. Fm6 to Cmaj7 is iv to I, the minor plagal cadence from the cadence lesson.</p>`,
         { code: `-- On an altered degree, @7 means a dominant seventh: ^b7@7 is Bb7. Other qualities need a symbol: ^b6@maj7 is Abmaj7.\n-- Change ^b6@maj7 to ^6@7 (the diatonic Am7) and ^b6 to ^6 in the bass, and hear the progression brighten.\nkey c major\nvoice comp = <^1@maj7 ^b6@maj7 ^b7@7 ^1@maj7>.voicelead\nvoice bass = <^1 ^b6 ^b7 ^1>.octave(-2).inst(upright)`, bars: 4 },
         { code: `-- Fm7 Bb7 into Cmaj7.\n-- Change Fm7 | Bb7 to Dm7 | G7 and compare the front door with this side entrance.\ntempo 100\nlet tune = changes("Cmaj7 | % | Fm7 | Bb7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.within(g1).inst(upright)`, bars: 6 },
         `<p>That is the <b>backdoor ii-V</b>: iv7, bVII7, I. Bb7 has no leading tone. It reaches C from a whole step below in the bass, and its Ab falls to G. Tadd Dameron's "Lady Bird" opens this way: Cmaj7 for two bars, then Fm7 Bb7 back to Cmaj7.</p>`,
@@ -120,7 +129,7 @@ export const UNIT3: Unit = {
           { q: "Listen. The first chord is home. Is the third chord IV or iv?", listen: `voice c = <c4@maj f4@maj f4@m c4@maj>.voicelead\nvoice b = <c2 f2 f2 c2>.inst(upright)`, bars: 4, options: ["IV (major)", "iv (minor)"], answer: 1, explain: "The A drops to Ab." },
           { q: "Listen. The first chord is home. Is the cadence the front door (ii-V) or the backdoor (iv7 bVII7)?", listen: `voice c = changes("Ebmaj7 | Abm7 | Db7 | Ebmaj7").rootless.voicelead\nvoice b = changes("Ebmaj7 | Abm7 | Db7 | Ebmaj7").root.octave(-1).inst(upright)`, bars: 4, options: ["Front door", "Backdoor"], answer: 1, explain: "Db7 rises a whole step to Eb." },
           { q: "In C major, which chord is bVII7?", options: ["B7", "Bb7", "Bbmaj7", "Bdim7"], answer: 1 },
-          { q: "Borrowed chords come from...", options: ["the relative minor", "the parallel minor", "the dominant key", "the whole-tone scale"], answer: 1, explain: "Same tonic, minor mode." },
+          { q: "In Eb major, which chord is borrowed from Eb minor?", options: ["Abm6", "Ab", "Fm7", "Bb7"], answer: 0, explain: "Its Cb is the b6 of Eb minor. Ab, Fm7 and Bb7 are all in Eb major." },
           { q: "From the secondary-dominant lesson: in C major, C7 is V7/IV. Which of its notes is outside the key?", options: ["C", "E", "G", "Bb"], answer: 3, explain: "Bb, the seventh, pulls down to A in Fmaj7." },
         ] },
       ],
@@ -134,7 +143,7 @@ export const UNIT3: Unit = {
         `<p>Tonicization borrows a key for a chord or two. <b>Modulation</b> moves the tonic for good, or at least for a section. That example used a <b>pivot chord</b>: Am7 is vi in C and ii in G, so the progression arrives on it in one key and leaves it in the other.</p>`,
         { code: `-- The same four bars in C, then in Eb, with nothing between them.\n-- Change key eb major to key a major and the second half lands a major sixth up, in A.\ntempo 160\nsection home 4\n  key c major\n  voice comp = <^2@m7 ^5@dom7 ^1@maj7 ^1@maj7>.rootless.voicelead\nsection up 4\n  key eb major\n  voice comp = <^2@m7 ^5@dom7 ^1@maj7 ^1@maj7>.rootless.voicelead\nform home up` },
         `<p>That is a <b>direct</b>, or phrase, modulation: end a phrase in one key and start the next in another. Because Tine degrees resolve against the key, a section can restate the same material in a new key by changing one line. It is also how to practice a progression in all twelve keys.</p>`,
-        { code: `-- The top note G never moves. Under it, C major becomes Eb major.\n-- Change eb3@maj to e3@m: G is still shared, and E minor is a much nearer key.\ntempo 90\nvoice hold = [g4].vel(.7).inst(vibes)\nvoice pad  = <c3@maj c3@maj eb3@maj eb3@maj>.inst(pad).vel(.4)`, bars: 4 },
+        { code: `-- The top note G never moves. Under it, C major becomes Eb major.\n-- Change both eb3@maj to e3@m: G is still shared, and E minor is a much nearer key.\ntempo 90\nvoice hold = [g4].vel(.7).inst(vibes)\nvoice pad  = <c3@maj c3@maj eb3@maj eb3@maj>.inst(pad).vel(.4)`, bars: 4 },
         `<p>A <b>common-tone</b> modulation holds one note while the harmony shifts under it. It can reach distant keys smoothly, because the ear follows the held note.</p>`,
         { code: `-- C, then a ii-V into Eb, a ii-V into Gb, and a ii-V back to C.\n-- Change Abm7 | Db7 | Gbmaj7 to Cm7 | F7 | Bbmaj7 and the third key is Bb, a whole step below C.\ntempo 140\nlet tune = changes("Cmaj7 | % | Fm7 | Bb7 | Ebmaj7 | % | Abm7 | Db7 | Gbmaj7 | % | Dm7 | G7")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 12 },
         `<p>Jazz tunes modulate constantly, almost always with a <b>ii-V of the new key</b>. The ii-V says where you are going so clearly that no pivot is needed. That example rose by minor thirds, C to Eb to Gb. Other common moves are up a fourth (to IV) and down a whole step. Miles Davis's "Tune Up" drops by whole steps: a ii-V into D, then into C, then into Bb.</p>`,
@@ -152,7 +161,7 @@ export const UNIT3: Unit = {
         { quiz: [
           { q: "Listen. The first chord is home. Does the music end in the key it started in?", listen: `tempo 120\nlet tune = changes("Cmaj7 | % | Fm7 | Bb7 | Ebmaj7 | %")\nvoice c = tune.rootless.voicelead\nvoice b = tune.root.octave(-1).inst(upright)`, bars: 6, options: ["Yes, C", "No, it moved"], answer: 1, explain: "Fm7 Bb7 is a ii-V of Eb, and it lands there." },
           { q: "In a pivot modulation from C to G, Em is iii in C. What is it in G?", options: ["iii", "ii", "IV", "vi"], answer: 3, explain: "G A B C D E: E is the sixth degree." },
-          { q: "How do jazz tunes most often announce a new key?", options: ["A pivot chord", "A ii-V of the new key", "A long pause", "A key signature"], answer: 1 },
+          { q: "Which pair announces a move from C major to Bb major?", options: ["Cm7 F7", "Dm7 G7", "Fm7 Bb7", "Gm7 C7"], answer: 0, explain: "Cm7 F7 is the ii-V of Bb." },
           { q: "Modulating from C major to Eb major moves the tonic...", options: ["up a minor third", "up a major third", "down a minor third", "up a fourth"], answer: 0 },
           { q: "From the borrowed-chord lesson: Ebmaj7 in C major is bIIImaj7, borrowed from C minor. What makes a passage a modulation to Eb instead?", options: ["Eb becomes the new home, usually after its own ii-V", "Any Eb chord at all", "A slower tempo", "A minor chord before it"], answer: 0 },
         ] },
@@ -162,12 +171,12 @@ export const UNIT3: Unit = {
     {
       id: "aug6", title: "The Neapolitan and augmented sixths",
       parts: [
-        `<p>A cadence in C minor with an unusual first chord. Listen to the top voice of that chord fall to the next.</p>`,
-        { code: `-- Db major over F, then G7, then C minor.\n-- Change db4 to d4 (an ordinary ii°, D F Ab): the darkness of the first chord drains away.\nvoice comp = <{f3 ab3 db4} {g3 b3 d4 f4} {g3 c4 eb4} .>\nvoice bass = <f2 g2 c2 .>.inst(upright)`, bars: 4 },
-        `<p>That first chord is the <b>Neapolitan</b>: a major triad on the lowered second degree, bII. In C minor it is Db F Ab. It usually has its third (F) in the bass, so it is called the <b>Neapolitan sixth</b>, N6, and it moves to V. Its Db falls to B, a diminished third, a voice-leading move you rarely hear anywhere else.</p>`,
-        { code: `-- Abmaj7, Dbmaj7, Cmaj7: bVI and bII as major sevenths. The last move slides down a half step to I.\n-- Change Dbmaj7 to G7: the ordinary dominant, and the slide into C is gone.\ntempo 100\nlet tune = changes("Abmaj7 | Dbmaj7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.within(g1).inst(upright)`, bars: 4 },
-        `<p>Jazz keeps the Neapolitan's root and changes its job. <b>bIImaj7</b> slides down a half step straight to I, as at the end of "Lady Bird" (Abmaj7 Dbmaj7 back to Cmaj7). A dominant seventh on bII doing the same is the tritone substitute, the next lesson.</p>`,
+        `<p>This lesson has two parts: first the <b>Neapolitan</b>, then the <b>augmented sixths</b>. Both are chromatic chords that lead to V.</p><p>A cadence in C minor with an unusual first chord. Listen to the top voice of that chord fall to the next.</p>`,
+        { code: `-- Db major over F, then G7, then C minor.\n-- Change db4 to d4 (an ordinary ii°, D F Ab): the darkness of the first chord drains away.\nvoice comp = <{f3 ab3 db4} {f3 g3 b3} {eb3 g3 c4} .>\nvoice bass = <f2 g2 c2 .>.inst(upright)`, bars: 4 },
+        `<p>That first chord is the <b>Neapolitan</b>: a major triad on the lowered second degree, bII. In C minor it is Db F Ab. It usually has its third (F) in the bass, so it is called the <b>Neapolitan sixth</b>, N6, and it moves to V. Its Db falls to B, a <b>diminished third</b> (written as a third, D to B, but sounding as a whole step), a voice-leading move you rarely hear anywhere else.</p>`,
         { code: `-- Partly done, in A minor: bar 1 is empty. Put the Neapolitan sixth there: Bb major with D in the bass.\n-- Then hear it fall to E7 and A minor.\nvoice comp = <. {e3 g#3 b3 d4} {a2 c4 e4 a4}>`, bars: 3 },
+        { code: `-- Abmaj7, Dbmaj7, Cmaj7: bVI and bII as major sevenths. The last move slides down a half step to I.\n-- Change Dbmaj7 to G7: the ordinary dominant, and the slide into C is gone.\ntempo 100\nlet tune = changes("Abmaj7 | Dbmaj7 | Cmaj7 | %")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.within(g1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 4 },
+        `<p>Jazz keeps the Neapolitan's root and changes its job. <b>bIImaj7</b> slides down a half step straight to I, as at the end of "Lady Bird" (Abmaj7 Dbmaj7 back to Cmaj7). A dominant seventh on bII doing the same is the tritone substitute, the next lesson.</p><p>That is the Neapolitan. Now the second part: the <b>augmented sixths</b>.</p>`,
         { code: `-- Three chords on Ab, each resolving outward to an octave G.\n-- Bars 1-2, 3-4, 5-6. Change f#4 to g4 in bar 1 and the outward pull is gone.\nvoice it  = <{ab2 c4 f#4} {g2 b3 g4} . . . .>\nvoice fr  = <. . {ab2 c4 d4 f#4} {g2 b3 d4 g4}>\nvoice ger = <. . . . {ab2 c4 eb4 f#4} {g2 b3 d4 g4}>`, bars: 6 },
         `<p>Those are the <b>augmented sixth chords</b>. Each puts the lowered sixth degree (Ab in C minor) in the bass and the raised fourth (F#) above it. The two notes are an augmented sixth apart, and they spread by half step to the octave G, the root of V. Ab up to F# is ten half steps, the same as a minor seventh. Spelled as a sixth, it pushes outward instead of falling. Three national flavors add different middle notes:</p>
          <table class="t"><tr><th>chord</th><th>notes in C</th><th>sounds like</th></tr>
@@ -191,7 +200,7 @@ export const UNIT3: Unit = {
             if (!c[0] || !isChord(c[0], 5, "7")) return `Bar 1 should hold F, A, C and D# (you have ${c[0] ? nms(c[0], "sharps") : "nothing"}).`;
             if (pc(c[0][0]) !== 5) return `The German sixth needs F in the bass; your lowest note is ${nm(c[0][0], "sharps")}.`;
             if (!c[1] || !isChord(c[1], 9, "m") || pc(c[1][0]) !== 4) return `Bar 2 should be A minor with E as its lowest note${c[1] ? `; you have ${nms(c[1], "sharps")}` : ""}.`;
-            if (!c[2] || !(isChord(c[2], 4, "") || isChord(c[2], 4, "7"))) return `Bar 3 should be E or E7${c[2] ? `; you have ${nms(c[2], "sharps")}` : ""}.`;
+            if (!c[2] || !(isChord(c[2], 4, "") || (!fits(c[2], "E7", 4, "7") && rootHeard(n, "comp", chordAt(n, "comp", 2), 4, c[2])))) return `Bar 3 should be E or E7${c[2] ? `; you have ${nms(c[2], "sharps")}` : ""}.`;
             if (!c[3] || !(isChord(c[3], 9, "m") || isChord(c[3], 9, "m7") || isChord(c[3], 9, "m6"))) return `Bar 4 should be A minor${c[3] ? `; you have ${nms(c[3], "sharps")}` : ""}.`;
             return null;
           },
@@ -212,10 +221,12 @@ export const UNIT3: Unit = {
       parts: [
         `<p>The same ii-V-I twice. The second time, one chord is replaced. Listen to the bass.</p>`,
         { code: `-- Bars 1-4: Dm7 G7 Cmaj7. Bars 5-8: Dm7 Db7 Cmaj7.\n-- Change Db7 to Db7#11 and the substitute gets a little brighter on top.\ntempo 120\nlet plain  = changes("Dm7 | G7 | Cmaj7 | %")\nlet subbed = changes("Dm7 | Db7 | Cmaj7 | %")\nlet both = arrange(plain, 4, subbed, 4)\nvoice comp = ([0 . . 0 . . . .] + both).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + both.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 8 },
-        `<p>The first time the bass falls by fifths: D, G, C. The second time it falls by half steps: D, Db, C. Yet Db7 does the same job as G7. Here is why.</p>`,
-        { code: `-- The guide tones (3rd and 7th) of G7, then of Db7.\n-- Change db3@7 to d3@7: the guide tones move, and the match is gone.\nprint(tones(g3@7.guide), tones(db3@7.guide))\nvoice x = [g3@7.guide db3@7.guide]` },
+        `<p>The first time the roots move by fifths: D, G, C. The second time the bass falls by half steps: D, Db, C. Yet Db7 does the same job as G7. Here is why.</p>`,
+        { code: `-- The guide tones (3rd and 7th) of G7, then of Db7.\n-- Change both db3@7 to d3@7: the guide tones move, and the match is gone.\nprint(tones(g3@7.guide), tones(db3@7.guide))\nvoice x = [g3@7.guide db3@7.guide]` },
         `<p>A dominant seventh gets its pull from the tritone between its third and seventh. G7 has B and F. Db7, the dominant a tritone away, has F and Cb, and Cb is B. The same tritone, roles swapped, so either chord can resolve to C. Using bII7 in place of V7 is a <b>tritone substitution</b>, and the substitute is often written <b>subV7</b>.</p>
-         <p>The other notes of the substitute color the original. Db7 over a G bass gives G7 a b9 (Ab) and a #11 (Db). Add Db9's Eb and you get the b13 too. The substitute is often written <b>7#11</b>. Its #11 is G, the root of the chord it replaces.</p>`,
+         <p>The other notes of the substitute color the original. Hear Db7 over a G bass.</p>`,
+        { code: `-- G7, then Db7 over the same G bass: G7 with a b9 (Ab) and a #11 (Db).\n-- Change db4@7 to db4@9 and listen for the Eb, the b13.\nvoice comp = <g3@7 db4@7>.voicelead\nvoice bass = [g1].inst(upright)`, bars: 2 },
+        `<p>Over G, Db7's Ab is a b9 and its Db a #11. Db9's Eb adds the b13. Players often add the #11 to the substitute, written Db7#11. Its #11 is G, the root of the chord it replaces.</p>`,
         { code: `-- I VI7 ii V, then the same with both dominants replaced: Eb7 for A7, Db7#11 for G7.\n-- Change Eb7 back to A7 and only the last chord is substituted.\n-- Then change Dm7 in subs to Abm7: the ii-V is replaced as a pair.\ntempo 130\nlet orig = changes("Cmaj7 | A7 | Dm7 | G7")\nlet subs = changes("Cmaj7 | Eb7 | Dm7 | Db7#11")\nlet both = arrange(orig, 4, subs, 4)\nvoice comp = both.voicelead\nvoice bass = both.root.octave(-1).inst(upright)`, bars: 8 },
         `<p>Any dominant can be substituted, secondary ones included. A ii-V can be substituted as a pair too: <b>Abm7 Db7</b> in place of Dm7 G7.</p>`,
         { code: `-- Partly done, in F: Gm7, then an empty bar, then Fmaj7.\n-- Fill bar 2 with the tritone substitute of C7: Gb7.\nlet tune = changes("Gm7 | N.C. | Fmaj7 | %")\nvoice comp = tune.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
@@ -228,6 +239,7 @@ export const UNIT3: Unit = {
             const m = need(n, "comp"); if (m) return m;
             const c = barChords(n, "comp", 4);
             if (!c[0] || fits(c[0], "Dm7", 2, "m7")) return "Keep Dm7 in bar 1.";
+            { const nr = noRoot(n, "comp", chordAt(n, "comp", 0), 2, "Dm7", c[0], "Bar 1"); if (nr) return nr; }
             if (!c[1]) return "Bar 2 is empty.";
             if (!has(c[1], [5, 11])) return `Bar 2 (${nms(c[1])}) needs F and Cb (B), the tritone that G7 and Db7 share.`;
             // G's root and fifth mean it is still G7. Otherwise Db, or Db's 9th or 13th without G's, marks the substitute.
@@ -235,6 +247,7 @@ export const UNIT3: Unit = {
             const onDb = has(c[1], [1]) || (!has(c[1], [7]) && (has(c[1], [3]) || has(c[1], [10])) && !has(c[1], [4]) && !has(c[1], [9]));
             if (onG || !onDb) return `Bar 2 (${nms(c[1])}) still sounds like G7. Build the dominant on Db, a tritone away.`;
             if (!c[2] || fits(c[2], "Cmaj7", 0, "maj7")) return "Resolve to Cmaj7 in bar 3.";
+            { const nr = noRoot(n, "comp", chordAt(n, "comp", 2), 0, "Cmaj7", c[2], "Bar 3"); if (nr) return nr; }
             return null;
           },
         } },
@@ -274,7 +287,10 @@ export const UNIT3: Unit = {
             const c = chordList(n, "comp");
             const want: [number, string, string][] = [[5, "maj7", "Fmaj7"], [6, "dim7", "F#dim7 (the passing chord)"], [7, "m7", "Gm7"], [0, "7", "C7"]];
             if (c.length !== 4) return `I hear ${c.length} different chord${c.length === 1 ? "" : "s"}; I expected 4: Fmaj7, the passing chord, Gm7, C7.`;
-            for (let i = 0; i < 4; i++) { const why = fits(c[i], want[i][2], want[i][0], want[i][1]); if (why) return `Chord ${i + 1} should be ${want[i][2]}, but ${why}. You have ${nms(c[i])}.`; }
+            for (let i = 0; i < 4; i++) {
+              const why = fits(c[i].semis, want[i][2], want[i][0], want[i][1]); if (why) return `Chord ${i + 1} should be ${want[i][2]}, but ${why}. You have ${nms(c[i].semis)}.`;
+              const nr = noRoot(n, "comp", c[i].t, want[i][0], want[i][2], c[i].semis, `Chord ${i + 1}`); if (nr) return nr;
+            }
             return null;
           },
         } },
@@ -304,11 +320,11 @@ export const UNIT3: Unit = {
         `<p>Those are <b>rhythm changes</b>, the chords of Gershwin's "I Got Rhythm", reused for hundreds of bebop tunes, among them Charlie Parker's "Anthropology" and Sonny Rollins's "Oleo". The A sections are turnarounds strung together, with a quick move to IV (Fm7 Bb7 into Ebmaj7) in the middle. The bridge is a chain of extended dominants, two bars each: <b>D7, G7, C7, F7</b>, the V of the V of the V of the V. Players learn it as the second form after the blues.</p>`,
         { code: `-- The bridge as ii-Vs: a related ii in front of each dominant.\n-- Change the last Cm7 F7 to Gbm7 B7, the tritone-substituted ii-V. Here the loop returns to Am7. In the full tune, B7 slides down a half step into the A section's Bb6.\ntempo 160\nlet h = changes("Am7 D7 | % | Dm7 G7 | % | Gm7 C7 | % | Cm7 F7 | %")\nvoice comp = ([0 . . 0 0 . . 0] + h).rootless.voicelead.swing.vel(.55)\nvoice bass = ([0 0 0 0] + h.root.octave(-1)).inst(upright)`, bars: 8 },
         `<p>The bridge is a place to practice substitution. Tritone substitutes fit anywhere a dominant does.</p>`,
-        { code: `-- Partly done: the first half of the bridge. Add C7 for two bars and F7 for two bars.\nvoice comp = changes("D7 | % | G7 | %").rootless.voicelead`, bars: 4 },
+        { code: `-- Partly done: the first half of the bridge. Add C7 for two bars and F7 for two bars, in both lines.\nvoice comp = changes("D7 | % | G7 | %").rootless.voicelead\nvoice bass = ([0 0 0 0] + changes("D7 | % | G7 | %").root.octave(-1)).inst(upright)`, bars: 4 },
         { exercise: {
-          task: `<p>Write <code>voice comp</code>: the <b>rhythm-changes bridge in Eb</b>, eight bars, a dominant seventh chord every two bars, each the V of the next, ending on Bb7 (the V of Eb).</p>`,
+          task: `<p>Write <code>voice comp</code>: the <b>rhythm-changes bridge in Eb</b>, eight bars, a dominant seventh chord every two bars, each the V of the next, ending on Bb7 (the V of Eb). If you play rootless voicings, add a bass that plays the roots.</p>`,
           starter: `voice comp = changes("G7 | % | C7 | %")`,
-          solution: `voice comp = changes("G7 | % | C7 | % | F7 | % | Bb7 | %").rootless.voicelead`,
+          solution: `let bridge = changes("G7 | % | C7 | % | F7 | % | Bb7 | %")\nvoice comp = bridge.rootless.voicelead\nvoice bass = ([0 0 0 0] + bridge.root.octave(-1)).inst(upright)`,
           bars: 8,
           hint: "Count back from Bb7 by fifths: each chord is a fifth above the next.",
           check: (_s, n) => {
@@ -319,6 +335,8 @@ export const UNIT3: Unit = {
               if (!ch) return `Bar ${b + 1} has no chord.`;
               const r = roots[b];
               if (!has(ch, [(r + 4) % 12, (r + 10) % 12])) return `Bar ${b + 1} should be ${nm(r)}7 (it needs ${nm(r + 4)} and ${nm(r + 10)}); you have ${nms(ch)}.`;
+              const why = fits(ch, `${nm(r)}7`, r, "7"); if (why) return `Bar ${b + 1} should be ${nm(r)}7, but ${why}. You have ${nms(ch)}.`;
+              const nr = noRoot(n, "comp", chordAt(n, "comp", b), r, `${nm(r)}7`, ch, `Bar ${b + 1}`); if (nr) return nr;
             }
             return null;
           },

@@ -94,16 +94,26 @@ export function fits(semis: number[], label: string, rootPc: number, q: string):
   const Q = QUAL[q], rel = pcset(semis).map(p => (p - rootPc + 12) % 12), root = label.match(/^[A-G][b#]?/)![0];
   const miss = Q.need.find(x => !rel.includes(x));
   if (miss !== undefined) return `it needs ${spell(root, miss, q)}, the ${q === "dim7" && miss === 9 ? "diminished 7th" : ROLE[miss]}`;
+  // b9 and b5 with neither root nor fifth is the dominant a tritone away (Db7 for G7), not this chord.
+  if ((q === "7" || q === "7b9") && rel.includes(1) && rel.includes(6) && !rel.includes(0) && !rel.includes(7)) return `that is ${pc(rootPc + 6) === 6 ? "Gb" : nm(rootPc + 6)}7, the tritone substitute. Build the dominant on ${root}`;
   const extra = rel.find(x => !Q.ok.includes(x));
   if (extra !== undefined) return `${spell(root, extra, q)} does not belong in ${label.split(" ")[0]}`;
   return null;
 }
+// Is the chord's root sounding: in the chord itself, or in another pitched voice (a bass) at that moment?
+// Without it a rootless voicing is ambiguous (rootless Fmaj7 is Am7), so checks require one or the other.
+export function rootHeard(n: TimedNote[], v: string, t: number, rootPc: number, semis: number[]): boolean {
+  if (semis.some(s => pc(s) === pc(rootPc))) return true;
+  return n.some(x => x.voice !== v && x.params?.inst !== "kit" && pc(x.semi) === pc(rootPc) && x.bar <= t + 2e-3 && x.bar + x.bars > t + 2e-3);
+}
+
 export function expectChords(n: TimedNote[], v: string, want: [number, string][]): string | null {
   const miss = need(n, v); if (miss) return miss;
   const g = groups(of(n, v)).filter(x => x.semis.length >= 2);
   for (let i = 0; i < want.length; i++) {
     const [root, sym] = want[i];
     if (!g[i]) return `I hear ${g.length} chord${g.length === 1 ? "" : "s"}; I expected ${want.length}.`;
+    if (!rootHeard(n, v, g[i].t, root, g[i].semis)) return `Chord ${i + 1} should be ${NAMES[pc(root)]}${sym}, but nothing plays its root, ${NAMES[pc(root)]}. You have ${nms(g[i].semis)}. Put ${NAMES[pc(root)]} in the chord, or add a bass that plays it.`;
     if (QUAL[sym]) { const why = fits(g[i].semis, NAMES[pc(root)] + sym, pc(root), sym); if (why) return `Chord ${i + 1} should be ${NAMES[pc(root)]}${sym}, but ${why}. You have ${nms(g[i].semis)}.`; continue; }
     if (!isChord(g[i].semis, root, sym)) return `Chord ${i + 1} is ${named(g[i].semis)} (${nms(g[i].semis)}); it should be ${NAMES[pc(root)]}${sym}.`;
   }
