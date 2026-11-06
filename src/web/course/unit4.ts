@@ -270,11 +270,14 @@ export const UNIT4: Unit = {
     {
       id: "coltrane", title: "Coltrane changes and symmetric motion",
       parts: [
-        `<p>Major and minor keys divide the octave unevenly, which is what gives tonal music its sense of direction. Divide it evenly and you get a different kind of harmony. Three major thirds make an octave: B, G, Eb, B. In 1959 John Coltrane built tunes whose tonics move around that triangle, each new key reached through its own V7. The result, <b>Coltrane changes</b>, is one of the hardest things in jazz to improvise over, because the key changes every two beats.</p>`,
-        { code: `tempo 120\n-- three tonics a major third apart, each approached by its dominant\nlet tune = changes("Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7 F#7 | Bmaj7")\nvoice comp = tune.rootless.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>Coltrane also used the cycle as a <b>substitution</b>. Over a plain ii-V-I in C, the major-third cycle visits Ab and E on its way to C, adding dominants in front of each: Dm7, Eb7, Abmaj7, B7, Emaj7, G7, Cmaj7. It starts and ends in the same place, and in between it takes the long way round.</p>`,
-        { code: `tempo 120\nlet plain = changes("Dm7 | G7 | Cmaj7 | %")\nlet trane = changes("Dm7 Eb7 | Abmaj7 B7 | Emaj7 G7 | Cmaj7")\nlet both = arrange(plain, 4, trane, 4)\nvoice comp = both.rootless.voicelead\nvoice bass = both.root.octave(-1).inst(upright)`, bars: 8 },
-        `<p>Symmetric divisions turn up everywhere once you look. Minor thirds divide the octave into four (the diminished chord, lesson 25), whole steps into six (the whole-tone scale), the tritone into two (the tritone substitute). Each one is a way out of a key that still sounds organized, because the pattern itself is audible.</p>`,
+        `<p>Three major chords, each approached by its own dominant. Listen to the bass on beat 1 of each bar: B, G, Eb, then B again.</p>`,
+        { code: `-- Three tonics a major third apart, each reached through its V7.\n-- Change tempo 120 to tempo 280, about the tempo of the first recording.\ntempo 120\nlet tune = changes("Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7 F#7 | Bmaj7")\nvoice comp = ([0 . . 0 0 . . 0] + tune).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 4 },
+        `<p>Major and minor keys divide the octave unevenly, which gives tonal music its sense of direction. Three major thirds divide it evenly: B, G, Eb, and back to B. In 1959 John Coltrane built tunes whose tonics move around that triangle, each new key reached through its own V7. These <b>Coltrane changes</b> are among the hardest things in jazz to improvise over, because the key changes every two beats.</p>`,
+        { code: `-- A plain ii-V-I, then the same ii-V-I with the major-third cycle inside it.\n-- Change Emaj7 G7 to Emaj7 E7 and hear the last link miss its target.\ntempo 120\nlet plain = changes("Dm7 | G7 | Cmaj7 | %")\nlet trane = changes("Dm7 Eb7 | Abmaj7 B7 | Emaj7 G7 | Cmaj7")\nlet both = arrange(plain, 4, trane, 4)\nvoice comp = both.rootless.voicelead\nvoice bass = both.root.octave(-1).inst(upright)`, bars: 8 },
+        `<p>Coltrane also used the cycle as a <b>substitution</b>. Over a ii-V-I in C, the cycle visits Ab and E on its way to C, with a dominant in front of each: Dm7, Eb7, Abmaj7, B7, Emaj7, G7, Cmaj7. It starts and ends in the same place and takes the long way round.</p>`,
+        { code: `-- The octave divided four ways (minor thirds), then six (whole steps), then two (tritones).\n-- Change [c4 eb4 f#4 a4] to [c4 e4 g#4] and divide the octave into three: the augmented triad.\nvoice q = cat([c4 eb4 f#4 a4], [c4 d4 e4 f#4 g#4 a#4], [c4 f#4 c5 .]).inst(vibes)`, bars: 3 },
+        `<p>Symmetric divisions turn up everywhere once you look. Minor thirds divide the octave into four (the diminished chord), whole steps into six (the whole-tone scale), the tritone into two (the tritone substitute). Each is a way out of a key that still sounds organized, because the pattern itself is audible.</p>`,
+        { code: `-- Partly done: the first two links of the cycle. Add Ebmaj7 in bar 3, the third tonic.\nlet tune = changes("Bmaj7 D7 | Gmaj7 Bb7 | N.C.")\nvoice comp = tune.rootless.voicelead`, bars: 3 },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: the <b>Coltrane substitution over Dm7 G7 Cmaj7</b>, in four bars: Dm7 Eb7, Abmaj7 B7, Emaj7 G7, Cmaj7.</p>`,
           starter: `voice comp = changes("Dm7 | G7 | Cmaj7 | %")`,
@@ -283,9 +286,11 @@ export const UNIT4: Unit = {
           check: (_s, n) => expectChords(n, "comp", [[2, "m7"], [3, "7"], [8, "maj7"], [11, "7"], [4, "maj7"], [7, "7"], [0, "maj7"]]),
         } },
         { quiz: [
+          { q: "Listen. The first chord is home. Do the major chords move by fifths or by major thirds?", listen: `tempo 110\nlet t = changes("Cmaj7 | Abmaj7 | Emaj7 | Cmaj7")\nvoice c = t.rootless.voicelead\nvoice b = t.root.octave(-1).inst(upright)`, bars: 4, options: ["Fifths", "Major thirds"], answer: 1, explain: "C, Ab, E, C: down a major third each time, back home in three moves." },
           { q: "How many tonics are in a major-third cycle?", options: ["2", "3", "4", "6"], answer: 1 },
           { q: "What precedes each new tonic in Coltrane changes?", options: ["Its IV", "Its V7", "A diminished chord", "Its relative minor"], answer: 1 },
           { q: "Which interval divides the octave into four equal parts?", options: ["Major 3rd", "Minor 3rd", "Whole step", "Tritone"], answer: 1 },
+          { q: "From the diminished-chord lesson: how many different diminished seventh chords are there?", options: ["12", "4", "3", "2"], answer: 2, explain: "Twelve notes, four per chord, no overlaps: three." },
         ] },
       ],
     },
@@ -293,7 +298,13 @@ export const UNIT4: Unit = {
     {
       id: "reharm", title: "Reharmonization",
       parts: [
-        `<p><b>Reharmonization</b> is choosing new chords under an existing melody. It is how arrangers make a familiar tune sound new, and it draws on everything in this course. The one hard rule: each melody note must fit the new chord, as a chord tone or an available tension. Within that rule, here is the toolbox.</p>
+        `<p>A plain four-bar melody with plain chords. Learn the melody first, because it stays the same through the next two examples.</p>`,
+        { code: `-- The melody: E D | C A | D F | E.\n-- Change Dm G7 to F G7 in bar 3: F has no D, so the melody's D clashes. Then change it back.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet plain = changes("C | Am | Dm G7 | C")\nvoice comp = plain.voicelead.vel(.5)\nvoice bass = plain.root.octave(-1).inst(upright)`, bars: 4 },
+        `<p><b>Reharmonization</b> is choosing new chords under an existing melody. Arrangers use it to make a familiar tune sound new, and it draws on everything in this course. The one hard rule: each melody note must fit the new chord, as a chord tone or an available tension. That is why F under the D in your edit clashed.</p>`,
+        { code: `-- The same melody, a new chord under almost every note.\n-- Change E7b13 to E7: the melody's C now rubs against the chord's B instead of belonging to it.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7 | Dm9 G13 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
+        `<p>Bar 1 moves from Cmaj7 to Bm7b5, which sets up a minor ii-V into Am. E7b13 carries the melody's C as its flat 13th. Dm9 and G13 hold the D and the F. Read each melody note against its chord: every one is a chord tone or a tension.</p>`,
+        { code: `-- Darker: a backdoor chord, a borrowed bVI, a tritone substitute.\n-- Change Db7#11 to G7: the plain dominant returns, and the half-step slide in the bass (D, Db, C) is gone.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bb7 | Abmaj7 Fmaj7 | Dm9 Db7#11 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
+        `<p>Under the D in bar 1, Bb7, the backdoor bVII7, holds D as its third. Under the C in bar 2, Abmaj7, a borrowed bVI, holds C as its third, and the A that follows gets Fmaj7. In bar 3, Db7#11, the tritone substitute for G7, holds the F as its third. Testing every melody note against its chord like this is the real work. The toolbox, with the lesson for each:</p>
          <table class="t"><tr><th>technique</th><th>lesson</th></tr>
          <tr><td>Diatonic substitution: same function, other chord (vi for I, ii for IV)</td><td>10</td></tr>
          <tr><td>Secondary dominants and related iis</td><td>19</td></tr>
@@ -301,14 +312,9 @@ export const UNIT4: Unit = {
          <tr><td>Borrowed chords and the backdoor</td><td>21</td></tr>
          <tr><td>Tritone substitution</td><td>24</td></tr>
          <tr><td>Passing and common-tone diminished</td><td>25</td></tr>
-         <tr><td>Coltrane and other symmetric cycles</td><td>33</td></tr>
-         <tr><td>Pedal points and sus chords</td><td>32</td></tr></table>
-         <p>Here is a plain four-bar melody with plain chords.</p>`,
-        { code: `tempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet plain = changes("C | Am | Dm G7 | C")\nvoice comp = plain.voicelead.vel(.5)\nvoice bass = plain.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>Now the same melody with a new chord under almost every note. Bar 1 descends from Cmaj7 to Bm7b5, which sets up a minor ii-V into Am. E7b13 carries the melody's C as its flat 13th. Dm9 and G13 hold the D and the F. Read each melody note against its chord: every one is a chord tone or a tension.</p>`,
-        { code: `tempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7 | Dm9 G13 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
-        `<p>And again, darker. Under the D in bar 1, Bb7, the backdoor bVII7, holds D as its third. Under the C in bar 2, Abmaj7, a borrowed bVI, holds C as its third; the A that follows gets Fmaj7. In bar 3, Db7#11, the tritone substitute for G7, holds the F as its third. Testing every melody note against its chord like this is the real work of reharmonizing.</p>`,
-        { code: `tempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bb7 | Abmaj7 Fmaj7 | Dm9 Db7#11 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
+         <tr><td>Pedal points and sus chords</td><td>32</td></tr>
+         <tr><td>Coltrane and other symmetric cycles</td><td>33</td></tr></table>`,
+        { code: `-- Partly done: bars 1, 2 and 4 are reharmonized. Bar 3 is still plain.\n-- Replace Dm G7 with Dm9 Db7#11, or with Bm7b5 Bb7 (D is in both; F is in both).\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7 | Dm G7 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
         { exercise: {
           task: `<p>Reharmonize the melody. Write <code>voice comp</code> with <b>two chords in each of bars 1 to 3</b> (and one or two in bar 4), using <b>at least six different chords</b>. The melody note sounding at the start of each chord must belong to that chord (a chord tone or a tension that you include in the symbol).</p>`,
           starter: `voice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nvoice comp = changes("C | Am | Dm G7 | C")`,
@@ -328,9 +334,11 @@ export const UNIT4: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. The melody is the one from this lesson. Under its C in bar 2, is the chord major (Abmaj7) or dominant (E7b13)?", listen: `tempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 2, options: ["Abmaj7", "E7b13"], answer: 1, explain: "The bass falls B to E, and the chord pulls toward Am." },
           { q: "What is the one hard rule of reharmonization?", options: ["Keep the bass line", "Each melody note must fit the new chord", "Never use dominant chords", "Change every chord"], answer: 1 },
           { q: "Under a melody note C, which dominant chord holds it as its b13?", options: ["G7", "E7b13", "C7", "F7"], answer: 1 },
           { q: "Which technique replaces G7 with Db7?", options: ["Backdoor", "Tritone substitution", "Modal interchange", "Pedal point"], answer: 1 },
+          { q: "From the borrowed-chord lesson: in C major, Abmaj7 is borrowed from which key?", options: ["A minor", "C minor", "Eb major", "F minor"], answer: 1 },
         ] },
       ],
     },
@@ -338,34 +346,41 @@ export const UNIT4: Unit = {
     {
       id: "posttonal", title: "Beyond tonality: pitch-class sets and rows",
       parts: [
-        `<p>Twentieth-century composers, and some jazz composers after them, wrote music without a tonic. The theory for it counts notes as numbers. A <b>pitch class</b> is a note name regardless of octave, written as an integer from C = 0 to B = 11. Arithmetic is <b>mod 12</b>: 11 + 3 is 2.</p>
+        `<p>Twelve notes, each used once, in a fixed order. Listen for a home note. There isn't one.</p>`,
+        { code: `-- A twelve-tone row: every pitch class once.\n-- Add .rev at the end: the same row backwards.\nlet row = [0 11 7 8 3 1 2 10 6 5 4 9]\nvoice row12 = row.map(x => pitch(60 + x)).inst(vibes)` },
+        `<p>Twentieth-century composers, and some jazz composers after them, wrote music without a tonic. The theory for it counts notes as numbers. A <b>pitch class</b> is a note name regardless of octave, written as an integer from C = 0 to B = 11. Arithmetic is <b>mod 12</b>: 11 + 3 is 2. <code>pitch(n)</code> turns a number into a note, so <code>pitch(60 + x)</code> places pitch class x above middle C.</p>`,
+        { code: `-- C major, moved up 3, then flipped around C.\n-- Change tn(triad, 3) to tn(triad, 7) and the second bar becomes G major.\nlet triad = [0 4 7]\nlet tn(s, n) = s.map(x => (x + n) % 12)\nlet inv(s) = s.map(x => (12 - x) % 12)\nprint(tn(triad, 3), inv(triad))\nvoice x = cat(triad.map(x => pitch(60 + x)), tn(triad, 3).map(x => pitch(60 + x)), inv(triad).map(x => pitch(60 + x)))`, bars: 3 },
+        `<p>Two operations do most of the work.</p>
          <ul><li><b>Transposition</b> Tn adds n to every pitch class. T3 of {0 4 7} (C major) is {3 7 10} (Eb major).</li>
-         <li><b>Inversion</b> I flips each pitch class around 0: x becomes 12 minus x. The inversion of {0 4 7} is {0 8 5}, an F minor triad: major and minor triads are inversions of each other.</li></ul>
-         <p>Tine's lists make these one line each. <code>pitch(n)</code> turns a number into a note, so <code>pitch(60 + x)</code> places pitch class x above middle C.</p>`,
-        { code: `let triad = [0 4 7]\nlet tn(s, n) = s.map(x => (x + n) % 12)\nlet inv(s) = s.map(x => (12 - x) % 12)\nprint(tn(triad, 3), inv(triad))\nvoice x = cat(triad.map(x => pitch(60 + x)), tn(triad, 3).map(x => pitch(60 + x)), inv(triad).map(x => pitch(60 + x)))`, bars: 3 },
+         <li><b>Inversion</b> I flips each pitch class around 0: x becomes 12 minus x. The inversion of {0 4 7} is {0 8 5}, an F minor triad. Major and minor triads are inversions of each other.</li></ul>`,
+        { code: `-- The row four ways, one per bar: prime, inversion, retrograde, retrograde inversion.\n-- Change the row's first two numbers to 11 0 and hear every version change with it.\nlet row = [0 11 7 8 3 1 2 10 6 5 4 9]\nlet notes(r) = r.map(x => pitch(60 + x))\nlet inv(r) = r.map(x => (12 - x) % 12)\nvoice row12 = cat(notes(row), notes(inv(row)), notes(row).rev, notes(inv(row)).rev).inst(vibes)`, bars: 4 },
         `<p><b>Twelve-tone</b> music (Schoenberg, Berg, Webern) orders all twelve pitch classes into a <b>row</b> and builds a piece from it and its transformations: the <b>prime</b> (P), its <b>inversion</b> (I), its <b>retrograde</b> (R, backwards), and the <b>retrograde inversion</b> (RI). Each can be transposed. Bill Evans wrote a tune on a twelve-tone row, and many modern players borrow the idea for melodies that avoid any one key.</p>`,
-        { code: `let row = [0 11 7 8 3 1 2 10 6 5 4 9]\nlet notes(r) = r.map(x => pitch(60 + x))\nlet inv(r) = r.map(x => (12 - x) % 12)\n-- prime, inversion, retrograde, retrograde inversion: one per bar\nvoice row12 = cat(notes(row), notes(inv(row)), notes(row).rev, notes(inv(row)).rev).inst(vibes)`, bars: 4 },
-        `<p>Rows and sets are also a lens for jazz harmony. A dominant seventh is the set {0 4 7 10}. Its tritone substitute is T6 of the same set, and they share two pitch classes, the guide tones. A diminished seventh {0 3 6 9} maps onto itself under T3, which is the symmetry from lesson 25 stated as arithmetic.</p>`,
-        { code: `let dom = [0 4 7 10]\nlet tn(s, n) = s.map(x => (x + n) % 12)\nprint(dom, tn(dom, 6))\nvoice x = cat(dom.map(x => pitch(55 + x)), tn(dom, 6).map(x => pitch(55 + x)))`, bars: 2 },
+        { code: `-- G7 as a set, then T6 of it: Db7.\n-- Change tn(dom, 6) to tn(dom, 5): C7, which shares only one pitch class with G7.\nlet dom = [0 4 7 10]\nlet tn(s, n) = s.map(x => (x + n) % 12)\nprint(dom, tn(dom, 6))\nvoice x = cat(dom.map(x => pitch(55 + x)), tn(dom, 6).map(x => pitch(55 + x)))`, bars: 2 },
+        `<p>Sets are also a lens for jazz harmony. A dominant seventh is the set {0 4 7 10}. Its tritone substitute is T6 of the same set, and they share two pitch classes, the guide tones. A diminished seventh {0 3 6 9} maps onto itself under T3, the symmetry from the diminished-chord lesson stated as arithmetic.</p>`,
+        { code: `-- Partly done: the inversion of the row. Add .rev to make it the retrograde inversion.\nlet row = [0 11 7 8 3 1 2 10 6 5 4 9]\nvoice x = row.map(x => pitch(60 + (12 - x) % 12)).inst(vibes)` },
         { exercise: {
-          task: `<p>The row is <code>[0 11 7 8 3 1 2 10 6 5 4 9]</code>. Write <code>voice ri</code> playing its <b>retrograde inversion</b> (invert it, then play it backwards) as twelve notes in one bar, starting from middle C (pitch class x at <code>pitch(60 + x)</code>).</p>`,
+          task: `<p>The row is <code>[0 11 7 8 3 1 2 10 6 5 4 9]</code>. Write <code>voice ri</code> playing its <b>retrograde inversion</b> (invert it, then play it backwards) <b>transposed up 2</b> (T2), as twelve notes in one bar, from middle C (pitch class x at <code>pitch(60 + x)</code>).</p>`,
           starter: `let row = [0 11 7 8 3 1 2 10 6 5 4 9]\nvoice ri = row.map(x => pitch(60 + x))`,
-          solution: `let row = [0 11 7 8 3 1 2 10 6 5 4 9]\nvoice ri = row.map(x => pitch(60 + (12 - x) % 12)).rev`,
+          solution: `let row = [0 11 7 8 3 1 2 10 6 5 4 9]\nvoice ri = row.map(x => pitch(60 + (12 - x + 2) % 12)).rev`,
+          hint: `Invert first (12 minus x), add 2, keep it mod 12, then reverse.`,
           check: (_s, n) => {
             const m = need(n, "ri"); if (m) return m;
             const row = [0, 11, 7, 8, 3, 1, 2, 10, 6, 5, 4, 9];
-            const want = row.map(x => (12 - x) % 12).reverse();
+            const want = row.map(x => (12 - x + 2) % 12).reverse();
             const got = line(n, "ri").slice(0, 12).map(pc);
             if (got.length !== 12) return `That is ${got.length} notes; a row has 12.`;
+            const plain = row.map(x => (12 - x) % 12).reverse();
+            if (got.every((x, i) => x === plain[i])) return "That is the retrograde inversion, but not transposed. Add 2 to every pitch class.";
             const bad = got.findIndex((x, i) => x !== want[i]);
-            return bad < 0 ? null : `Note ${bad + 1} is pitch class ${got[bad]}; the retrograde inversion has ${want[bad]} there.`;
+            return bad < 0 ? null : `Note ${bad + 1} is pitch class ${got[bad]}; T2 of the retrograde inversion has ${want[bad]} there.`;
           },
         } },
         { quiz: [
+          { q: "Listen. Bar 1 is the row. Is bar 2 the row backwards (retrograde) or the inversion?", listen: `let row = [0 11 7 8 3 1 2 10 6 5 4 9]\nvoice x = cat(row.map(x => pitch(60 + x)), row.map(x => pitch(60 + x)).rev).inst(vibes)`, bars: 2, options: ["Retrograde", "Inversion"], answer: 0, explain: "It ends where bar 1 began, on C." },
           { q: "What is T3 of the set {0 4 7}?", options: ["{3 7 10}", "{0 3 7}", "{9 1 4}", "{3 4 7}"], answer: 0 },
           { q: "What is the inversion of pitch class 4?", options: ["4", "8", "16", "-4"], answer: 1, explain: "12 minus 4." },
           { q: "Which transformation plays a row backwards?", options: ["Inversion", "Retrograde", "Transposition", "Prime"], answer: 1 },
-          { q: "A dominant seventh and its tritone substitute share how many pitch classes?", options: ["None", "One", "Two", "Four"], answer: 2, explain: "The 3rd and 7th, swapped." },
+          { q: "From the tritone-substitution lesson: a dominant seventh and its tritone substitute share how many pitch classes?", options: ["None", "One", "Two", "Four"], answer: 2, explain: "The 3rd and 7th, swapped." },
         ] },
       ],
     },

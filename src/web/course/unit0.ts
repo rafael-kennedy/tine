@@ -30,6 +30,7 @@ export const UNIT0: Unit = {
         `<p>That <code>.</code> at the end is a moment of silence. You will meet it properly in lesson 0.3. A line that starts with <code>--</code> is a <b>comment</b>: Tine skips it, and it is there for the person reading.</p>
          <p>Each lesson ends with a <b>challenge</b> and a few <b>quiz</b> questions. A challenge gives you a task and a box to write in. Press <b>check</b> and the page listens to what your code plays and tells you what is right and what is not. <b>Hint</b> gives a nudge and <b>show answer</b> shows one solution. Any code that plays the right music passes, even if it looks different from the answer.</p>
          <p>If anything is unclear, use <b>Ask about this lesson</b> at the bottom of the page. Ask in plain words. The answer knows which lesson you are on and what code you have written.</p>`,
+        { code: `-- Change g4 to . (a dot) and hear a gap where it was.\nvoice hello = [c4 e4 g4 c5]` },
         { exercise: {
           task: `<p>Write a voice called <code>first</code> that plays exactly four notes. Any four notes are fine. Use letters from <code>a</code> to <code>g</code>, each followed by the number 4, like <code>d4</code>.</p>`,
           starter: `voice first = [c4 c4]`,
@@ -136,7 +137,7 @@ export const UNIT0: Unit = {
       id: "lengths", title: "Long and short notes",
       parts: [
         `<p>Play this and clap the hi-hat beat. Each bar has the same four beats, but the notes get shorter and shorter.</p>`,
-        { code: `-- four bars: 1 note, then 2, then 4, then 8 in the same space\nvoice ladder = <[c4] [c4 c4] [c4 c4 c4 c4] [c4 c4 c4 c4 c4 c4 c4 c4]>\nvoice beat   = [hat hat hat hat].vel(.4)`, bars: 4 },
+        { code: `-- four bars: 1 note, then 2, then 4, then 8 in the same space\n-- Change the last bar to [c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4]: sixteen, twice as fast again.\nvoice ladder = <[c4] [c4 c4] [c4 c4 c4 c4] [c4 c4 c4 c4 c4 c4 c4 c4]>\nvoice beat   = [hat hat hat hat].vel(.4)`, bars: 4 },
         `<p>The angle brackets <code>&lt; &gt;</code> play one item per bar, in turn, which is how one voice plays four different bars. Inside each square bracket the steps share the bar equally, so the number of steps decides how long each note is. Musicians name the lengths by dividing a whole bar:</p>
          <table class="t"><tr><th>write</th><th>each note lasts</th><th>musicians call it</th></tr>
          <tr><td><code>[c4]</code></td><td>the whole bar, four beats</td><td>a whole note</td></tr>
@@ -146,7 +147,7 @@ export const UNIT0: Unit = {
         `<p>Real tunes mix long and short. To make one note longer than its neighbours, follow it with <code>_</code>, which means "keep holding". Sing along: "long, short, short", then "short, short, long".</p>`,
         { code: `-- C lasts two steps, E and G one each. Then the reverse.\n-- Try [c4 e4 _ g4]: now E is the long one.\nvoice tune = <[c4 _ e4 g4] [e4 d4 c4 _]>`, bars: 2 },
         `<p>A hold and a rest both fill a step, but they sound different. <code>_</code> keeps the note ringing. <code>.</code> stops it and leaves silence. Listen to the difference.</p>`,
-        { code: `-- bar 1: one C held for four beats. Bar 2: one short C, then three beats of silence.\nvoice tune = <[c4 _ _ _] [c4 . . .]>`, bars: 2 },
+        { code: `-- bar 1: one C held for four beats. Bar 2: one short C, then three beats of silence.\n-- Change bar 2 to [c4 _ . .]: the C now rings for two beats, then stops.\nvoice tune = <[c4 _ _ _] [c4 . . .]>`, bars: 2 },
         `<p>A step can also hold a smaller bracket, which splits that one beat. Here beat 2 is split into two eighth notes.</p>`,
         { code: `-- split another beat too: [c4 [d4 e4] [f4 e4] d4]\nvoice tune = [c4 [d4 e4] f4 g4]\nvoice beat = [hat hat hat hat].vel(.4)` },
         { exercise: {
