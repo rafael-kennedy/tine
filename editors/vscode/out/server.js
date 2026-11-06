@@ -189,6 +189,7 @@ var KEYWORDS = new Set([
   "true",
   "false"
 ]);
+var CHORD_SYM = /^[A-Za-z0-9#+]+(?:\/[A-Ga-g](?:#|b)?\d?(?![A-Za-z0-9_#]))?/;
 var NOTE_RE = /^[A-Ga-g](?:#|b)*\d?$/;
 var OPS = [
   "=>",
@@ -416,6 +417,13 @@ function lex(src) {
     if (matched === ")" || matched === "]" || matched === "}")
       depth = Math.max(0, depth - 1);
     push({ type: "op", text: matched, start, end: i });
+    if (matched === "@") {
+      const m = CHORD_SYM.exec(src.slice(i));
+      if (m) {
+        push({ type: "chordq", text: m[0], start: i, end: i + m[0].length });
+        i += m[0].length;
+      }
+    }
   }
   if (toks.length && toks[toks.length - 1].type !== "newline")
     push({ type: "newline", text: `
@@ -755,7 +763,7 @@ class Parser {
     if (this.isOp("@")) {
       this.next();
       const q = this.tok;
-      if (q.type !== "ident" && q.type !== "num" && q.type !== "note")
+      if (q.type !== "ident" && q.type !== "num" && q.type !== "note" && q.type !== "chordq")
         this.err("expected a chord quality after '@', like c4@maj7 or ^2@4");
       this.next();
       const arg = q.type === "num" ? this.numNode(q) : { t: "str", v: q.text, span: this.spanOf(q) };
@@ -977,11 +985,12 @@ class Parser {
       if (this.isOp("@")) {
         this.next();
         const q = this.tok;
-        if (q.type !== "ident" && q.type !== "num" && q.type !== "note")
+        if (q.type !== "ident" && q.type !== "num" && q.type !== "note" && q.type !== "chordq")
           this.err("expected a chord quality after '@'");
         this.next();
         const arg = q.type === "num" ? this.numNode(q) : { t: "str", v: q.text, span: this.spanOf(q) };
         node = { t: "mod", kind: "chord", e: node, arg, span: sp(node.span, arg.span) };
+        node = this.postfix(node, true);
         continue;
       }
       break;
@@ -1129,6 +1138,20 @@ var SCALES = {
   chromatic: ET("chromatic", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
   hirajoshi: ET("hirajoshi", [0, 2, 3, 7, 8]),
   double_harmonic: ET("double_harmonic", [0, 1, 4, 5, 7, 8, 11]),
+  altered: ET("altered", [0, 1, 3, 4, 6, 8, 10]),
+  lydian_dominant: ET("lydian_dominant", [0, 2, 4, 6, 7, 9, 10]),
+  lydian_augmented: ET("lydian_augmented", [0, 2, 4, 6, 8, 9, 11]),
+  mixolydian_b6: ET("mixolydian_b6", [0, 2, 4, 5, 7, 8, 10]),
+  locrian_nat2: ET("locrian_nat2", [0, 2, 3, 5, 6, 8, 10]),
+  dorian_b2: ET("dorian_b2", [0, 1, 3, 5, 7, 9, 10]),
+  phrygian_dominant: ET("phrygian_dominant", [0, 1, 4, 5, 7, 8, 10]),
+  half_whole: ET("half_whole", [0, 1, 3, 4, 6, 7, 9, 10]),
+  whole_half: ET("whole_half", [0, 2, 3, 5, 6, 8, 9, 11]),
+  augmented: ET("augmented", [0, 3, 4, 7, 8, 11]),
+  major_blues: ET("major_blues", [0, 2, 3, 4, 7, 9]),
+  bebop_dominant: ET("bebop_dominant", [0, 2, 4, 5, 7, 9, 10, 11]),
+  bebop_major: ET("bebop_major", [0, 2, 4, 5, 7, 8, 9, 11]),
+  bebop_dorian: ET("bebop_dorian", [0, 2, 3, 4, 5, 7, 9, 10]),
   just_major: new Scale("just_major", [1, 9 / 8, 5 / 4, 4 / 3, 3 / 2, 5 / 3, 15 / 8].map((r) => 12 * Math.log2(r))),
   slendro: new Scale("slendro", [0, 2.4, 4.8, 7.2, 9.6]),
   bohlen_pierce: new Scale("bohlen_pierce", [1, 27 / 25, 25 / 21, 9 / 7, 7 / 5, 75 / 49, 5 / 3, 9 / 5, 49 / 25].map((r) => 12 * Math.log2(r)), 12 * Math.log2(3))
@@ -1259,8 +1282,15 @@ function makeCtx(seed, voice = 0, key = DEFAULT_KEY, offset = ZERO, inputs = NO_
 
 class Chord {
   notes;
-  constructor(notes) {
+  root;
+  bass;
+  constructor(notes, root, bass) {
     this.notes = notes;
+    this.root = root;
+    this.bass = bass;
+  }
+  map(f) {
+    return new Chord(this.notes.map(f), this.root === undefined ? undefined : f(this.root), this.bass === undefined ? undefined : f(this.bass));
   }
   toString() {
     return `{${this.notes.map(String).join(" ")}}`;
@@ -1764,7 +1794,465 @@ function truthy(v) {
     return v !== 0;
   return true;
 }
+// ../../src/core/harmony.ts
+var mod12 = (x) => (Math.round(x) % 12 + 12) % 12;
+function parseQuality(q) {
+  if (Object.prototype.hasOwnProperty.call(CHORDS, q))
+    return CHORDS[q];
+  let s = q.replace(/[()]/g, "");
+  let third = 4, fifth = 7, sev = null;
+  const ext = new Set;
+  const eat = (re) => {
+    const m = s.match(re);
+    if (m)
+      s = s.slice(m[0].length);
+    return m;
+  };
+  if (eat(/^(mmaj|mMaj|mM|minmaj|-maj|-M|mΔ|-Δ)/)) {
+    third = 3;
+    sev = 11;
+  } else if (eat(/^(m7b5|hdim|ø)/)) {
+    third = 3;
+    fifth = 6;
+    sev = 10;
+    eat(/^7/);
+  } else if (eat(/^(dim|o|°)/)) {
+    third = 3;
+    fifth = 6;
+    if (eat(/^7/))
+      sev = 9;
+  } else if (eat(/^(aug|\+)/)) {
+    fifth = 8;
+    if (eat(/^(maj|M|Δ)(?=7|9|13)/))
+      sev = 11;
+  } else if (eat(/^(maj|Maj|ma(?=\d)|M|Δ)/)) {
+    if (/^(7|9|11|13)/.test(s))
+      sev = 11;
+  } else if (eat(/^(min|mi|m|-)/)) {
+    third = 3;
+  }
+  const n = eat(/^(69|6\/9|13|11|9|7|6|5)/);
+  if (n) {
+    switch (n[1]) {
+      case "5":
+        third = null;
+        break;
+      case "6":
+        ext.add(9);
+        break;
+      case "69":
+      case "6/9":
+        ext.add(9);
+        ext.add(14);
+        break;
+      case "7":
+        sev ??= 10;
+        break;
+      case "9":
+        sev ??= 10;
+        ext.add(14);
+        break;
+      case "11":
+        sev ??= 10;
+        ext.add(14);
+        ext.add(17);
+        break;
+      case "13":
+        sev ??= 10;
+        ext.add(14);
+        ext.add(21);
+        if (third === 3)
+          ext.add(17);
+        break;
+    }
+  }
+  for (;; ) {
+    let m;
+    if (m = eat(/^sus(2|4)?/)) {
+      third = m[1] === "2" ? 2 : 5;
+      continue;
+    }
+    if (eat(/^alt/)) {
+      sev ??= 10;
+      fifth = null;
+      ext.add(13);
+      ext.add(15);
+      ext.add(20);
+      continue;
+    }
+    if (m = eat(/^(add|no|omit)(\d+)/)) {
+      const k = Number(m[2]);
+      if (m[1] === "add") {
+        const a = { 2: 2, 4: 5, 6: 9, 9: 14, 11: 17, 13: 21 };
+        if (a[k] === undefined)
+          return null;
+        ext.add(a[k]);
+      } else if (k === 3)
+        third = null;
+      else if (k === 5)
+        fifth = null;
+      else
+        return null;
+      continue;
+    }
+    if (m = eat(/^(b|#)(5|9|11|13)/)) {
+      const up = m[1] === "#", k = Number(m[2]);
+      if (k === 5)
+        fifth = up ? 8 : 6;
+      else {
+        sev ??= 10;
+        const nat = k === 9 ? 14 : k === 11 ? 17 : 21;
+        ext.delete(nat);
+        ext.add(nat + (up ? 1 : -1));
+      }
+      continue;
+    }
+    break;
+  }
+  if (s.length)
+    return null;
+  const out = [0, third, fifth, sev, ...ext].filter((x) => x !== null);
+  return [...new Set(out)].sort((a, b) => a - b);
+}
+var NAMING = [
+  "",
+  "m",
+  "7",
+  "maj7",
+  "m7",
+  "m7b5",
+  "dim7",
+  "dim",
+  "aug",
+  "sus4",
+  "sus2",
+  "5",
+  "6",
+  "m6",
+  "mmaj7",
+  "7sus4",
+  "9",
+  "maj9",
+  "m9",
+  "69",
+  "m69",
+  "add9",
+  "madd9",
+  "7b9",
+  "7#9",
+  "7#11",
+  "7b13",
+  "7#5",
+  "7b5",
+  "maj7#11",
+  "maj7#5",
+  "9sus4",
+  "13",
+  "maj13",
+  "m11",
+  "11",
+  "m13",
+  "7b9b13",
+  "7#9b13",
+  "7b9#9",
+  "13b9",
+  "13#11",
+  "9#11",
+  "7alt",
+  "mmaj9",
+  "m9b5",
+  "13sus4",
+  "7sus2",
+  "m7add11",
+  "maj7add13"
+];
+var NAMED = NAMING.map((sym) => ({ sym, pcs: new Set(parseQuality(sym).map(mod12)) }));
+var NAMES2 = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+var pcName = (pc) => NAMES2[mod12(pc)];
+function identify(semis, rootHint) {
+  if (rootHint !== undefined) {
+    const id = identifyOn(semis, mod12(rootHint));
+    if (id)
+      return id;
+  }
+  return identifyOn(semis);
+}
+function identifyOn(semis, only) {
+  if (!semis.length)
+    return null;
+  const sorted = [...semis].sort((a, b) => a - b);
+  const pcs = [...new Set(sorted.map(mod12))];
+  const bass = mod12(sorted[0]);
+  let best = null;
+  for (let r = 0;r < 12; r++) {
+    if (only !== undefined && r !== only)
+      continue;
+    const rel = new Set(pcs.map((p) => mod12(p - r)));
+    NAMED.forEach(({ sym, pcs: q }, rank) => {
+      for (const x of rel)
+        if (!q.has(x))
+          return;
+      const missing = [...q].filter((x) => !rel.has(x));
+      const omitted = [];
+      for (const x of missing) {
+        if (x === 0)
+          omitted.push("root");
+        else if (x === 7)
+          omitted.push("5");
+        else
+          return;
+      }
+      if (rel.size < 2)
+        return;
+      const score = (r === bass ? 0 : 40) + (pcs.includes(r) ? 0 : 25) + omitted.length * 12 + rank * 0.5;
+      if (!best || score < best.score)
+        best = { root: r, sym, omitted, score };
+    });
+  }
+  if (!best)
+    return null;
+  const b = best;
+  return { root: b.root, sym: b.sym, omitted: b.omitted };
+}
+function nameOf(semis, rootHint) {
+  const id = identify(semis, rootHint);
+  if (!id)
+    return `{${semis.map((s) => pcName(s).toLowerCase()).join(" ")}}`;
+  const bass = mod12(Math.min(...semis));
+  let s = pcName(id.root) + id.sym;
+  if (id.omitted.includes("root"))
+    s += " (no root)";
+  else if (bass !== id.root)
+    s += "/" + pcName(bass);
+  return s;
+}
+function semisOfValue(v, key) {
+  if (v instanceof Pitch)
+    return v.drum ? [] : [v.semi];
+  if (v instanceof Degree)
+    return [key.resolve(v)];
+  if (typeof v === "number")
+    return [v];
+  if (v && typeof v === "object" && "n" in v && "d" in v)
+    return [v.n / v.d];
+  if (v instanceof Chord)
+    return v.notes.flatMap((n) => semisOfValue(n, key));
+  return [];
+}
+function chordSemis(c, key) {
+  return semisOfValue(c, key).sort((a, b) => a - b);
+}
+function rootOf(c, key) {
+  if (c.root !== undefined)
+    return semisOfValue(c.root, key)[0];
+  const s = chordSemis(c, key);
+  const id = identify(s);
+  if (!id)
+    return s[0];
+  const lo = s[0];
+  let r = lo - mod12(lo - id.root);
+  return r;
+}
+function bassOf(c, key) {
+  if (c.bass !== undefined)
+    return semisOfValue(c.bass, key)[0];
+  if (c.root !== undefined)
+    return rootOf(c, key);
+  return chordSemis(c, key)[0];
+}
+function relTones(c, key) {
+  const root = rootOf(c, key);
+  const rel = new Set(chordSemis(c, key).map((s) => mod12(s - root)));
+  return { root, rel };
+}
+function functionsOf(rel) {
+  const third = rel.has(4) ? 4 : rel.has(3) ? 3 : rel.has(5) ? 5 : rel.has(2) ? 2 : null;
+  const seventh = rel.has(10) ? 10 : rel.has(11) ? 11 : rel.has(9) && rel.has(6) && rel.has(3) ? 9 : null;
+  const fifth = rel.has(7) ? 7 : rel.has(6) && third !== 4 ? 6 : rel.has(8) ? 8 : rel.has(6) ? 6 : null;
+  const ninth = rel.has(1) ? 1 : rel.has(3) && third === 4 ? 3 : rel.has(2) && third !== 2 ? 2 : null;
+  const thirteenth = rel.has(9) && seventh !== 9 ? 9 : null;
+  return { third, fifth, seventh, ninth, thirteenth, dominant: third === 4 && seventh === 10 };
+}
+var chordFrom = (semis, c, root) => new Chord(semis.map((s) => new Pitch(s)), new Pitch(root), c.bass instanceof Pitch ? c.bass : undefined);
+function stackUp(root, offs, lo) {
+  const out = [];
+  let prev = -Infinity;
+  for (const o of offs) {
+    let s = root + o;
+    if (!out.length) {
+      while (s < lo)
+        s += 12;
+      while (s - 12 >= lo)
+        s -= 12;
+    } else {
+      while (s <= prev)
+        s += 12;
+      while (s - 12 > prev)
+        s -= 12;
+    }
+    out.push(s);
+    prev = s;
+  }
+  return out;
+}
+function shellVoicing(c, key) {
+  const { root, rel } = relTones(c, key);
+  const f = functionsOf(rel);
+  const offs = [0, f.third ?? 7, f.seventh ?? (rel.has(9) ? 9 : f.fifth ?? 7)];
+  return chordFrom(stackUp(root, offs, root), c, root);
+}
+function guideVoicing(c, key) {
+  const { root, rel } = relTones(c, key);
+  const f = functionsOf(rel);
+  const offs = [f.third ?? 7, f.seventh ?? (rel.has(9) ? 9 : f.fifth ?? 7)];
+  return chordFrom(stackUp(root, offs, 52), c, root);
+}
+function rootlessVoicing(c, key, form = "a") {
+  const { root, rel } = relTones(c, key);
+  const f = functionsOf(rel);
+  const third = f.third ?? 4;
+  const seventh = f.seventh ?? 9;
+  const ninth = f.ninth ?? 2;
+  let fifth;
+  if (f.dominant)
+    fifth = rel.has(8) ? 8 : rel.has(6) && !rel.has(7) ? 6 : 9;
+  else
+    fifth = f.fifth ?? 7;
+  if (seventh === 9 && fifth === 9)
+    fifth = 7;
+  const offs = String(form).toLowerCase() === "b" ? [seventh, ninth, third, fifth] : [third, fifth, seventh, ninth];
+  return chordFrom(stackUp(root, offs, 50), c, root);
+}
+function dropVoicing(c, key, which) {
+  const given = chordSemis(c, key);
+  const top = given[given.length - 1];
+  const below = [...new Set(given.slice(0, -1).map((x) => mod12(x)))].filter((p) => p !== mod12(top)).map((p) => top - (mod12(top - p) || 12));
+  const s = [...below.sort((a, b) => a - b), top];
+  const n = s.length;
+  const out = s.map((x, i) => which.includes(n - i) ? x - 12 : x).sort((a, b) => a - b);
+  return new Chord(out.map((x) => new Pitch(x)), c.root !== undefined ? new Pitch(rootOf(c, key)) : undefined, c.bass);
+}
+function closeInversions(pcsInOrder) {
+  const base = [...new Set(pcsInOrder.map(mod12))].sort((a, b) => a - b);
+  const out = [];
+  for (let r = 0;r < base.length; r++) {
+    const rot = [...base.slice(r), ...base.slice(0, r)];
+    const v = [];
+    for (const p of rot) {
+      let s = p;
+      while (v.length && s <= v[v.length - 1])
+        s += 12;
+      v.push(s);
+    }
+    out.push(v);
+  }
+  return out;
+}
+var mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+function motion(a, b) {
+  if (a.length === b.length)
+    return a.reduce((t, x, i) => t + Math.abs(x - b[i]), 0);
+  return b.reduce((t, x) => t + Math.min(...a.map((y) => Math.abs(x - y))), 0);
+}
+function leadTo(prev, semis, center) {
+  const shapes = closeInversions(semis);
+  let best = semis, bestCost = Infinity;
+  for (const sh of shapes) {
+    const m = mean(sh);
+    const k0 = Math.round((center - m) / 12);
+    for (let k = k0 - 1;k <= k0 + 1; k++) {
+      const v = sh.map((x) => x + 12 * k);
+      const drift = Math.abs(mean(v) - center);
+      const cost = (prev ? motion(prev, v) : 0) + drift * (prev ? 0.35 : 1);
+      if (cost < bestCost - 0.000000001) {
+        bestCost = cost;
+        best = v;
+      }
+    }
+  }
+  return best;
+}
+function parseSymbol(text, octave = 3) {
+  if (/^(N\.?C\.?|nc)$/i.test(text))
+    return null;
+  const m = text.match(/^([A-Ga-g])(#|b)?(.*?)(?:\/([A-Ga-g])(#|b)?)?$/);
+  if (!m)
+    throw new Error(`'${text}' is not a chord symbol; try Dm7, G7b9, Cmaj7 or F/A`);
+  const L = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+  const pc = L[m[1].toLowerCase()] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0);
+  const offs = parseQuality(m[3]);
+  if (!offs)
+    throw new Error(`unknown chord quality '${m[3]}' in '${text}'`);
+  const root = 12 * (octave + 1) + mod12(pc);
+  const notes = offs.map((o) => new Pitch(root + o));
+  let bass;
+  if (m[4]) {
+    const bpc = L[m[4].toLowerCase()] + (m[5] === "#" ? 1 : m[5] === "b" ? -1 : 0);
+    let b = root - mod12(root - bpc);
+    if (b >= root)
+      b -= 12;
+    if (b === root - 12)
+      b = root - 12;
+    bass = new Pitch(b);
+    notes.unshift(bass);
+  }
+  return new Chord(notes, new Pitch(root), bass);
+}
+function parseChanges(text, octave = 3) {
+  const segs = text.split("|").map((s) => s.trim());
+  while (segs.length && segs[0] === "")
+    segs.shift();
+  while (segs.length && segs[segs.length - 1] === "")
+    segs.pop();
+  const bars = [];
+  for (const seg of segs) {
+    if (seg === "%") {
+      if (!bars.length)
+        throw new Error("'%' repeats the previous bar, but this is the first bar");
+      bars.push(bars[bars.length - 1]);
+      continue;
+    }
+    const steps = [];
+    for (const tok of seg.split(/\s+/).filter(Boolean)) {
+      if (tok === "/" || tok === "_") {
+        if (steps.length)
+          steps[steps.length - 1] = { ...steps[steps.length - 1], w: steps[steps.length - 1].w + 1 };
+        else {
+          const last = bars[bars.length - 1];
+          steps.push({ chord: last ? last[last.length - 1].chord : null, w: 1 });
+        }
+        continue;
+      }
+      if (tok === "%")
+        throw new Error(`'%' repeats a whole bar, so it goes between bar lines: "C7 | %"`);
+      steps.push({ chord: parseSymbol(tok, octave), w: 1 });
+    }
+    if (!steps.length)
+      steps.push({ chord: null, w: 1 });
+    bars.push(steps);
+  }
+  if (!bars.length)
+    throw new Error('changes needs at least one chord, like changes("Dm7 G7 | Cmaj7")');
+  return bars;
+}
+var IV = ["P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7"];
+var IV_LONG = ["unison", "minor 2nd", "major 2nd", "minor 3rd", "major 3rd", "perfect 4th", "tritone", "perfect 5th", "minor 6th", "major 6th", "minor 7th", "major 7th"];
+var COMPOUND = { 12: "P8", 13: "m9", 14: "M9", 15: "m10", 16: "M10", 17: "P11", 18: "A11", 19: "P12", 20: "m13", 21: "M13" };
+function intervalName(semis, long = false) {
+  const s = Math.round(Math.abs(semis));
+  if (long) {
+    if (s === 12)
+      return "octave";
+    const base = IV_LONG[s % 12];
+    return s > 12 ? `${base} + ${Math.floor(s / 12)} octave${s >= 24 ? "s" : ""}` : base;
+  }
+  if (COMPOUND[s])
+    return COMPOUND[s];
+  return s >= 12 ? `${IV[s % 12]}+${Math.floor(s / 12)}oct` : IV[s];
+}
+
 // ../../src/core/builtins.ts
+var parseQuality2 = parseQuality;
 var DEFS = [];
 function def(name, sig, doc, category, impl) {
   DEFS.push(new Builtin(name, impl, sig, doc, category));
@@ -1799,21 +2287,37 @@ function fnKeyed(call, f, args, ctx, keys, salt) {
 var asFn = (call, f) => (p) => P(fnCall(call, f, [p]));
 var DIATONIC = { "3": [0, 2, 4], "5": [0, 2, 4], "6": [0, 2, 4, 5], "7": [0, 2, 4, 6], "9": [0, 2, 4, 6, 8], "11": [0, 2, 4, 6, 8, 10], "13": [0, 2, 4, 6, 8, 10, 12] };
 function makeChord(root, q) {
+  const slash = q.match(/^(.*)\/([A-Ga-g](?:#|b)?\d?)$/);
+  if (slash) {
+    const c = makeChord(root, slash[1]);
+    const given = slash[2];
+    let b = parseNote(given);
+    if (!/\d$/.test(given)) {
+      const lowest = root instanceof Pitch ? root.semi : 60;
+      let s = b.semi;
+      while (s >= lowest)
+        s -= 12;
+      while (s + 12 < lowest)
+        s += 12;
+      b = new Pitch(s);
+    }
+    return new Chord([b, ...c.notes], c.root, b);
+  }
   if (root instanceof Degree) {
-    if (DIATONIC[q])
-      return new Chord(DIATONIC[q].map((k) => new Degree(root.deg, root.acc, root.shift + k)));
-    const offs = CHORDS[q];
+    if (DIATONIC[q] && root.acc === 0)
+      return new Chord(DIATONIC[q].map((k) => new Degree(root.deg, root.acc, root.shift + k)), root);
+    const offs = parseQuality2(q);
     if (!offs)
-      throw new Error(`unknown chord quality '${q}'`);
-    return new Chord(offs.map((o) => new Degree(root.deg, root.acc + o, root.shift)));
+      throw new Error(`unknown chord quality '${q}'; try maj7, m7, 7, m7b5, dim7, 7b9, 7alt, maj7#11, 9sus4`);
+    return new Chord(offs.map((o) => new Degree(root.deg, root.acc + o, root.shift)), root);
   }
   const semi = root instanceof Pitch ? root.semi : isNum(root) ? num(root) : NaN;
   if (isNaN(semi))
     throw new Error(`cannot build a chord on ${typeName(root)}`);
-  const offs = CHORDS[q];
+  const offs = parseQuality2(q);
   if (!offs)
-    throw new Error(`unknown chord quality '${q}'; try maj, m, 7, maj7, m7, dim, sus4, 9`);
-  return new Chord(offs.map((o) => new Pitch(semi + o)));
+    throw new Error(`unknown chord quality '${q}'; try maj7, m7, 7, m7b5, dim7, 7b9, 7alt, maj7#11, 9sus4`);
+  return new Chord(offs.map((o) => new Pitch(semi + o)), new Pitch(semi));
 }
 function semisOf(v, key) {
   if (v instanceof Pitch)
@@ -1881,7 +2385,7 @@ def("ply", "ply(p, n)", "Repeat each event n times within its own length. n may 
     return out;
   });
 });
-def("swing", "swing(p, amount: 1/3, div: 8)", "Delay every second subdivision (eighths by default) by a fraction of a step.", cat.time, ([p, amount, div], named) => {
+def("swing", "swing(p, amount: 1/3, div: 8)", "Delay every second subdivision (eighths by default) by a fraction of a step. 1/3 gives triplet swing (long-short 2:1), 0.2 a lighter 3:2, 0 is straight.", cat.time, ([p, amount, div], named) => {
   const amt = N(named.amount ?? amount, 1 / 3), d = Math.round(N(named.div ?? div, 8));
   const grid = new R(1, d), q = P(p);
   return new Pat((a, b, ctx) => q.query(a.sub(grid), b, ctx).flatMap((ev) => {
@@ -2033,7 +2537,7 @@ def("shuffle", "shuffle(list)", "The list in a seeded random order (decided once
 def("chance", "chance(prob)", "true with the given probability (seeded).", cat.rand, ([p], _n, call) => call.interp.stream.next() < N(p, 0.5));
 function mapPitch(v, f) {
   if (v instanceof Chord)
-    return new Chord(v.notes.map(f));
+    return v.map(f);
   if (v instanceof Rest || v === null || v === undefined)
     return v;
   return f(v);
@@ -2076,13 +2580,22 @@ def("degrees", "degrees(p)", "Treat numbers as 0-based scale steps: [0 2 4].degr
 def("key", "key(root, scale) or p.key(root, scale)", "Make a key, or play p in a key. Degrees like ^3 resolve against it.", cat.pitch, (args) => {
   if (args[0] instanceof Pat || args[0] instanceof Degree || args[0] instanceof Chord) {
     const k = args[1] instanceof Key ? args[1] : new Key(args[1], args[2] ?? SCALES.major);
-    return withCtx(P(args[0]), (ctx) => ({ ...ctx, key: k }));
+    const q = withCtx(P(args[0]), (ctx) => ({ ...ctx, key: k }));
+    const np = mapEv(q, (ev) => ev.p.key ? ev : { ...ev, p: { ...ev.p, key: k } });
+    np.items = q.items;
+    return np;
   }
   if (!(args[0] instanceof Pitch))
     throw new TypeError("key needs a root note, like key(d, dorian)");
   return new Key(args[0], args[1] ?? SCALES.major);
 });
-def("chord", "chord(root, quality)", 'A chord: chord(c4, "maj7") is the same as c4@maj7.', cat.pitch, ([r, q]) => makeChord(r, String(q instanceof Pitch ? q.toString() : q)));
+def("chord", "chord(root, quality)", 'A chord: chord(c4, "maj7") is the same as c4@maj7. With one text argument it reads a chord symbol: chord("Bb7#11").', cat.pitch, ([r, q]) => {
+  if (typeof r === "string" && q === undefined) {
+    const c = parseSymbol(r);
+    return c ?? REST;
+  }
+  return makeChord(r, String(q instanceof Pitch ? q.toString() : q));
+});
 def("invert", "invert(p, n: 1)", "Chord inversion: move the lowest n notes up an octave.", cat.pitch, ([p, n]) => {
   const k = Math.round(N(n, 1));
   const inv = (c, key) => {
@@ -2364,10 +2877,84 @@ def("print", "print(x, ...)", "Show values in the console.", cat.misc, (args, _n
 });
 def("str", "str(x)", "Text form of a value.", cat.misc, ([x]) => typeof x === "string" ? x : show(x));
 def("type", "type(x)", "The name of a value's type.", cat.misc, ([x]) => typeName(x));
+var H_CAT = "harmony";
+var keyOf = (ev, ctx) => ev.p.key ?? ctx.key;
+function chordMap(p, f) {
+  if (p instanceof Chord)
+    return f(p, new Key(new Pitch(60), SCALES.major));
+  return mapEv(P(p), (ev, ctx) => ev.v instanceof Chord ? { ...ev, v: f(ev.v, keyOf(ev, ctx)) } : ev);
+}
+var pitchOf = (x, d) => x === undefined ? d : x instanceof Pitch ? x.semi : N(x);
+def("changes", "changes(text, octave: 3)", 'Chords from a lead sheet: changes("Dm7 G7 | Cmaj7 %"). Bars are split by |, chords in a bar share it, / holds a chord one more slot, % repeats the bar, N.C. is no chord. Loops over its bars.', H_CAT, ([t, oct], named) => {
+  const bars = parseChanges(String(t), Math.round(N(named.octave ?? oct, 3)));
+  const pats = bars.map((steps) => seq(steps.map((st) => ({ pat: st.chord ? toPat(st.chord) : toPat(REST), w: new R(st.w) }))));
+  return alt(pats);
+});
+def("root", "root(p)", "The root of each chord (from its symbol, or named from its notes). Single notes pass through. Try changes(...).root.octave(-1) for a bass line.", H_CAT, ([p]) => chordMap(p, (c, k) => new Pitch(rootOf(c, k))));
+def("bassnote", "bassnote(p)", "The bass note of each chord: the slash note of c@7/e, otherwise the root.", H_CAT, ([p]) => chordMap(p, (c, k) => new Pitch(bassOf(c, k))));
+def("tones", "tones(chord)", "A chord's notes as a list, low to high.", H_CAT, ([c]) => {
+  if (!(c instanceof Chord))
+    throw new TypeError(`tones needs a chord, got ${typeName(c)}`);
+  return list(chordSemis(c, new Key(new Pitch(60), SCALES.major)).map((x) => new Pitch(x)));
+});
+def("name", "name(x, bars: 1)", 'Name a chord, or the chords of a pattern, as a chord symbol: name({e g c5}) is "C/E".', H_CAT, ([x, bars], named, call) => {
+  const key = call.interp.scene.key;
+  const hint = (c, k) => c.root !== undefined ? semisOfValue(c.root, k)[0] : undefined;
+  if (x instanceof Chord)
+    return nameOf(chordSemis(x, key), hint(x, key));
+  if (x instanceof Pat && x.items && !x.items.some((v) => v instanceof Pat || v instanceof Chord))
+    return nameOf(x.items.flatMap((v) => semisOfValue(v, key)));
+  const n = Math.max(1, Math.round(N(named.bars ?? bars, 1)));
+  const ctx = { seed: call.interp.scene.seed, voice: 0, key, offset: ZERO, inputs: { cc: () => 0, held: () => [] } };
+  const out = [];
+  for (let b = 0;b < n; b++) {
+    const evs = P(x).query(new R(b), new R(b + 1), ctx).filter((e) => e.s.ge(new R(b))).sort((u, v) => u.s.toNumber() - v.s.toNumber());
+    out.push(evs.map((e) => e.v instanceof Chord ? nameOf(chordSemis(e.v, keyOf(e, ctx)), hint(e.v, keyOf(e, ctx))) : semisOfValue(e.v, keyOf(e, ctx)).map((s) => pcName(s)).join("")).filter(Boolean).join(" ") || "N.C.");
+  }
+  return out.join(" | ");
+});
+def("shell", "shell(p)", "Shell voicings: root, third and seventh, the bebop pianist's left hand.", H_CAT, ([p]) => chordMap(p, shellVoicing));
+def("guide", "guide(p)", "Guide tones: just the third and seventh of each chord. Add .voicelead to hear them move by step.", H_CAT, ([p]) => chordMap(p, guideVoicing));
+def("rootless", 'rootless(p, form: "a")', 'Rootless voicings: four notes without the root (3-5-7-9, dominants use the 13th for the 5th). Form "a" starts on the third, "b" on the seventh.', H_CAT, ([p, form], named) => {
+  const f = String(named.form ?? form ?? "a");
+  return chordMap(p, (c, k) => rootlessVoicing(c, k, f));
+});
+def("drop2", "drop2(p)", "Drop-2 voicings: close position, with the second voice from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => dropVoicing(c, k, [2])));
+def("drop3", "drop3(p)", "Drop-3 voicings: close position, with the third voice from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => dropVoicing(c, k, [3])));
+def("drop24", "drop24(p)", "Drop-2-and-4 voicings: the second and fourth voices from the top dropped an octave.", H_CAT, ([p]) => chordMap(p, (c, k) => dropVoicing(c, k, [2, 4])));
+def("voicelead", "voicelead(p, around: e4)", "Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: built on evolve, so the chain is replayed from bar 0.", H_CAT, ([p, around], named) => {
+  const q = P(p), center = pitchOf(named.around ?? around, 64);
+  const voiceBar = (prev, c, ctx) => {
+    const lo = new R(c);
+    const evs = q.query(lo, new R(c + 1), ctx).filter((e) => e.s.ge(lo)).sort((u, v) => u.s.toNumber() - v.s.toNumber());
+    const out = [];
+    for (const e of evs) {
+      if (!(e.v instanceof Chord)) {
+        out.push(e);
+        continue;
+      }
+      const key = keyOf(e, ctx), v = leadTo(prev, chordSemis(e.v, key), center);
+      prev = v;
+      out.push({ ...e, v: new Chord(v.map((x) => new Pitch(x)), new Pitch(rootOf(e.v, key)), e.v.bass) });
+    }
+    return { out, last: prev };
+  };
+  return evolve(null, (prev, c, ctx) => voiceBar(prev, c - 1, ctx).last, (prev, c, ctx) => {
+    const { out } = voiceBar(prev, c, ctx);
+    return new Pat((a, b) => out.filter((e) => e.s.ge(a) && e.s.lt(b)));
+  });
+});
+def("interval", "interval(a, b, long: false)", 'The interval between two pitches by size: interval(c4, e4) is "M3"; with long: true, "major 3rd". Tine counts semitones, so C-F# and C-Gb are both TT (tritone).', H_CAT, ([a, b, long], named) => {
+  const k = new Key(new Pitch(60), SCALES.major);
+  const x = semisOfValue(a, k)[0], y = semisOfValue(b, k)[0];
+  if (x === undefined || y === undefined)
+    throw new TypeError("interval needs two pitches, like interval(c4, g4)");
+  return intervalName(y - x, truthy(named.long ?? long ?? false));
+});
 
 // ../../src/core/interp.ts
 var MAX_DEPTH = 400;
-var INSTRUMENTS = ["keys", "sine", "tri", "saw", "square", "pluck", "bass", "pad", "bell", "organ", "kit", "lead"];
+var INSTRUMENTS = ["keys", "sine", "tri", "saw", "square", "pluck", "bass", "pad", "bell", "organ", "kit", "lead", "upright", "vibes"];
 
 class Interp {
   env;
@@ -2787,7 +3374,7 @@ function liftUnary(v, f) {
   if (v instanceof Pat)
     return mapV(v, (x) => x instanceof Rest ? x : f(x));
   if (v instanceof Chord)
-    return new Chord(v.notes.map(f));
+    return v.map(f);
   return f(v);
 }
 function neg(x, span) {
@@ -2883,9 +3470,9 @@ function scalar(op, a, b, span) {
   if (["==", "!=", "<", ">", "<=", ">="].includes(op))
     return compare(op, a, b);
   if (a instanceof Chord)
-    return new Chord(a.notes.map((x) => scalar(op, x, b, span)));
+    return a.map((x) => scalar(op, x, b, span));
   if (b instanceof Chord && isNum(a))
-    return new Chord(b.notes.map((x) => scalar(op, a, x, span)));
+    return b.map((x) => scalar(op, a, x, span));
   if (a instanceof Pitch) {
     if (isNum(b)) {
       if (op === "+")
@@ -3073,6 +3660,8 @@ var INSTRUMENT_DOCS = {
   bell: "FM bell with a long ring.",
   organ: "Drawbar-style additive organ.",
   lead: "Detuned square and saw lead.",
+  upright: "Upright (acoustic) bass: a round plucked tone with a soft finger thump. For walking lines.",
+  vibes: "Vibraphone: struck metal bars with a motor tremolo and a long ring.",
   kit: "Drum kit: plays General MIDI drum note numbers (kick, snare, hat, ...)."
 };
 // ../../src/core/docs.ts
@@ -3267,11 +3856,14 @@ function completion(uri, p) {
   const off = posToOffset(src, p);
   const before = src.slice(Math.max(0, off - 40), off);
   const items = [];
-  if (/@[A-Za-z0-9]*$/.test(before)) {
+  if (/@[A-Za-z0-9#+]*$/.test(before)) {
     for (const q of Object.keys(CHORDS))
       items.push({ label: q, kind: 12, detail: `chord ${CHORDS[q].map((x) => Math.round(x * 100) / 100).join(" ")}` });
     for (const q of ["3", "7", "9", "11", "13"])
       items.push({ label: q, kind: 12, detail: "diatonic chord on a degree" });
+    for (const q of ["7b9", "7#9", "7#11", "7b13", "7alt", "maj7#11", "9sus4", "13sus4", "69", "m69", "maj13", "m13", "mmaj7", "7#5", "7b5"])
+      if (!items.some((i) => i.label === q))
+        items.push({ label: q, kind: 12, detail: "chord symbol" });
     return items;
   }
   const afterDot = /\.[A-Za-z_]*$/.test(before);
