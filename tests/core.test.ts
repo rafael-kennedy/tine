@@ -188,6 +188,10 @@ describe("errors", () => {
     expect(e.kind).toBe("syntax");
     expect(formatError(src, e)).toContain("unclosed");
   });
+  test("a bracket left open before the next statement is named as unclosed", () => {
+    const e = err("voice tune = [c4 e4 g4 c5\nvoice bass = [c3]");
+    expect(e.message).toContain("unclosed '['"); expect(e.span?.start).toBe(13); expect(e.hint).toContain("']'");
+  });
   test("note names cannot be variables", () => { expect(err("let a = 1").message).toContain("note name"); });
   test("type errors are readable", () => { expect(err("voice a = c4 + \"x\"").message).toContain("cannot add"); });
   test("keepGoing collects errors per statement", () => {

@@ -1,5 +1,6 @@
 import { lex, Token } from "./lexer";
 import { TineError, Span } from "./errors";
+const STATEMENT_KW = new Set(["voice", "let", "section", "form", "meter", "use"]);
 
 // ---------- AST ----------
 export type Node =
@@ -387,6 +388,8 @@ class Parser {
     const items: PItem[] = [];
     while (!this.isOp(close)) {
       if (this.tok.type === "eof" || this.tok.type === "newline" || this.tok.type === "dedent") this.err(`unclosed '${open}'`, s, `add a matching '${close}'`);
+      // newlines inside brackets are ignored, so a forgotten bracket swallows the next statement
+      if (this.tok.type === "kw" && STATEMENT_KW.has(this.tok.text)) this.err(`unclosed '${open}': the next line starts with '${this.tok.text}' before it was closed`, s, `add a matching '${close}' at the end of this line`);
       if (this.isOp("_")) {
         const h = this.next();
         if (!items.length) throw new TineError("syntax", "'_' extends the previous step, so it cannot come first", this.spanOf(h));
