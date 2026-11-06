@@ -334,3 +334,9 @@ An arrangement written in Tine against 1.0 found three rough edges, now fixed:
 ## 36. A fix found by the course: `.key()` on a pattern
 
 - `voice v = [^1 ^3 ^5].key(d, minor)` ignored the key, because degrees were resolved before the method ran. The key now travels with each note as a parameter, and an inner `.key` wins over an outer one. A regression test covers it.
+
+## 37. `within`: folding pitches into a range
+
+- A slash-chord chart puts each bass note below its chord's root, so `changes("Bm | F#/A#", octave: 2).bassnote` gives b2 then a#1. A falling bass line needs one octave. `within(p, lo, hi: lo + 12)` moves each note by whole octaves until it sits in the range; `.bassnote.within(e1, e2)` fixes the line.
+- A chord moves as a unit, by its lowest note, so its voicing survives. Folding each chord tone on its own would turn a voicing into a cluster.
+- It is a general pitch function, not a `bassnote` option, because melodies, guitar parts and generated lines need it too. The name `fold` was taken by the list function.

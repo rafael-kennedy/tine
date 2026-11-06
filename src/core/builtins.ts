@@ -539,6 +539,20 @@ def("changes", "changes(text, octave: 3)", "Chords from a lead sheet: changes(\"
 });
 def("root", "root(p)", "The root of each chord (from its symbol, or named from its notes). Single notes pass through. Try changes(...).root.octave(-1) for a bass line.", H_CAT, ([p]) => chordMap(p, (c, k) => new Pitch(H.rootOf(c, k))));
 def("bassnote", "bassnote(p)", "The bass note of each chord: the slash note of c@7/e, otherwise the root.", H_CAT, ([p]) => chordMap(p, (c, k) => new Pitch(H.bassOf(c, k))));
+// Octaves that move a note or chord (by its lowest note) into [lo, hi).
+function withinShift(semis: number[], lo: number, hi: number): number {
+  if (!semis.length) return 0;
+  const low = Math.min(...semis);
+  let k = Math.ceil((lo - low) / 12);
+  if (hi - lo > 12) while (low + 12 * (k + 1) < hi && low + 12 * k < lo) k++;
+  return k;
+}
+def("within", "within(p, lo, hi: lo + 12)", "Move each note or chord by whole octaves until it sits in lo..hi (a chord moves by its lowest note and keeps its shape). changes(...).bassnote.within(e1, e2) folds a bass line into one octave.", cat.pitch, ([p, lo, hi]) => {
+  const L = pitchOf(lo, 36), Hh = hi === undefined ? L + 12 : pitchOf(hi, L + 12);
+  const fix = (v: any, k: Key) => { if (v === REST || (v instanceof Pitch && v.drum)) return v; const sh = withinShift(H.semisOfValue(v, k), L, Hh); return sh ? mapPitch(v, x => transposeVal(x, 12 * sh)) : v; };
+  if (!(p instanceof Pat)) return fix(p, new Key(new Pitch(60), SCALES.major));
+  return mapEv(P(p), (ev, ctx) => ({ ...ev, v: fix(ev.v, keyOf(ev, ctx)) }));
+});
 def("tones", "tones(chord)", "A chord's notes as a list, low to high.", H_CAT, ([c]) => {
   if (!(c instanceof Chord)) throw new TypeError(`tones needs a chord, got ${typeName(c)}`);
   return list(H.chordSemis(c, new Key(new Pitch(60), SCALES.major)).map(x => new Pitch(x)));

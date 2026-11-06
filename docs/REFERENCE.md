@@ -213,6 +213,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `scala(text)` | A scale from the text of a Scala .scl file (the common microtonal tuning format). |
 | `scala_file(path)` | A scale loaded from a Scala .scl file next to your piece. |
 | `mode(scale, n)` | Rotate a scale to start on its n-th degree (1-based): mode(major, 2) is dorian. |
+| `within(p, lo, hi: lo + 12)` | Move each note or chord by whole octaves until it sits in lo..hi (a chord moves by its lowest note and keeps its shape). changes(...).bassnote.within(e1, e2) folds a bass line into one octave. |
 
 ### Sound
 
