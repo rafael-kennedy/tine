@@ -65,7 +65,7 @@ export const UNIT4: Unit = {
          <table class="t"><tr><th>mode</th><th>from</th><th>chord</th><th>signature note</th></tr>
          <tr><td>ionian</td><td>^1</td><td>Imaj7</td><td>4 (an avoid note)</td></tr>
          <tr><td>dorian</td><td>^2</td><td>ii7</td><td>natural 6</td></tr>
-         <tr><td>phrygian</td><td>^3</td><td>iii7, sus(b9)</td><td>b2</td></tr>
+         <tr><td>phrygian</td><td>^3</td><td>iii7</td><td>b2</td></tr>
          <tr><td>lydian</td><td>^4</td><td>IVmaj7, maj7#11</td><td>#4</td></tr>
          <tr><td>mixolydian</td><td>^5</td><td>V7</td><td>b7</td></tr>
          <tr><td>aeolian</td><td>^6</td><td>vi7</td><td>b6</td></tr>
@@ -105,16 +105,17 @@ export const UNIT4: Unit = {
       parts: [
         `<p>A dominant chord full of altered tensions, with a line that matches it, resolving to C.</p>`,
         { code: `-- G7alt, a descending G altered scale, then C.\n-- Change altered to mixolydian and g3@7alt to g3@13: line and chord go sweet, and the pull weakens.\ntempo 120\nvoice comp = <g3@7alt c3@maj9>.rootless.voicelead.vel(.5)\nvoice bass = <g1 c2>.inst(upright)\nvoice line = <[^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(g4, altered) [^3 _ _ _ . . . .].key(c4, major)>.swing.inst(vibes)`, bars: 2 },
-        `<p>That is the <b>altered scale</b>: G Ab Bb B Db Eb F, or root, b9, #9, 3, b5 (#11), b13, b7. Every tension is altered, and each one is a half step from a note of C major, so the resolution is strong. It is the seventh mode of <b>jazz melodic minor</b> (a major scale with a flat third), here Ab melodic minor. Melodic minor has seven modes, and they cover the chords the major modes can't.</p>
+        `<p>That is the <b>altered scale</b>: G Ab Bb B Db Eb F, or root, b9, #9, 3, b5 (#11), b13, b7. Every tension is altered, and each one is a half step from a note of C major, so the resolution is strong. It is the seventh mode of <b>jazz melodic minor</b> (a major scale with a flat third), here Ab melodic minor.</p>`,
+        { code: `-- Melodic minor's seven modes, all on C, one per bar.\n-- Change c4 to g4 and c2 to g2 to hear the same seven from G.\nlet mm = [melodic_minor dorian_b2 lydian_augmented lydian_dominant mixolydian_b6 locrian_nat2 altered]\nvoice m = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(c4, at(mm, bar))).inst(vibes)\nvoice drone = c2.inst(pad).vel(.3)`, bars: 7 },
+        `<p>Melodic minor has seven modes, and they cover the chords the major modes can't.</p>
          <table class="t"><tr><th>mode</th><th>Tine name</th><th>chord</th></tr>
          <tr><td>1 melodic minor</td><td><code>melodic_minor</code></td><td>mmaj7, m6 (the minor tonic)</td></tr>
-         <tr><td>2 dorian b2</td><td><code>dorian_b2</code></td><td>7sus(b9)</td></tr>
+         <tr><td>2 dorian b2</td><td><code>dorian_b2</code></td><td>7sus4 with a b9 (the 4th replaces the 3rd)</td></tr>
          <tr><td>3 lydian augmented</td><td><code>lydian_augmented</code></td><td>maj7#5</td></tr>
-         <tr><td>4 lydian dominant</td><td><code>lydian_dominant</code></td><td>7#11: subV7, IV7 in the blues, bVII7</td></tr>
+         <tr><td>4 lydian dominant</td><td><code>lydian_dominant</code></td><td>7#11: the tritone sub, IV7 in the blues, bVII7</td></tr>
          <tr><td>5 mixolydian b6</td><td><code>mixolydian_b6</code></td><td>7b13</td></tr>
          <tr><td>6 locrian natural 2</td><td><code>locrian_nat2</code></td><td>m7b5 (iiø7)</td></tr>
          <tr><td>7 altered</td><td><code>altered</code></td><td>7alt: b9, #9, b13, and the b5</td></tr></table>`,
-        { code: `-- Melodic minor's seven modes, all on C, one per bar.\n-- Change c4 to g4 and c2 to g2 to hear the same seven from G.\nlet mm = [melodic_minor dorian_b2 lydian_augmented lydian_dominant mixolydian_b6 locrian_nat2 altered]\nvoice m = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(c4, at(mm, bar))).inst(vibes)\nvoice drone = c2.inst(pad).vel(.3)`, bars: 7 },
         { code: `-- Dm9, Db7#11 (the tritone sub), Cmaj9, with a Db lydian dominant line in bar 2.\n-- Change lydian_dominant to mixolydian: the G in the line becomes Gb, and the link to the original G7 is lost.\ntempo 120\nvoice comp = <d3@m9.rootless {f3 g3 b3 eb4} c3@maj9.rootless .>.voicelead.vel(.5)\nvoice bass = <d2 db2 c2 .>.inst(upright)\nvoice line = <[^1 ^3 ^5 ^7 ^9 ^7 ^5 ^3].key(d4, dorian) [^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(db4, lydian_dominant) [^3 _ _ _ . . . .].key(c4, major) [.]>.swing.inst(vibes)`, bars: 4 },
         `<p><b>Lydian dominant</b> is mixolydian with a raised 4th, the natural scale for a tritone substitute. Over Db7, its raised 4th is G, the root of the chord it replaces.</p>`,
         { code: `-- A whole-tone scale over C7#5.\n-- Change whole_tone to half_whole and c3@7#5 to c3@7b9: the other symmetric dominant sound.\nvoice whole = [^1 ^2 ^3 ^4 ^5 ^6 ^7 .].key(c4, whole_tone).inst(vibes)\nvoice comp  = c3@7#5.vel(.4)` },
@@ -160,9 +161,9 @@ export const UNIT4: Unit = {
         `<p>A <b>voicing</b> is a choice of which chord notes to play, in what order, in what register. The symbol says Dm7; the voicing says how it sounds. You heard four systems, and Tine has a function for each.</p>
          <ul><li><b>Shell</b> (<code>shell</code>): root, 3rd, 7th. The bebop left hand, and the guitarist's "Freddie Green" comp.</li>
          <li><b>Rootless</b> (<code>rootless</code>): 3, 5, 7, 9 or 7, 9, 3, 5, with the 13th in place of the 5th on dominants. The default sound of a modern trio.</li>
-         <li><b>Drop 2</b> (<code>drop2</code>): a four-note close voicing with the second voice from the top dropped an octave. Wider, with a clear top melody. Guitarists and big-band arrangers use it constantly. <code>drop3</code> drops the third voice from the top instead, for an even wider spread.</li>
+         <li><b>Drop 2</b> (<code>drop2</code>): start from close position (all four notes inside one octave, no chord tone skipped) and drop the second voice from the top an octave. Wider, with a clear top melody. Guitarists and big-band arrangers use it constantly. <code>drop3</code> drops the third voice from the top instead, for an even wider spread.</li>
          <li><b>Guide tones</b> (<code>guide</code>): 3rd and 7th only.</li></ul>`,
-        { code: `-- Partly done: Cmaj7 in close position, then drop 2. Drop the second voice from the top: change g4 in bar 2 to g3.\nvoice comp = <{c4 e4 g4 b4} {c4 e4 g4 b4}>.inst(keys)`, bars: 2 },
+        { code: `-- Partly done: Cmaj7 in close position (all four notes inside one octave), then drop 2. Drop the second voice from the top: change g4 in bar 2 to g3.\nvoice comp = <{c4 e4 g4 b4} {c4 e4 g4 b4}>.inst(keys)`, bars: 2 },
         { code: `-- Five notes stacked in fourths, with a major third on top, over a D bass.\n-- Change the bass to e2: the same shape now sounds like Em7 with an added 11th.\nprint(name({e3 a3 d4 g4 b4}))\nvoice q = {e3 a3 d4 g4 b4}.inst(keys)\nvoice bass = d2.inst(upright)` },
         `<p>That is a <b>quartal voicing</b>: fourths instead of thirds, open and ambiguous. McCoy Tyner and Herbie Hancock made it a modal staple. This one, E A D G B, is the "So What" chord, from Bill Evans's piano on Miles Davis's "So What" (1959). On its own it spells Em7add11. Over a D bass it colors D minor without ever stating the third. Quartal harmony returns in the modal-jazz lesson.</p>`,
         { code: `-- A C7 shell in the left hand, with a triad above: D, A, Ab, F#.\n-- Change ab4@maj to eb4@maj: that triad (Eb G Bb) gives the #9, 5 and b7, a bluesier sound.\nvoice lh = <{c3 e3 bb3} {c3 e3 bb3} {c3 e3 bb3} {c3 e3 bb3}>.inst(keys)\nvoice rh = <d4@maj a4@maj ab4@maj f#4@maj>.inst(keys)\nprint(name({c3 e3 bb3 d4 f#4 a4}))`, bars: 4 },
@@ -244,7 +245,7 @@ export const UNIT4: Unit = {
           { q: "Listen. Dm7 to G7. Does the line cross the bar line by half step (7th to 3rd)?", listen: `voice comp = changes("Dm7 | G7").rootless.voicelead.vel(.45)\nvoice line = <[f4 a4 c5 e5 d5 _ c5 _] [b4 _ _ _ . . . .]>.swing.inst(vibes)`, bars: 2, options: ["Yes, C to B", "No, it leaps"], answer: 0, explain: "C, the 7th of Dm7, falls to B, the 3rd of G7." },
           { q: "The bebop dominant scale adds which note to mixolydian?", options: ["The b9", "The major 7th", "The #11", "The b3"], answer: 1 },
           { q: "Why add the passing note?", options: ["To make the scale symmetrical", "So chord tones fall on the beats in a run of eighths", "To avoid the tritone", "For a darker sound"], answer: 1 },
-          { q: "From the walking-bass lesson: in the first example the bass plays F# on beat 4 of bar 1, then G. What is the F#?", options: ["A chromatic approach from below", "A chord tone of Dm7", "A note of D dorian", "An enclosure"], answer: 0, explain: "F# is a half step below G, the next root." },
+          { q: "In this lesson's first example the bass plays F# on beat 4 of bar 1, then G. From the walking-bass lesson: what is the F#?", options: ["A chromatic approach from below", "A chord tone of Dm7", "A note of D dorian", "An enclosure"], answer: 0, explain: "F# is a half step below G, the next root." },
         ] },
       ],
     },
@@ -367,7 +368,9 @@ export const UNIT4: Unit = {
             for (let b = 0; b < 3; b++) { const k = groups(inBar(of(n, "comp"), b)).filter(g => g.semis.length >= 2).length; if (k !== 2) return `Bar ${b + 1} has ${k} chord${k === 1 ? "" : "s"}; give it two.`; }
             // A copy of either lesson example: its first six chords each hold that example's 3rd and 7th.
             const guides = [[[4, 11], [2, 9], [8, 2], [0, 7], [5, 0], [11, 5]], [[4, 11], [2, 8], [0, 7], [9, 4], [5, 0], [5, 11]]];
-            if (chords.length >= 6 && guides.some(gs => gs.every((gt, i) => has(chords[i].semis, gt)))) return "Bars 1 to 3 follow one of the lesson's reharmonizations; choose at least two chords of your own.";
+            const diffs = (gs: number[][]) => gs.filter((gt, i) => !chords[i] || !has(chords[i].semis, gt)).length;
+            const close = guides.map(diffs).find(d => d < 2);
+            if (close !== undefined) return close === 0 ? "Bars 1 to 3 follow one of the lesson's reharmonizations; choose at least two chords of your own." : "Bars 1 to 3 change only one chord from one of the lesson's reharmonizations; make at least two chords your own.";
             const distinct = new Set(chords.map(c => pcset(c.semis).join(",")));
             if (distinct.size < 6) return `I count ${distinct.size} different chords; use at least six.`;
             for (const c of chords) {
