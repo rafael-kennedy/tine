@@ -148,21 +148,23 @@ export const UNIT4: Unit = {
     {
       id: "voicings", title: "Piano voicings",
       parts: [
-        `<p>A <b>voicing</b> is a choice of which chord notes to play, in what order, in what register. The chord symbol says Dm9; the voicing says how it sounds. Jazz pianists carry a handful of systems, and Tine has a function for each.</p>
-         <ul><li><b>Shell</b> (<code>shell</code>): root, 3rd, 7th. The bebop left hand, also the guitarist's "Freddie Green" comp.</li>
-         <li><b>Rootless</b> (<code>rootless</code>): 3, 5, 7, 9 or 7, 9, 3, 5, the 13th in place of the 5th on dominants. The default sound of a modern trio.</li>
+        `<p>One ii-V-I, played four times. The chords never change. Only the way the piano spreads them does.</p>`,
+        { code: `-- Four voicings of Dm7 G7 Cmaj7, four bars each.\n-- Change tune.voicelead.drop2 to tune.voicelead.drop3 and hear the third pass open wider.\ntempo 120\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nlet sounds = arrange(tune.shell, 4, tune.rootless.voicelead, 4, tune.voicelead.drop2, 4, tune.guide.voicelead(around: g4), 4)\nvoice comp = sounds\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 16 },
+        `<p>A <b>voicing</b> is a choice of which chord notes to play, in what order, in what register. The symbol says Dm7; the voicing says how it sounds. You heard four systems, and Tine has a function for each.</p>
+         <ul><li><b>Shell</b> (<code>shell</code>): root, 3rd, 7th. The bebop left hand, and the guitarist's "Freddie Green" comp.</li>
+         <li><b>Rootless</b> (<code>rootless</code>): 3, 5, 7, 9 or 7, 9, 3, 5, with the 13th in place of the 5th on dominants. The default sound of a modern trio.</li>
          <li><b>Drop 2</b> (<code>drop2</code>): a four-note close voicing with the second voice from the top dropped an octave. Wider, with a clear top melody. Guitarists and big-band arrangers live on it. <code>drop3</code> and <code>drop24</code> are its cousins.</li>
          <li><b>Guide tones</b> (<code>guide</code>): 3rd and 7th only.</li></ul>`,
-        { code: `tempo 120\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nlet sounds = arrange(tune.shell, 4, tune.rootless.voicelead, 4, tune.voicelead.drop2, 4, tune.guide.voicelead(around: g4), 4)\nvoice comp = sounds\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 16 },
-        `<p><b>Quartal voicings</b> stack fourths instead of thirds. They are open and ambiguous, a modal sound, associated with McCoy Tyner and Herbie Hancock. The best-known is three perfect fourths topped by a major third: E A D G B. On its own it spells E minor seventh with an added 11th. In a D dorian tune it sits over a D bass and colors D minor without ever stating the third. You will meet quartal harmony again in lesson 32.</p>`,
-        { code: `print(name({e3 a3 d4 g4 b4}))\nvoice q = {e3 a3 d4 g4 b4}.inst(keys)\nvoice bass = d2.inst(upright)` },
-        `<p>An <b>upper-structure triad</b> puts a plain major or minor triad on top of a dominant's guide tones. Because the triad is simple, the ear hears it clearly, and its notes become the tensions. Over C7 (C, E, Bb):</p>
+        { code: `-- Five notes stacked in fourths, with a major third on top, over a D bass.\n-- Change the bass to e2: the same shape now sounds like Em7 with an added 11th.\nprint(name({e3 a3 d4 g4 b4}))\nvoice q = {e3 a3 d4 g4 b4}.inst(keys)\nvoice bass = d2.inst(upright)` },
+        `<p>That is a <b>quartal voicing</b>: fourths instead of thirds, open and ambiguous, a modal sound associated with McCoy Tyner and Herbie Hancock. This one, E A D G B, is the most famous. On its own it spells Em7add11. Over a D bass it colors D minor without ever stating the third. Quartal harmony returns in the modal-jazz lesson.</p>`,
+        { code: `-- A C7 shell in the left hand, with a triad above: D, A, Ab, F#.\n-- Change ab4@maj to eb4@maj: that triad (Eb G Bb) gives the #9, 5 and b7, a bluesier sound.\nvoice lh = <{c3 e3 bb3} {c3 e3 bb3} {c3 e3 bb3} {c3 e3 bb3}>.inst(keys)\nvoice rh = <d4@maj a4@maj ab4@maj f#4@maj>.inst(keys)\nprint(name({c3 e3 bb3 d4 f#4 a4}))`, bars: 4 },
+        `<p>Those are <b>upper-structure triads</b>: a plain major triad on top of a dominant's shell. The triad is simple, so the ear hears it clearly, and its notes become the tensions. Over C7 (C, E, Bb):</p>
          <table class="t"><tr><th>triad on top</th><th>tensions</th><th>symbol</th></tr>
          <tr><td>D major (II)</td><td>9, #11, 13</td><td>C13#11</td></tr>
          <tr><td>A major (VI)</td><td>13, b9, 3</td><td>C13b9</td></tr>
          <tr><td>Ab major (bVI)</td><td>b13, root, #9</td><td>C7#9b13</td></tr>
          <tr><td>F# major (bV)</td><td>#11, b7, b9</td><td>C7b9#11</td></tr></table>`,
-        { code: `-- C7 shell in the left hand, a triad above: D, A, Ab, F#\nvoice lh = <{c3 e3 bb3} {c3 e3 bb3} {c3 e3 bb3} {c3 e3 bb3}>.inst(keys)\nvoice rh = <d4@maj a4@maj ab4@maj f#4@maj>.inst(keys)\nprint(name({c3 e3 bb3 d4 f#4 a4}))`, bars: 4 },
+        { code: `-- Partly done: the C7 shell. Add an A major triad on top (a4 c#5 e5) to make upper structure VI.\nvoice comp = {c3 e3 bb3}.inst(keys)` },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: the <b>upper structure II</b> over C7. That is a C7 shell (C, E, Bb) with a <b>D major triad</b> on top, six notes in all.</p>`,
           starter: `voice comp = c3@7`,
@@ -176,9 +178,11 @@ export const UNIT4: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. Rootless or root position?", listen: `voice x = changes("Dm7 | G7").rootless.voicelead\nvoice b = changes("Dm7 | G7").root.octave(-1).inst(upright)`, bars: 2, options: ["Rootless (bass has the roots)", "Root position in the piano"], answer: 0 },
+          { q: "Listen. C7 sounds first, then a triad joins it on top. Which tensions does the triad add?", listen: `voice lh = {c3 e3 bb3}.inst(keys)\nvoice rh = <. a4@maj>.inst(keys)`, bars: 2, options: ["9, #11, 13 (D major)", "13, b9, 3 (A major)", "b13, root, #9 (Ab major)"], answer: 1, explain: "A C# E: the C# is the b9, the sharpest rub." },
           { q: "Drop 2 drops which voice an octave?", options: ["The top", "The second from the top", "The second from the bottom", "The bass"], answer: 1 },
           { q: "A D major triad over C7 adds which tensions?", options: ["b9, #9, b13", "9, #11, 13", "11, 13, b7", "b5, #5, 9"], answer: 1 },
-          { q: "Listen. Rootless or root position?", listen: `voice x = changes("Dm7 | G7").rootless.voicelead\nvoice b = changes("Dm7 | G7").root.octave(-1).inst(upright)`, bars: 2, options: ["Rootless (bass has the roots)", "Root position in the piano"], answer: 0 },
+          { q: "From the ii-V-I lesson: a rootless voicing in A form starts on which chord tone?", options: ["The root", "The 3rd", "The 5th", "The 7th"], answer: 1 },
         ] },
       ],
     },
@@ -186,18 +190,19 @@ export const UNIT4: Unit = {
     {
       id: "bebop", title: "The bebop language",
       parts: [
-        `<p>Bebop melody, from Charlie Parker and Dizzy Gillespie on, follows a few rules so consistently that they work like grammar.</p>
-         <ul><li><b>Chord tones on the beat.</b> Strong beats outline the harmony; offbeats connect.</li>
-         <li><b>Bebop scales</b> add one chromatic passing note to a seven-note scale, making eight. A run of eighth notes then keeps chord tones on every beat.</li>
-         <li><b>Enclosures and chromatic approaches</b> aim at targets (lesson 13).</li>
-         <li><b>Arpeggios from the 3rd up</b>: 3, 5, 7, 9 of a chord, the rootless voicing played as a line.</li>
-         <li><b>Guide-tone targets</b>: the 7th of one chord falling to the 3rd of the next across the bar line.</li></ul>
-         <p>The <b>bebop dominant scale</b> is mixolydian with a major 7th added: G A B C D E F F# G. Descend from G in eighths and the beats land on G, F, D and B, the chord tones of G7.</p>`,
-        { code: `tempo 160\nvoice comp = g3@7.rootless.vel(.45)\nvoice bass = [g2 . d2 .].inst(upright)\nvoice line = [g5 f#5 f5 e5 d5 c5 b4 a4].swing.inst(vibes)` },
-        `<p>Without the passing F#, the same descent drifts: by beat 3 the chord tones are on the offbeats and the line sounds aimless. That one added note is the difference.</p>`,
-        { code: `tempo 160\nvoice comp = g3@7.rootless.vel(.45)\n-- mixolydian only: chord tones slip onto the offbeats\nvoice line = [g5 f5 e5 d5 c5 b4 a4 g4].swing.inst(vibes)` },
-        `<p>Put the devices together over a ii-V-I. Arpeggiate Dm7 from its 3rd, climb G7 and come down through the bebop passing tone F#, and resolve the F (7th of G7) to E (3rd of Cmaj7) across the bar line.</p>`,
-        { code: `tempo 170\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead.vel(.45)\nvoice bass = tune.root.octave(-1).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.35)\nvoice line = <[f4 a4 c5 e5 d5 c5 b4 a4] [g4 b4 d5 g5 _ f#5 f5 _] [e5 _ _ c5 b4 c5 _ .] [.]>.swing.inst(vibes)`, bars: 4 },
+        `<p>A bebop line over a ii-V-I. Listen to how it hits the chord on almost every beat, and how it slides from one chord into the next.</p>`,
+        { code: `-- Dm7, G7, Cmaj7.\n-- Change f5 in bar 2 to e5: the line arrives on bar 3 by repetition instead of by half step, and loses its snap.\ntempo 170\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nvoice comp = ([0 . . 0 . . . .] + tune).rootless.voicelead.swing.vel(.45)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.35)\nvoice line = <[f4 a4 c5 e5 d5 c5 a4 f4] [g4 b4 d5 g5 _ f#5 f5 _] [e5 _ _ c5 b4 c5 _ .] [.]>.swing.inst(vibes)`, bars: 4 },
+        `<p>Bebop melody, from Charlie Parker and Dizzy Gillespie on, follows a few rules so consistently that they work like grammar. That line uses each of them.</p>
+         <ul><li><b>Chord tones on the beat.</b> Strong beats outline the harmony; offbeats connect. Bar 1 lands F, C, D, A on the beats, all in Dm7.</li>
+         <li><b>Arpeggios from the 3rd up</b>: F A C E is 3, 5, 7, 9 of Dm7, the rootless voicing played as a line.</li>
+         <li><b>Guide-tone targets</b>: F, the 7th of G7, falls to E, the 3rd of Cmaj7, across the bar line.</li>
+         <li><b>Bebop scales</b> add one chromatic passing note to a seven-note scale. In bar 2, F# slips between G and F.</li>
+         <li><b>Enclosures and chromatic approaches</b> aim at targets, as in the nonchord-tone lesson.</li></ul>`,
+        { code: `-- The G bebop dominant scale, descending in eighths from G.\n-- Delete f#5 and add g4 at the end: the plain mixolydian scale, for the next example.\ntempo 160\nvoice comp = g3@7.rootless.vel(.45)\nvoice bass = [g2 . d2 .].inst(upright)\nvoice line = [g5 f#5 f5 e5 d5 c5 b4 a4].swing.inst(vibes)` },
+        `<p>The <b>bebop dominant scale</b> is mixolydian with a major 7th added: G A B C D E F F# G. Descend from G in eighths and the beats land on G, F, D and B, the chord tones of G7.</p>`,
+        { code: `-- Mixolydian only, no F#.\n-- Listen to beats 2, 3 and 4: E, C and A, none of them in G7. The chord tones have slipped onto the offbeats.\ntempo 160\nvoice comp = g3@7.rootless.vel(.45)\nvoice line = [g5 f5 e5 d5 c5 b4 a4 g4].swing.inst(vibes)` },
+        `<p>Without the passing F#, the descent drifts from beat 2 on, and the line sounds aimless. One added note fixes it.</p>`,
+        { code: `-- Partly done: a C bebop major scale (C D E F G G# A B) descending from C6, with a gap.\n-- Fill the gap with g#5 so the beats land on C, A, G and E.\nvoice comp = c3@6.vel(.4)\nvoice line = [c6 b5 a5 . g5 f5 e5 d5].swing.inst(vibes)` },
         { exercise: {
           task: `<p>Over <b>G7</b>, write <code>voice line</code>: eight eighth notes descending the <b>G bebop dominant</b> scale from G5. Every note on a beat (notes 1, 3, 5, 7) must be a chord tone of G7, and the passing F# must be in it.</p>`,
           starter: `voice comp = g3@7.rootless.vel(.4)\nvoice line = [g5 f5 e5 d5 c5 b4 a4 g4].swing`,
@@ -208,14 +213,16 @@ export const UNIT4: Unit = {
             if (l.length !== 8) return `That is ${l.length} notes; write 8.`;
             if (l[0] !== 79) return "Start on G5.";
             if (!l.every(x => subset([x], [7, 9, 11, 0, 2, 4, 5, 6]))) return "Stay in the G bebop dominant scale: G A B C D E F F#.";
-            for (let i = 0; i < 8; i += 2) if (!subset([l[i]], [7, 11, 2, 5])) return `Note ${i + 1} (${nm(l[i])}) is on a beat but is not a chord tone of G7.`;
+            for (let i = 0; i < 8; i += 2) if (!subset([l[i]], [7, 11, 2, 5])) return `Note ${i + 1} (${nm(l[i], "sharps")}) is on a beat but is not a chord tone of G7.`;
             return l.some(x => pc(x) === 6) ? null : "Include the passing F#.";
           },
         } },
         { quiz: [
+          { q: "Listen. G7 sounds. Bebop scale (with F#) or plain mixolydian?", listen: `tempo 140\nvoice comp = g3@7.rootless.vel(.45)\nvoice line = [g5 f#5 f5 e5 d5 c5 b4 a4].swing.inst(vibes)`, bars: 1, options: ["Bebop scale", "Mixolydian"], answer: 0, explain: "The half step F# to F near the top, and the line lands on B at the end of the bar." },
+          { q: "Listen. Dm7 to G7. Does the line cross the bar line by half step (7th to 3rd)?", listen: `voice comp = changes("Dm7 | G7").rootless.voicelead.vel(.45)\nvoice line = <[f4 a4 c5 e5 d5 _ c5 _] [b4 _ _ _ . . . .]>.swing.inst(vibes)`, bars: 2, options: ["Yes, C to B", "No, it leaps"], answer: 0, explain: "C, the 7th of Dm7, falls to B, the 3rd of G7." },
           { q: "The bebop dominant scale adds which note to mixolydian?", options: ["The b9", "The major 7th", "The #11", "The b3"], answer: 1 },
           { q: "Why add the passing note?", options: ["To make the scale symmetrical", "So chord tones fall on the beats in a run of eighths", "To avoid the tritone", "For a darker sound"], answer: 1 },
-          { q: "In a ii-V-I, the 7th of V7 usually resolves to...", options: ["the root of I", "the 3rd of I", "the 5th of I", "the 7th of I"], answer: 1 },
+          { q: "From the nonchord-tone lesson: F, D#, E is what device aimed at E?", options: ["A suspension", "An enclosure", "An escape tone", "A pedal"], answer: 1 },
         ] },
       ],
     },
@@ -223,35 +230,39 @@ export const UNIT4: Unit = {
     {
       id: "modal", title: "Modal jazz and quartal harmony",
       parts: [
-        `<p>Around 1959, players including Miles Davis, Bill Evans and John Coltrane began writing tunes with very few chords that last a long time, sometimes eight or sixteen bars each. In <b>modal jazz</b> the harmony is a mode rather than a progression, and the interest moves to melody, rhythm and texture.</p>
-         <p>A common modal form is a 32-bar AABA in which the A sections are one dorian mode and the bridge is the same mode a half step up. The tension comes from the shift itself.</p>`,
-        { code: `tempo 140\nsection main 4\n  key d dorian\n  let q = {^1 ^4 ^7 ^10}\n  voice pad = <q q q.step(1) q.step(1)>.inst(keys).vel(.5)\n  voice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\nsection bridge 4\n  key eb dorian\n  let q = {^1 ^4 ^7 ^10}\n  voice pad = <q q q.step(1) q.step(1)>.inst(keys).vel(.5)\n  voice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.35)\nform main main bridge main` },
-        `<p>Tertian chords (stacks of thirds) point at a root and a function. <b>Quartal</b> chords (stacks of fourths) don't, which suits music that doesn't want to move. A powerful modal technique is <b>planing</b>: keep one shape and slide it through the mode step by step. Because the steps are diatonic, the fourths are mostly perfect, with an occasional tritone that adds a bite. In Tine, write the shape on degrees and move it with <code>.step</code>.</p>`,
-        { code: `tempo 120\nkey d dorian\nlet q = {^1 ^4 ^7 ^10}\nvoice planing = [q q.step(1) q.step(2) q.step(1) q . q.step(-1) .].inst(keys).swing\nvoice bass = [^1 _ _ _ ^1 _ _ _].octave(-2).inst(upright)` },
-        `<p><b>Sus chords</b> are the other modal staple. A 9sus4 chord (G C D F A) is really an F triad over G, or Dm7 over G: it has a dominant's root and seventh but no third, so it floats instead of resolving. Herbie Hancock built whole tunes from chains of sus chords. A <b>pedal point</b>, one bass note held while chords change above it, does the same thing.</p>`,
-        { code: `tempo 90\nvoice comp = <g3@9sus4 ab3@maj7 g3@9sus4 f3@m11>.voicelead.inst(keys)\nvoice bass = [g1 _ _ _].inst(upright)` },
+        `<p>Sixteen bars on almost one chord. Listen for the one big event: where the whole texture shifts.</p>`,
+        { code: `-- A sections in D dorian, the bridge in Eb dorian.\n-- Change key eb dorian to key g dorian: the bridge moves up a fourth instead of a half step.\ntempo 140\nsection main 4\n  key d dorian\n  let q = {^1 ^4 ^7 ^10}\n  voice pad = <q q q.step(1) q.step(1)>.inst(keys).vel(.5)\n  voice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\nsection bridge 4\n  key eb dorian\n  let q = {^1 ^4 ^7 ^10}\n  voice pad = <q q q.step(1) q.step(1)>.inst(keys).vel(.5)\n  voice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.35)\nform main main bridge main` },
+        `<p>Around 1959, Miles Davis, Bill Evans, John Coltrane and others began writing tunes with very few chords, each lasting eight or sixteen bars. In <b>modal jazz</b> the harmony is a mode rather than a progression, and the interest moves to melody, rhythm and texture. That example is a common modal form: a 32-bar AABA (shortened here) whose A sections are one dorian mode and whose bridge is the same mode a half step up. The shift is the drama.</p>`,
+        { code: `-- One quartal shape slid through D dorian.\n-- Change q.step(2) to q.step(3): a new chord, with a tritone inside (B to F).\ntempo 120\nkey d dorian\nlet q = {^1 ^4 ^7 ^10}\nvoice planing = [q q.step(1) q.step(2) q.step(1) q . q.step(-1) .].inst(keys).swing\nvoice bass = [^1 _ _ _ ^1 _ _ _].octave(-2).inst(upright)` },
+        `<p>Chords built from thirds (<b>tertian</b>) point at a root and a function. Chords built from fourths (<b>quartal</b>) don't, which suits music that doesn't want to move. Sliding one shape through the mode step by step, as you just heard, is <b>planing</b>. The steps are diatonic, so the fourths are mostly perfect, with an occasional tritone that adds a bite. In Tine, write the shape on degrees and move it with <code>.step</code>.</p>`,
+        { code: `-- G9sus4, Abmaj7, G9sus4, Fm11, all over a G pedal.\n-- Change the bass to <g1 g1 g1 f1>.inst(upright): the last chord settles as Fm11, and the pedal's float is gone.\ntempo 90\nvoice comp = <g3@9sus4 ab3@maj7 g3@9sus4 f3@m11>.voicelead.inst(keys)\nvoice bass = [g1 _ _ _].inst(upright)`, bars: 4 },
+        `<p><b>Sus chords</b> are the other modal staple. G9sus4 (G C D F A) is Dm7 over G: it has a dominant's root and seventh but no third, so it floats instead of resolving. Herbie Hancock built whole tunes from chains of sus chords. A <b>pedal point</b>, one bass note held while chords change above it, does the same.</p>`,
+        { code: `-- Partly done: one quartal chord in D dorian. Add two more after it: q.step(1) and q.step(2).\nkey d dorian\nlet q = {^1 ^4 ^7 ^10}\nvoice comp = [q . . .].inst(keys)` },
         { exercise: {
-          task: `<p>In <b>D dorian</b>, write <code>voice comp</code> that <b>planes a quartal voicing</b> through the mode: at least three different four-note chords, each a stack of fourths (every gap between neighboring notes a perfect fourth or a tritone), all from D dorian.</p>`,
-          starter: `key d dorian\nvoice comp = [^1@7 ^2@7 ^3@7 .]`,
-          solution: `key d dorian\nlet q = {^1 ^4 ^7 ^10}\nvoice comp = [q q.step(1) q.step(2) .]`,
+          task: `<p>In <b>E dorian</b>, write <code>voice comp</code> that <b>planes a quartal voicing</b> through the mode: at least three different four-note chords, each a stack of fourths (every gap between neighboring notes a perfect fourth or a tritone), all from E dorian.</p>`,
+          starter: `key e dorian\nvoice comp = [^1@7 ^2@7 ^3@7 .]`,
+          solution: `key e dorian\nlet q = {^1 ^4 ^7 ^10}\nvoice comp = [q q.step(1) q.step(2) .]`,
+          hint: "Build a shape a fourth apart on degrees, like {^1 ^4 ^7 ^10}, and move it with .step.",
           check: (_s, n) => {
             const m = need(n, "comp"); if (m) return m;
             const g = groups(of(n, "comp")).filter(x => x.semis.length >= 2);
-            const dor = [2, 4, 5, 7, 9, 11, 0];
+            const dor = [4, 6, 7, 9, 11, 1, 2];
             const seen = new Set<string>();
             for (const ch of g) {
               if (ch.semis.length !== 4) return `One chord has ${ch.semis.length} notes; use four.`;
-              for (let i = 1; i < 4; i++) { const d = ch.semis[i] - ch.semis[i - 1]; if (d !== 5 && d !== 6) return `${nms(ch.semis)} is not a stack of fourths (a gap of ${d} half steps).`; }
-              if (!subset(ch.semis, dor)) return `${nms(ch.semis)} leaves D dorian.`;
+              for (let i = 1; i < 4; i++) { const d = ch.semis[i] - ch.semis[i - 1]; if (d !== 5 && d !== 6) return `${nms(ch.semis, "sharps")} is not a stack of fourths (a gap of ${d} half steps).`; }
+              if (!subset(ch.semis, dor)) return `${nms(ch.semis, "sharps")} leaves E dorian.`;
               seen.add(ch.semis.join(","));
             }
             return seen.size >= 3 ? null : `I hear ${seen.size} different quartal chords; plane through at least three.`;
           },
         } },
         { quiz: [
+          { q: "Listen. A D bass, then a chord. Is it built in thirds or in fourths?", listen: `voice b = d2.inst(upright)\nvoice x = <. {d3 g3 c4 f4}>.inst(keys)`, bars: 2, options: ["Thirds", "Fourths"], answer: 1, explain: "D G C F: every gap is a perfect fourth." },
+          { q: "Listen. The A section is D dorian. Where does the bridge go?", listen: `tempo 160\nsection main 2\n  key d dorian\n  voice pad = {^1 ^4 ^7 ^10}.inst(keys).vel(.5)\n  voice b = ^1.octave(-2).inst(upright)\nsection bridge 2\n  key eb dorian\n  voice pad = {^1 ^4 ^7 ^10}.inst(keys).vel(.5)\n  voice b = ^1.octave(-2).inst(upright)\nform main bridge main`, bars: 6, options: ["Up a half step", "Up a fourth", "Down a whole step"], answer: 0 },
           { q: "What replaces a progression in modal jazz?", options: ["A mode held for many bars", "A twelve-tone row", "A fixed bass riff", "Constant modulation"], answer: 0 },
           { q: "A 9sus4 chord leaves out which chord tone?", options: ["The root", "The 3rd", "The 7th", "The 9th"], answer: 1 },
-          { q: "Planing means...", options: ["moving one voicing shape through a scale", "removing the root", "holding a bass note", "doubling the melody"], answer: 0 },
+          { q: "From the modes lesson: what is the signature note of dorian?", options: ["The b2", "The natural 6", "The #4", "The b7"], answer: 1 },
         ] },
       ],
     },
