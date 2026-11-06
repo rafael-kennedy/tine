@@ -157,7 +157,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `off(p, t, f)` | Layer p with a copy shifted by t bars and transformed by f. |
 | `echo(p, times: 3, time: 1/8, decay: 0.6)` | Repeat each event, quieter each time. |
 | `ply(p, n)` | Repeat each event n times within its own length. n may be a pattern. |
-| `swing(p, amount: 1/3, div: 8)` | Delay every second subdivision (eighths by default) by a fraction of a step. |
+| `swing(p, amount: 1/3, div: 8)` | Delay every second subdivision (eighths by default) by a fraction of a step. 1/3 gives triplet swing (long-short 2:1), 0.2 a lighter 3:2, 0 is straight. |
 | `stack(a, b, ...)` | Play patterns at the same time. |
 | `cat(a, b, ...)` | One pattern per bar, in turn. |
 | `seq(a, b, ...)` | Squeeze patterns one after another into a single bar. |
@@ -321,7 +321,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `drop2(p)` | Drop-2 voicings: close position, with the second voice from the top dropped an octave. |
 | `drop3(p)` | Drop-3 voicings: close position, with the third voice from the top dropped an octave. |
 | `drop24(p)` | Drop-2-and-4 voicings: the second and fourth voices from the top dropped an octave. |
-| `voicelead(p, around: e4)` | Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: the chain is replayed from bar 0. |
+| `voicelead(p, around: e4)` | Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: built on evolve, so the chain is replayed from bar 0. |
 | `interval(a, b, long: false)` | The interval between two pitches by size: interval(c4, e4) is "M3"; with long: true, "major 3rd". Tine counts semitones, so C-F# and C-Gb are both TT (tritone). |
 
 ## Scales

@@ -93,7 +93,7 @@ export interface CellOptions { seed: () => number; onScene?: (s: Scene, src: str
 
 export function makeCell(cell: Cell, o: CellOptions): HTMLElement & { view: () => EditorView } {
   const bars = cell.bars ?? autoBars(cell.code);
-  const box = h("div", { class: "cell" }) as HTMLElement & { view: () => EditorView };
+  const box = h("div", { class: "cell" }) as unknown as HTMLElement & { view: () => EditorView };
   const edHost = h("div");
   const playBtn = h("button", { class: "primary small" }, "▶ play");
   const stopBtn = h("button", { class: "small" }, "■");

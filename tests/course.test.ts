@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import { evaluate, renderNotes } from "../src/core";
-import { UNITS, COURSE_LESSONS } from "../src/web/course";
+import { UNITS, COURSE_LESSONS } from "../src/web/course/index";
 
 // Every example in the theory course must play, every challenge's answer must pass
 // (and its starter must not), and every quiz must be well formed and its listening examples must play.

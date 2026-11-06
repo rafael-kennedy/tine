@@ -28,6 +28,7 @@ usage:
   tine roll <file> [--bars N]  draw the piece as a piano roll in the terminal
   tine daw [file]              open the live-coding DAW in your browser
   tine learn                   open the interactive tutorial
+  tine theory                  open the music theory course
   tine pack <file> [-o out.html]
                                package a piece as a single-file HTML player
   tine pack <file> --exe [--runtime tine-windows-x64.exe] [-o name]
@@ -38,7 +39,7 @@ usage:
 options:
   --seed N     override the seed for this run (files with 'seed' keep theirs)
   --bars N     how many bars to render when a file has no 'form'
-  --port N     port for daw/learn (default 7357)
+  --port N     port for daw/learn/theory (default 7357)
   --samples D  folder of .wav files usable as sample("name")
 `;
 
@@ -137,7 +138,7 @@ async function main() {
       console.log(dim(`\nseed ${scene.seed}`));
       return;
     }
-    case "daw": case "learn": { await serve(cmd, pos[0], flags); return; }
+    case "daw": case "learn": case "theory": { await serve(cmd, pos[0], flags); return; }
     case "pack": { await pack(pos[0], flags); return; }
     case "new": {
       const name = pos[0] ?? "untitled";
@@ -167,7 +168,7 @@ voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3 .].every(4, rev).inst(pluck)
 `;
 }
 
-async function serve(kind: "daw" | "learn", file: string | undefined, flags: Record<string, any>) {
+async function serve(kind: "daw" | "learn" | "theory", file: string | undefined, flags: Record<string, any>) {
   const port = flags.port ? parseInt(flags.port, 10) : 7357;
   const path = file ? resolve(file) : undefined;
   if (path && !existsSync(path)) writeFileSync(path, template(randomSeed()));
@@ -185,8 +186,9 @@ async function serve(kind: "daw" | "learn", file: string | undefined, flags: Rec
     port, hostname: "127.0.0.1",
     async fetch(req) {
       const url = new URL(req.url);
-      if (url.pathname === "/" || url.pathname === "/index.html") return new Response(kind === "learn" ? assets.LEARN_HTML : assets.DAW_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
+      if (url.pathname === "/" || url.pathname === "/index.html") return new Response(kind === "learn" ? assets.LEARN_HTML : kind === "theory" ? assets.THEORY_HTML : assets.DAW_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
       if (url.pathname === "/learn") return new Response(assets.LEARN_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
+      if (url.pathname === "/theory") return new Response(assets.THEORY_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
       if (url.pathname === "/daw") return new Response(assets.DAW_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
       if (url.pathname === "/api/file") {
         if (!path) return Response.json({ path: null, content: null });

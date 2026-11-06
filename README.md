@@ -20,10 +20,11 @@ voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .]
 
 | | |
 | --- | --- |
-| **Language** | `src/core`: parser, interpreter, exact-time patterns, seeded randomness, pitch and tuning model, synth, per-voice effects, WAV, MIDI and MusicXML writers |
+| **Language** | `src/core`: parser, interpreter, exact-time patterns, seeded randomness, pitch and tuning model, synth, per-voice effects, chord symbols, lead-sheet changes and jazz voicings, WAV, MIDI and MusicXML writers |
 | **REPL** | `tine`: multi-line input, tab completion, piano-roll drawings in the terminal, `:play`, `:seed`, `:save` |
 | **DAW** | `tine daw piece.tine`: live coding in the browser with bar-quantized hot swap, mute/solo, sections as launchable scenes, MIDI in/out with control and program changes, MIDI clock in and out, controller mapping, per-voice effects, synthesis in a background thread, capture of played notes into code, sample loading, a history of every take with its seed, WAV/MIDI export |
 | **Tutorial** | `tine learn`: 14 interactive lessons with live examples and checked exercises |
+| **Theory course** | `tine theory`: a jazz-first college theory sequence, 101 through 202, in 35 lessons with live examples, challenges checked by what your code plays, and quizzes with ear training |
 | **Packaging** | standalone `tine` binaries for Linux, macOS and Windows; `tine pack` turns one piece into a single-file HTML player or its own executable |
 | **Editors** | a language server (`tine lsp`), a VS Code extension, and support files for Neovim, Vim, Helix, Emacs, Sublime, JetBrains and Zed (`editors/`) |
 | **Brand** | logo, icons and palette in `brand/` |
@@ -32,7 +33,7 @@ voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .]
 
 ## Install
 
-Download the binary for your machine from `dist/bin/` (or a release), rename it to `tine`, and put it on your PATH. It has no dependencies: the DAW, the tutorial and the language server are inside it.
+Download the binary for your machine from `dist/bin/` (or a release), rename it to `tine`, and put it on your PATH. It has no dependencies: the DAW, the tutorial, the theory course and the language server are inside it.
 
 | Platform | File |
 | --- | --- |
@@ -51,6 +52,7 @@ From source, with [Bun](https://bun.sh): `bun install`, then `bun src/cli/main.t
 tine new groove            # a starting point
 tine daw groove.tine       # open the live DAW (Chrome/Edge for MIDI)
 tine learn                 # the tutorial
+tine theory                # the music theory course
 tine render groove.tine    # groove.wav
 tine midi groove.tine      # groove.mid, one track per voice, for any other DAW
 tine xml groove.tine       # groove.musicxml, a score for MuseScore, Dorico, Sibelius

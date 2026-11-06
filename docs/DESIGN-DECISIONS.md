@@ -271,7 +271,7 @@ In 1.0 every note's audio was computed on the browser's main thread, the same th
 - `evolve(start, (state, bar) => next, (state, bar) => pattern)` defines the state at bar *n* as the step function applied *n* times to the start. It is a fold over bars. Asking for bar 37 computes bars 1 to 37 once and remembers them, so any bar can be asked in any order, and the result is always the same. That keeps seeking, looping, rendering a slice and replaying a take exact.
 - The memory is keyed by seed, voice and section start, so a section restarts its state when it starts, and two voices never share a walk. Randomness inside the step is keyed by bar, so a seeded random walk replays exactly.
 - Cost is linear in how far into the piece you are, once. A cap of 100,000 bars stops a mistake from eating memory; that is over two days of music at 120 BPM.
-- The jazz course's `voicelead` (smooth chord voicing, where each chord depends on the last) is being moved onto it, which is the test that it is general enough.
+- The jazz course's `voicelead` (smooth chord voicing, where each chord depends on the last) now runs on it, which is the test that it is general enough. See section 34.
 
 ## 29. MusicXML export
 
@@ -296,3 +296,41 @@ An arrangement written in Tine against 1.0 found three rough edges, now fixed:
 - Naming a parameter `f` (a note) now suggests a rename, `fn`, instead of only saying it is not allowed.
 - The terminal piano roll spells notes by the file's key, so B minor shows `a#` and not `bb`.
 
+
+## 32. Chord symbols
+
+- `c4@maj7`, `chord("Bb7#11")` and `changes("Dm7 G7 | Cmaj7")` all read one grammar, in `core/harmony.ts`. It is a family (`m`, `-`, `maj`, `M`, `Δ`, `dim`, `o`, `ø`, `m7b5`, `aug`, `+`, `mmaj`), then a number (5, 6, 69, 7, 9, 11, 13), then any modifiers (`sus`, `alt`, `add9`, `no5`, `b9`, `#11`, `b13`, and so on). Named shapes in the old chord table are checked first, so nothing that worked before changed.
+- **Chosen: the lead-sheet spellings musicians already write**, including `-7` and `Δ7`. Real Book charts use all of them, and a course that rejected `C-7` would be teaching Tine instead of jazz.
+- `ma` only counts as major when a digit follows (`Ama7`), so `madd9` is minor add 9.
+- A slash bass (`c4@m7/g`, `"C/E"`) goes below the root unless it names an octave. The other choice, the nearest bass note, puts the bass above the root half the time.
+- After `@`, the lexer reads a whole symbol token (`@7#9`, `@maj7/e`). That is why `#` and `+` are allowed there and nowhere else.
+- On a scale degree, a bare number still means a diatonic stack (`^2@7` is ii7). On an altered degree (`^b7@7`) the number names the quality, because there is no diatonic chord on a note outside the key.
+
+## 33. `changes()` and voicings
+
+- `changes("Dm7 G7 | Cmaj7 | %")` reads a lead sheet. Bars split on `|`; chords in a bar share it equally; `/` or `_` holds the previous chord one slot; `%` alone in a bar repeats the last bar; `N.C.` is a rest. A `%` inside a bar is an error with a message, because it has two plausible meanings.
+- Chords now carry their root and bass as metadata through transposition. `root`, `bassnote` and `name()` use it, so a rootless F7 is still named F13, not the Ebmaj7#11 its notes spell. Without the hint, naming is a scored search: a root not in the bass, a missing root and each omitted tone cost points, and only the root and 5th may be omitted.
+- Voicings are functions over chord patterns: `shell` (root, 3, 7), `guide` (3 and 7), `rootless(form: "a"|"b")` (Bill Evans A and B forms, the 13th replacing the 5th on dominants), `drop2`, `drop3`, `drop24`. They keep register limits so a voicing never sinks into mud below about D3.
+- `bass` was taken by the instrument, so the lowest-note function is `bassnote`.
+
+## 34. `voicelead`
+
+- `.voicelead(around: e4)` picks, for each chord, the inversion and octave that moves least from the chord before, with a small pull toward a center note so a long progression does not drift off the keyboard.
+- It is built on `evolve` (section 28). The state is the last voicing of the previous bar; each bar is voiced chord by chord from it. That makes it order independent: asking for bar 9 first gives the same notes as playing through. A test checks this.
+- **Chosen: close-position inversions only.** Spread and drop voicings are a separate step (`.drop2.voicelead` is fine). Searching every spacing finds smoother lines but takes much longer and gives voicings a pianist would not pick.
+
+## 35. The theory course
+
+`tine theory` opens a 35-lesson course, Theory 101 through 202, in the browser. The page is built from `src/web/course/` and shares its cell, challenge and quiz code with the tutorial (`src/web/cells.ts`).
+
+- **Jazz first, not jazz last.** Most college sequences teach four-part chorale writing for a year and reach jazz as an elective. Here swing is lesson 3, seventh chords lesson 8, ii-V-I lesson 14, the blues lesson 15. Classical topics that jazz uses (cadences, nonchord tones, Neapolitan and augmented sixths, mixture, modulation) stay, explained in jazz terms where it helps. Species counterpoint and figured bass are left out; they are about writing for voices in a style Tine does not target.
+- Four units: 101 Fundamentals, 102 Diatonic harmony and the jazz core, 201 Chromatic harmony, 202 Jazz harmony and beyond (tensions, modes, melodic minor, voicings, bebop, modal jazz, Coltrane changes, reharmonization, post-tonal sets and rows).
+- **Challenges are checked by what the code plays, not how it is written.** A check gets the notes and compares pitch-class sets, bar by bar. Any correct answer passes, including one the author did not think of. Tests make sure every solution passes and every starter fails.
+- **No staff notation.** Tine works in sounding pitch and has no enharmonic spelling, so Fb and E are the same note. The course says so on its home page and spells chords by their usual jazz names in prose. A staff view would need a spelling engine; MusicXML export (section 29) already spells by key if you want a score.
+- **No global swing.** A `swing` statement would clash with the `swing` function and make swing a property of the piece rather than of each player. Lessons use `.swing` per voice, the way a drummer and a pianist can swing differently.
+- New sounds for the course: `upright` (bass) and `vibes`. New scales: altered, lydian dominant, lydian augmented, mixolydian b6, locrian natural 2, dorian b2, phrygian dominant, both diminished scales, augmented, major blues, and three bebop scales.
+- Lesson prose never uses an em-dash. A test enforces it.
+
+## 36. A fix found by the course: `.key()` on a pattern
+
+- `voice v = [^1 ^3 ^5].key(d, minor)` ignored the key, because degrees were resolved before the method ran. The key now travels with each note as a parameter, and an inner `.key` wins over an outer one. A regression test covers it.
