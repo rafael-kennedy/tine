@@ -3,7 +3,20 @@
 // so the DAW, the tutorial and exported WAVs sound alike.
 import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx } from "../core";
 
-interface Chain { input: GainNode; hp: BiquadFilterNode; lp: BiquadFilterNode; pre: GainNode; shaper: WaveShaperNode; post: GainNode; dly: DelayNode; fb: GainNode; wet: GainNode; drive: number }
+// Parameters can be exact rationals (class R). A structured clone to the
+// worker drops their prototype, and Number() of the bare object is NaN, so
+// send plain numbers.
+export function plainParams(p: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (v && typeof v === "object" && typeof v.toNumber === "function") out[k] = v.toNumber();
+    else if (v === null || typeof v !== "object") out[k] = v;
+    else if (k === "ctl") out[k] = plainParams(v);
+  }
+  return out;
+}
+
+interface Chain { input: GainNode; hp: BiquadFilterNode; lp: BiquadFilterNode; pre: GainNode; shaper: WaveShaperNode; post: GainNode; dly: DelayNode; fb: GainNode; wet: GainNode; drive: number; hpSet: number; lpSet: number }
 
 export interface PlayableNote { semi: number; vel: number; durSec: number; params: Record<string, any>; voice: string }
 
@@ -86,7 +99,7 @@ export class Engine {
   }
 
   private job(n: PlayableNote, inst: string, dur: number) {
-    return { inst, freq: freqOf(n.semi, this.tuningRef), semi: n.semi, vel: n.vel, dur, params: n.params };
+    return { inst, freq: freqOf(n.semi, this.tuningRef), semi: n.semi, vel: n.vel, dur, params: plainParams(n.params) };
   }
 
   private store(key: string, data: Float32Array): AudioBuffer {
@@ -155,7 +168,7 @@ export class Engine {
     let c = this.chains.get(voice);
     if (!c) {
       const x = this.ctx;
-      c = { input: x.createGain(), hp: x.createBiquadFilter(), lp: x.createBiquadFilter(), pre: x.createGain(), shaper: x.createWaveShaper(), post: x.createGain(), dly: x.createDelay(MAX_DELAY_SEC), fb: x.createGain(), wet: x.createGain(), drive: 0 };
+      c = { input: x.createGain(), hp: x.createBiquadFilter(), lp: x.createBiquadFilter(), pre: x.createGain(), shaper: x.createWaveShaper(), post: x.createGain(), dly: x.createDelay(MAX_DELAY_SEC), fb: x.createGain(), wet: x.createGain(), drive: 0, hpSet: 10, lpSet: 20000 };
       c.hp.type = "highpass"; c.lp.type = "lowpass"; c.hp.Q.value = c.lp.Q.value = Math.SQRT1_2;
       c.hp.frequency.value = 10; c.lp.frequency.value = 20000; c.wet.gain.value = 0; c.fb.gain.value = 0;
       c.input.connect(c.hp).connect(c.lp).connect(c.pre).connect(c.shaper).connect(c.post).connect(this.master);
@@ -164,8 +177,11 @@ export class Engine {
       this.chains.set(voice, c);
     }
     const t = Math.max(when, this.ctx.currentTime), tc = 0.005;
-    c.hp.frequency.setTargetAtTime(fx.hpf > 0 ? fx.hpf : 10, t, tc);
-    c.lp.frequency.setTargetAtTime(fx.lpf > 0 ? Math.min(fx.lpf, this.ctx.sampleRate * 0.49) : 20000, t, tc);
+    // filters are scheduled only when their setting changes; re-aiming a
+    // biquad at every note makes Chrome warn that its state is bad
+    const hp = fx.hpf > 0 ? fx.hpf : 10, lp = fx.lpf > 0 ? Math.min(fx.lpf, this.ctx.sampleRate * 0.49) : 20000;
+    if (hp !== c.hpSet) { c.hp.frequency.setTargetAtTime(hp, t, tc); c.hpSet = hp; }
+    if (lp !== c.lpSet) { c.lp.frequency.setTargetAtTime(lp, t, tc); c.lpSet = lp; }
     const dg = fx.drive > 0 ? driveGains(fx.drive) : { pre: 1, post: 1 };
     c.pre.gain.setTargetAtTime(dg.pre, t, tc); c.post.gain.setTargetAtTime(dg.post, t, tc);
     if ((fx.drive > 0) !== (c.drive > 0)) {
