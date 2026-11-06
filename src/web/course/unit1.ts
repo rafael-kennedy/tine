@@ -10,18 +10,19 @@ export const UNIT1: Unit = {
     {
       id: "pitch", title: "Pitch, octaves and half steps",
       parts: [
-        `<p>A pitch is a frequency. When one note vibrates exactly twice as fast as another, the two sound like the same note in a different register. That distance is the <b>octave</b>, and every musical system on earth treats it as special.</p>
-         <p>Western music divides the octave into twelve equal steps called <b>half steps</b> (or semitones). A piano shows them plainly: twelve keys, seven white and five black, then the pattern repeats. Two half steps make a <b>whole step</b>.</p>
-         <p>In Tine a note is a letter, an optional accidental (<code>#</code> sharp, <code>b</code> flat) and an octave number. <code>c4</code> is middle C. Here is every half step from middle C up to the B above it, the <b>chromatic scale</b>.</p>
-         <p>The octave number goes up at <b>C</b>, not at A. B3 is the key just below middle C, and the A and B above middle C are A4 and B4. So a scale from D4 runs D4 E4 F#4 G4 A4 B4 C#5 D5. Writing <code>a5</code> there would leap up an octave.</p>`,
-        { code: `voice chromatic = [c4 c#4 d4 eb4 e4 f4 f#4 g4 ab4 a4 bb4 b4]` },
-        `<p>Underneath, Tine numbers pitches the way MIDI does. Middle C is 60, and each half step adds one. So <code>c4 + 2</code> is D, a whole step up, and <code>c4 + 12</code> is the C an octave higher. The <code>hz</code> function shows the frequency. Notice the octave doubling.</p>`,
-        { code: `print(hz(a3), hz(a4), hz(a5))\nvoice octaves = [a3 a4 a5 .]` },
-        `<p><b>Enharmonic</b> notes share a key but not a name. C# and Db are the same piano key. In written music they mean different things: C# is a raised C, Db a lowered D, and theory cares which one a chord "really" contains. Tine works in sounding pitch, so <code>c#4 == db4</code> is true. When spelling changes the meaning of something, this course will say so.</p>
-         <p>You can do arithmetic with pitches. Parentheses let an expression sit inside a phrase.</p>`,
-        { code: `-- whole, whole, half: the first four notes of a major scale\nvoice steps = [c4 (c4 + 2) (c4 + 4) (c4 + 5)]` },
+        `<p>If you took Theory 100, the first half of this lesson is a fast review. It adds two tools the rest of the course leans on: counting half steps as numbers, and the idea that one key can have two names. Start by listening.</p>`,
+        { code: `-- three A's, each an octave above the last. The numbers printed are their frequencies.\n-- Change a5 to e5: no longer an octave, and the blend is gone.\nprint(hz(a3), hz(a4), hz(a5))\nvoice octaves = [a3 a4 a5 .]` },
+        `<p>A pitch is a frequency. When one note vibrates exactly twice as fast as another (220, 440, 880), the two sound like the same note in a higher or lower register. That distance is the <b>octave</b>, and nearly every musical tradition treats it as special.</p>`,
+        { code: `-- every key from middle C up to B: the chromatic scale.\n-- Delete every sharp and flat and play again: what is left is the C major scale.\nvoice chromatic = [c4 c#4 d4 eb4 e4 f4 f#4 g4 ab4 a4 bb4 b4]` },
+        `<p>Western music divides the octave into twelve equal steps called <b>half steps</b> (or semitones). The piano shows them as twelve keys, seven white and five black, before the pattern repeats. Two half steps make a <b>whole step</b>.</p>
+         <p>In Tine a note is a letter, an optional accidental (<code>#</code> sharp, <code>b</code> flat) and an octave number. <code>c4</code> is middle C, and the octave number goes up at C, not at A. So a scale from D4 runs D4 E4 F#4 G4 A4 B4 C#5 D5.</p>`,
+        { code: `-- D up to D. Change a4 to a5 and hear the leap a wrong octave number makes.\nvoice d_scale = [d4 e4 f#4 g4 a4 b4 c#5 d5]` },
+        `<p>Underneath, Tine numbers pitches the way MIDI does. Middle C is 60, and each half step adds one. So <code>c4 + 2</code> is D, a whole step up, <code>c4 + 12</code> is the C an octave higher, and you can do arithmetic with pitches. Parentheses let an expression sit inside a phrase.</p>`,
+        { code: `-- whole, whole, half: the first four notes of a major scale.\n-- Change + 5 to + 6 and the fourth note turns sour: F# is not in C major.\nvoice steps = [c4 (c4 + 2) (c4 + 4) (c4 + 5)]` },
+        `<p><b>Enharmonic</b> notes share a key but not a name. C# and Db are the same piano key. In written music they mean different things: C# is a raised C, Db a lowered D, and theory cares which one a chord "really" contains. Tine works in sounding pitch, so to Tine they are one note. When spelling changes the meaning of something, this course will say so.</p>`,
+        { code: `-- prints true: same pitch. You hear one note, twice.\nprint(c#4 == db4)\nvoice same = [c#4 _ db4 _]` },
         { exercise: {
-          task: `<p>Write <code>voice tune</code> that climbs from D4 to D5 using <b>only whole steps</b>. (You will need seven notes. This six-note-per-octave pattern is the <b>whole-tone scale</b>, a favorite of Debussy and Thelonious Monk.)</p>`,
+          task: `<p>Write <code>voice tune</code> that climbs from D4 to D5 using <b>only whole steps</b>. You will need seven notes. This six-notes-to-the-octave pattern is the <b>whole-tone scale</b>, a favorite of Debussy and of Thelonious Monk, who liked to run down it at the end of a phrase.</p>`,
           starter: `voice tune = [d4 e4]`,
           solution: `voice tune = [d4 e4 f#4 g#4 a#4 c5 d5]`,
           hint: `Count up by 2 from D: D, E, F#, G#, A#, C, D. Or write <code>d4 (d4 + 2) (d4 + 4)</code> and so on.`,
@@ -39,9 +40,11 @@ export const UNIT1: Unit = {
           },
         } },
         { quiz: [
-          { q: "How many half steps are in an octave?", options: ["7", "8", "12", "10"], answer: 2, explain: "Twelve. Seven of them are the white keys of a major scale." },
-          { q: "Which pair is enharmonic?", options: ["C# and Db", "E and F#", "B and Bb", "G and Ab"], answer: 0, explain: "Same key, different names." },
+          { q: "Listen. A C major chord sets the key, then two notes follow. Is the step between them a half step or a whole step?", listen: `voice x = <{c4 e4 g4} [e4 _ f4 _]>`, options: ["A half step", "A whole step"], answer: 0, explain: "E to F: no black key between them." },
           { q: "Listen. How far apart are the two notes?", listen: `voice x = [a4 _ a3 _]`, options: ["A half step", "A whole step", "An octave", "They are the same note"], answer: 2, explain: "A4 then A3: the same letter, half the frequency." },
+          { q: "How many half steps are in an octave?", options: ["7", "8", "12", "10"], answer: 2, explain: "Twelve keys, seven white and five black, before the pattern repeats." },
+          { q: "What note is <code>c4 + 7</code>?", options: ["F4", "G4", "A4", "B4"], answer: 1, explain: "Seven half steps up from C: C# D Eb E F F# G." },
+          { q: "Which pair is enharmonic?", options: ["C# and Db", "E and F#", "B and Bb", "G and Ab"], answer: 0, explain: "Same key, different names." },
         ] },
       ],
     },
@@ -49,34 +52,43 @@ export const UNIT1: Unit = {
     {
       id: "rhythm", title: "Beat, meter and rhythm",
       parts: [
-        `<p>The <b>beat</b> is the pulse you tap your foot to. <b>Tempo</b> is how fast it goes, in beats per minute. <b>Meter</b> groups beats into bars. A time signature names the meter: the top number counts beats in a bar, the bottom says which note value gets the beat. In 4/4 there are four quarter-note beats per bar.</p>
-         <p>In Tine one bar is one phrase. A phrase divides the bar into equal steps, so the number of steps decides the note values: four steps are quarter notes, eight are eighths, sixteen are sixteenths.</p>`,
-        { code: `tempo 100\nvoice quarters  = [c5 c5 c5 c5]\nvoice eighths   = [g4 g4 g4 g4 g4 g4 g4 g4]\nvoice sixteenth = [hat*16]` },
-        `<p>A rest is <code>.</code> and a hold is <code>_</code>. Holds make longer notes. A half note is one step plus a hold in a four-step bar; a whole note fills the bar.</p>`,
-        { code: `voice whole   = [c4 _ _ _]\nvoice halves  = [e4 _ g4 _]\nvoice quarter = [c5 . c5 .]` },
-        `<p>A <b>dot</b> adds half a note's value: a dotted quarter lasts three eighths. In Tine a weight says how many steps a note takes, so <code>c:3</code> in an eight-step bar is a dotted quarter. <b>Triplets</b> squeeze three notes into the space of two: nest a phrase inside one step.</p>`,
-        { code: `-- dotted quarter, eighth, quarter, quarter (in eighths: 3 + 1 + 2 + 2)\nvoice dotted = [c4:3 d4 e4:2 g4:2]\n-- a quarter-note triplet on beats 3 and 4\nvoice trip = [c5 c5 [e5 d5 c5]:2]` },
-        `<p><b>Simple meters</b> split the beat in two (2/4, 3/4, 4/4). <b>Compound meters</b> split it in three: 6/8 has two beats, each a dotted quarter made of three eighths. Jazz waltzes are in 3/4; a lot of blues and gospel feels like 12/8. Tine's <code>meter</code> line sets this, and <code>tempo</code> counts the bottom number.</p>`,
-        { code: `meter 6/8\ntempo 200\nvoice drums = {[kick . . snare . .] [hat*6]}\nvoice tune  = [g4 a4 b4 d5 _ b4]` },
-        `<p><b>Syncopation</b> puts emphasis where the beat isn't. The most important syncopation in jazz is the <b>Charleston</b> rhythm: a hit on beat 1 and another on the "and" of 2. Count eighths "1 and 2 and 3 and 4 and": the hits are on "1" and the second "and". Pianists comp with it constantly.</p>`,
-        { code: `tempo 120\nvoice clock = [rim . rim . rim . rim .].vel(.4)\nvoice comp  = [c4@maj7 . . c4@maj7 . . . .]` },
-        `<p>Another everyday syncopation is the <b>anticipation</b>: a chord arrives on the "and" of 4, an eighth note early, and is tied over the bar line. Players call it a push.</p>`,
-        { code: `voice clock = [rim rim rim rim].vel(.3)\nvoice push  = <[c4@6:7 (f4@7).dur(4.5)] [.]>`, bars: 2 },
+        `<p>Three voices, three speeds, one bar. Listen to how they lock together.</p>`,
+        { code: `tempo 100\n-- silence a line by putting -- in front of it, and listen to what each layer adds\nvoice quarters  = [c5 c5 c5 c5]\nvoice eighths   = [g4 g4 g4 g4 g4 g4 g4 g4]\nvoice sixteenth = [hat*16]` },
+        `<p>The <b>beat</b> is the pulse you tap your foot to; here it is the top voice. <b>Tempo</b> is how fast it goes, in beats per minute. <b>Meter</b> groups beats into bars, and a <b>time signature</b> names it: the top number counts beats in a bar, the bottom says which note value gets the beat. In 4/4 there are four quarter-note beats per bar.</p>
+         <p>A Tine phrase divides its bar into equal steps, so the number of steps sets the note values: four steps are quarter notes, eight are eighths, sixteen are sixteenths. <code>hat*16</code> is shorthand for sixteen hats.</p>`,
+        `<p>A rest is <code>.</code> and a hold is <code>_</code>. Holds make longer notes: a half note is one step plus a hold in a four-step bar, and a whole note fills the bar.</p>`,
+        { code: `-- a whole note, two half notes, and quarters with rests between.\n-- Change [c5 . c5 .] to [c5 _ c5 _]: same attacks, but now the notes ring.\nvoice whole   = [c4 _ _ _]\nvoice halves  = [e4 _ g4 _]\nvoice quarter = [c5 . c5 .]` },
+        `<p>Clap this one: long, short, then two even.</p>`,
+        { code: `-- dotted quarter, eighth, quarter, quarter. Counted in eighths: 3 + 1 + 2 + 2.\n-- Change c4:3 d4 to c4:2 d4:2 and the lilt flattens into even quarters.\nvoice dotted = [c4:3 d4 e4:2 g4:2]\nvoice beat   = [rim rim rim rim].vel(.3)` },
+        `<p>A <b>dot</b> after a note adds half its value, so a dotted quarter lasts three eighths. In Tine a weight says how many steps a note takes, so <code>c4:3</code> in an eight-step bar is a dotted quarter.</p>
+         <p>A <b>triplet</b> squeezes three notes into the space of two. In Tine you nest a phrase inside one step. Here the last two beats hold three even notes.</p>`,
+        { code: `-- a quarter-note triplet on beats 3 and 4.\n-- Change [e5 d5 c5]:2 to [e5 d5]:2 and hear the difference: two even notes instead of three.\nvoice trip = [c5 c5 [e5 d5 c5]:2]\nvoice beat = [rim rim rim rim].vel(.3)` },
+        `<p>Six eighth notes can be grouped two ways. Listen for where the accents fall.</p>`,
+        { code: `meter 6/8\ntempo 200\n-- bar 1: 3 + 3, two big beats (6/8). Bar 2: 2 + 2 + 2, three beats (the feel of 3/4).\nvoice accent = <[kick . . kick . .] [kick . kick . kick .]>\nvoice eighth = [hat*6].vel(.35)`, bars: 2 },
+        `<p><b>Simple meters</b> split each beat in two (2/4, 3/4, 4/4). <b>Compound meters</b> split it in three: 6/8 has two beats, each a dotted quarter made of three eighths. Jazz waltzes are in 3/4, and a lot of blues and gospel feels like 12/8. Tine's <code>meter</code> line sets the meter, and <code>tempo</code> counts the bottom number, so <code>tempo 200</code> in 6/8 means 200 eighth notes a minute.</p>`,
+        `<p><b>Syncopation</b> puts emphasis where the beat isn't. The most important syncopation in jazz is the <b>Charleston</b> rhythm: a hit on beat 1 and another on the "and" of 2. Count eighths out loud, "1 and 2 and 3 and 4 and", and clap with the chords.</p>`,
+        { code: `tempo 120\n-- the rim clicks every beat; the chord hits on 1 and the "and" of 2.\n-- Move the second chord one step later ([c4@maj7 . . . c4@maj7 . . .]): it lands on beat 3, and the kick of the rhythm is gone.\nvoice clock = [rim . rim . rim . rim .].vel(.4)\nvoice comp  = [c4@maj7 . . c4@maj7 . . . .]` },
+        `<p>Pianists comp (accompany) with the Charleston constantly. Another everyday syncopation is the <b>anticipation</b>, or <b>push</b>: a chord arrives on the "and" of 4, an eighth note early, and is tied over the bar line so it is already sounding when beat 1 comes.</p>`,
+        { code: `voice clock = [rim rim rim rim].vel(.3)\n-- the C6 chord lasts 7 of the 8 eighth notes (:7). The F7 enters on the last eighth.\n-- .dur(4.5) lets it ring for 4.5 beats, across the bar line, like a tie.\nvoice push  = <[c4@6:7 (f4@7).dur(4.5)] [.]>`, bars: 2 },
         { exercise: {
           task: `<p>Write <code>voice comp</code> that plays a chord (any chord) in the Charleston rhythm: on beat 1 and on the "and" of beat 2, in 4/4.</p>`,
           starter: `voice comp = [c4@maj7 . . . . . . .]`,
           solution: `voice comp = [c4@maj7 . . c4@maj7 . . . .]`,
-          hint: `In eight steps, beat 1 is step 1 and the "and" of 2 is step 4.`,
+          hint: `Use eight steps, one per eighth note. Beat 1 is step 1 and the "and" of 2 is step 4.`,
           check: (_s, n) => {
             const m = need(n, "comp"); if (m) return m;
             const t = groups(inBar(of(n, "comp"), 0)).map(g => g.t);
-            return JSON.stringify(t) === "[0,0.375]" ? null : `Your hits land at ${t.map(x => x * 8 + 1).join(", ")} (counting eighths from 1). The Charleston is 1 and 4.`;
+            if (JSON.stringify(t) === "[0,0.375]") return null;
+            const say = (x: number) => { const e = Math.round(x * 8); return e % 2 === 0 ? `beat ${e / 2 + 1}` : `the "and" of ${(e - 1) / 2 + 1}`; };
+            return `Your chords land on ${t.map(say).join(", ")}. The Charleston is beat 1 and the "and" of 2.`;
           },
         } },
         { quiz: [
+          { q: "Listen and count. Is this in three or in four?", listen: `meter 3/4\ntempo 150\nvoice d = {[kick hat hat] [. ride ride]}\nvoice b = <[c3 _ _] [g2 _ _]>.inst(upright)`, options: ["Three", "Four"], answer: 0, explain: "Boom, chick, chick: a waltz, three beats to the bar." },
+          { q: "Listen. Do the chords play on the beat, or in the Charleston rhythm?", listen: `tempo 120\nvoice clock = [rim rim rim rim].vel(.35)\nvoice comp = [f3@7 . . f3@7 . . . .]`, options: ["On beats 1 and 3", "The Charleston: 1 and the \"and\" of 2"], answer: 1 },
           { q: "How many beats does a bar of 6/8 usually feel like?", options: ["Six", "Two", "Three", "Eight"], answer: 1, explain: "Two dotted-quarter beats, each divided in three. That is what makes it compound." },
-          { q: "A dotted quarter note lasts as long as...", options: ["two eighths", "three eighths", "four eighths", "one and a half quarters plus an eighth"], answer: 1, explain: "A quarter (two eighths) plus half of that (one eighth)." },
-          { q: "Listen. Is this in three or in four?", listen: `tempo 150\nvoice d = {[kick hat hat] [. ride ride]}\nvoice b = <[c3 _ _] [g2 _ _]>.inst(upright)`, options: ["Three", "Four"], answer: 0, explain: "Boom, chick, chick: a waltz, three beats to the bar." },
+          { q: "A dotted quarter note lasts as long as...", options: ["two eighths", "three eighths", "four eighths", "five eighths"], answer: 1, explain: "A quarter (two eighths) plus half of that (one eighth)." },
+          { q: "From lesson 1: what is <code>c4 + 12</code>?", options: ["B4", "C5", "C3", "D4"], answer: 1, explain: "Twelve half steps is an octave." },
         ] },
       ],
     },
