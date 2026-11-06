@@ -61,7 +61,7 @@ export const UNIT4: Unit = {
       parts: [
         `<p>Seven scales, all starting on D. Each bar changes one note from the bar before. Listen to the scale get darker.</p>`,
         { code: `-- Brightest to darkest, one per bar.\n-- Change d4 to a4 and d2 to a2 and hear the same ladder from A.\nlet ladder = [lydian ionian mixolydian dorian aeolian phrygian locrian]\nvoice m = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(d4, at(ladder, bar))).inst(vibes)\nvoice drone = d2.inst(pad).vel(.3)`, bars: 7 },
-        `<p>Those are the seven <b>modes</b> of the major scale, each one the major scale started on a different note. Played on one root they form a ladder from bright to dark: <b>lydian, ionian, mixolydian, dorian, aeolian, phrygian, locrian</b>, each lowering one note. Each mode matches one diatonic seventh chord. That is <b>chord-scale theory</b>: for each chord, a scale holding its chord tones and its available tensions.</p>
+        `<p>Those are the seven <b>modes</b> of the major scale, each one the major scale started on a different note. Played on one root they form a ladder from bright to dark: <b>lydian, ionian, mixolydian, dorian, aeolian, phrygian, locrian</b>. Each mode matches one diatonic seventh chord. That is <b>chord-scale theory</b>: for each chord, a scale holding its chord tones and its available tensions.</p>
          <table class="t"><tr><th>mode</th><th>from</th><th>chord</th><th>signature note</th></tr>
          <tr><td>ionian</td><td>^1</td><td>Imaj7</td><td>4 (an avoid note)</td></tr>
          <tr><td>dorian</td><td>^2</td><td>ii7</td><td>natural 6</td></tr>
@@ -187,7 +187,7 @@ export const UNIT4: Unit = {
             const SP = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
             const ROLE: Record<number, string> = { 7: "G, the 9th", 11: "B, the #11", 2: "D, the 13th" };
             const pcs = pcset(g.semis), extra = pcs.filter(x => !want.includes(x)), missing = [7, 11, 2].filter(x => !pcs.includes(x));
-            if (missing.length === 3) return `You have ${nms(g.semis)}. Keep the shell, drop the 5th, and put the major triad a whole step above F on top.`;
+            if (missing.length === 3) return `You have ${g.semis.map(x => SP[((x % 12) + 12) % 12]).join(" ")}. ${pcs.includes(0) ? "Keep the shell, drop the 5th, and put" : "Keep the shell and put"} the major triad a whole step above F on top.`;
             if (extra.includes(10) && missing.includes(11)) return "Bb should be B, the #11. The triad is G major: G B D.";
             if (extra.includes(0)) return "C is extra: use six notes, and leave out the 5th.";
             if (extra.length) return `${SP[extra[0]]} is not in upper structure II. The triad on top is the one a whole step above F.`;
@@ -340,7 +340,7 @@ export const UNIT4: Unit = {
     {
       id: "reharm", title: "Reharmonization",
       parts: [
-        `<p>A plain four-bar melody with plain chords. Learn the melody first, because it stays the same through the next two examples.</p>`,
+        `<p>A plain four-bar melody with plain chords. Learn the melody first, because it stays the same for the rest of the lesson.</p>`,
         { code: `-- The melody: E D | C A | D F | E.\n-- Change Dm G7 to A G7 in bar 3: A major has C#, and the melody's D grinds a half step above it. Then change it back.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet plain = changes("C | Am | Dm G7 | C")\nvoice comp = plain.voicelead.vel(.5)\nvoice bass = plain.root.octave(-1).inst(upright)`, bars: 4 },
         `<p><b>Reharmonization</b> is choosing new chords under an existing melody. Arrangers use it to make a familiar tune sound new. The one hard rule: each melody note must fit the new chord, as a chord tone or an available tension. That is why the A chord under the D in your edit clashed.</p>`,
         { code: `-- The same melody, a new chord under almost every note.\n-- Change E7b13 to E7: the chord's C becomes C#, and it clashes with the melody's C.\ntempo 100\nvoice tune = <[e5 _ d5 _] [c5 _ a4 _] [d5 _ f5 _] [e5 _ _ _]>.inst(vibes)\nlet re = changes("Cmaj7 Bm7b5 | E7b13 Am7 | Dm9 G13 | Cmaj7")\nvoice comp = re.rootless.voicelead.vel(.5)\nvoice bass = re.root.octave(-1).inst(upright)`, bars: 4 },
@@ -367,7 +367,7 @@ export const UNIT4: Unit = {
             const tune = of(n, "tune"), chords = groups(of(n, "comp")).filter(g => g.semis.length >= 2);
             for (let b = 0; b < 3; b++) { const k = groups(inBar(of(n, "comp"), b)).filter(g => g.semis.length >= 2).length; if (k !== 2) return `Bar ${b + 1} has ${k} chord${k === 1 ? "" : "s"}; give it two.`; }
             // A copy of either lesson example: its first six chords each hold that example's 3rd and 7th.
-            const guides = [[[4, 11], [2, 9], [8, 2], [0, 7], [5, 0], [11, 5]], [[4, 11], [2, 8], [0, 7], [9, 4], [5, 0], [5, 11]]];
+            const guides = [[[0, 4, 11], [11, 2, 9], [4, 8, 2], [9, 0, 7], [2, 5, 0], [7, 11, 5]], [[0, 4, 11], [10, 2, 8], [8, 0, 7], [5, 9, 4], [2, 5, 0], [1, 5, 11]]];
             const diffs = (gs: number[][]) => gs.filter((gt, i) => !chords[i] || !has(chords[i].semis, gt)).length;
             const close = guides.map(diffs).find(d => d < 2);
             if (close !== undefined) return close === 0 ? "Bars 1 to 3 follow one of the lesson's reharmonizations; choose at least two chords of your own." : "Bars 1 to 3 change only one chord from one of the lesson's reharmonizations; make at least two chords your own.";
@@ -386,7 +386,7 @@ export const UNIT4: Unit = {
           { q: "The melody holds D. Which chord clashes with it?", options: ["Bb7", "Bm7b5", "G7", "A major"], answer: 3, explain: "D is a half step above C#, the third of A: the avoid 11th." },
           { q: "Under a melody note C, which dominant chord holds it as its b13?", options: ["G7", "E7", "A7", "D7"], answer: 1, explain: "A minor sixth above E is C." },
           { q: "Which technique replaces G7 with Db7?", options: ["Backdoor", "Tritone substitution", "Modal interchange", "Pedal point"], answer: 1 },
-          { q: "From the borrowed-chord lesson: in C major, Abmaj7 is borrowed from which key?", options: ["A minor", "C minor", "Eb major", "F minor"], answer: 1 },
+          { q: "From the borrowed-chord lesson: in C major, Abmaj7 is borrowed from which key?", options: ["A minor", "C minor", "G major", "D minor"], answer: 1 },
         ] },
       ],
     },

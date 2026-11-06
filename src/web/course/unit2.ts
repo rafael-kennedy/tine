@@ -106,7 +106,7 @@ export const UNIT2: Unit = {
         { code: `-- Partly done, in G major: bar 2 is empty.\n-- Put ^1@3 there, and ^1 in the bass, for an authentic cadence. Then try ^6@3 (and ^6 in the bass) for a deceptive one and compare.\nkey g major\nvoice prog = <^5@7 .>.voicelead\nvoice bass = <^5 .>.octave(-2).inst(upright)`, bars: 2 },
         { exercise: {
           task: `<p>Write <code>voice prog</code>: a <b>deceptive cadence in D major</b>. Bar 1 is the dominant (V or V7), bar 2 the chord the ear did not expect (vi or vi7).</p>`,
-          starter: `key d major\nvoice prog = <. .>`,
+          starter: `key d major\nvoice prog = <^5@7 ^1@3>`,
           solution: `key d major\nvoice prog = <^5@7 ^6@7>.voicelead`,
           bars: 2,
           check: (_s, n) => {
@@ -351,7 +351,7 @@ export const UNIT2: Unit = {
         `<p>Listen to the bass in this progression through every chord of C major. Each root is a fifth below the last (or a fourth above, the same note one octave up).</p>`,
         { code: `-- Two chords a bar, roots falling in fifths: C F B E A D G C.\n-- Change the last ^1@7 to ^6@7 (and ^1 to ^6 in the bass): the cycle stops short of home.\nkey c major\nvoice cycle = <[^1@7 ^4@7] [^7@7 ^3@7] [^6@7 ^2@7] [^5@7 ^1@7]>.voicelead\nvoice bass  = <[^1 ^4] [^7 ^3] [^6 ^2] [^5 ^1]>.octave(-2).inst(upright)`, bars: 4 },
         `<p>That is the <b>diatonic cycle of fifths</b>: I, IV, viiø, iii, vi, ii, V, I. Root motion by fifth is the strongest in tonal music, and the cycle chains it through the whole key. To stay in the key one fifth has to be a tritone, F to B. The ear accepts it because every other step is a perfect fifth.</p>`,
-        { code: `-- The same cycle in A minor, comped. From bar 2 on (Dm7 to Am7) it is the A section of the standard "Autumn Leaves", moved to A minor.\n-- Change E7 to Em7 and the pull back to Am weakens: G# is gone.\ntempo 120\nlet cyc = changes("Am7 | Dm7 | G7 | Cmaj7 | Fmaj7 | Bm7b5 | E7 | Am7")\nvoice comp = ([0 . . 0 . . . .] + cyc).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + cyc.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 8 },
+        { code: `-- The same cycle in A minor, comped. From bar 2 on (Dm7 to Am7) it is the A section of the standard "Autumn Leaves", moved to A minor.\n-- Change E7 to Em7 and the pull back to Am weakens: G# is gone.\ntempo 120\nlet cyc = changes("Am7 | Dm7 | G7 | Cmaj7 | Fmaj7 | Bm7b5 | E7 | Am7")\nvoice comp = ([0 . . 0 . . . .] + cyc).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + cyc.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 8 },
         `<p>In minor, the cycle is <b>i iv VII III VI iiø V i</b>. It holds two ii-V-Is: one into the relative major (Dm7 G7 Cmaj7) and one into the minor tonic (Bm7b5 E7 Am7).</p>`,
         { code: `-- A four-note motif, stepped down one scale degree each bar.\n-- Change <0 -1 -2 -3> to <0 1 2 3> and the sequence climbs instead.\nkey d minor\nvoice seq  = [^5 ^3 ^4 ^2].step(<0 -1 -2 -3>).inst(vibes)\nvoice bass = <^8 ^7 ^6 ^5>.octave(-2).inst(upright)`, bars: 4 },
         `<p>That is a <b>sequence</b>: a pattern repeated at another pitch level. Sequences build momentum and are a common way to change key. In Tine, <code>.step</code> moves a pattern by scale steps, staying in the key, and its argument can change bar by bar. The cycle of fifths you started with is one too: a two-chord pattern, moved down one scale step each bar.</p>`,

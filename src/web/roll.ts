@@ -85,8 +85,8 @@ export class Roll {
     g.fillStyle = "#1d1b19";
     for (let s = lo; s <= hi; s++) if (black(s)) g.fillRect(0, rowY(s) + rh * 0.08, Math.round(kw * 0.62), rh * 0.84);
     // name the Cs when there is room
-    if (rh >= 7) {
-      g.fillStyle = "rgba(0,0,0,0.55)"; g.font = `${Math.min(9, Math.floor(rh))}px system-ui, sans-serif`;
+    if (rh >= 3.5) {
+      g.fillStyle = "rgba(0,0,0,0.55)"; g.font = `${Math.max(7, Math.min(9, Math.floor(rh * 1.4)))}px system-ui, sans-serif`;
       g.textAlign = "right"; g.textBaseline = "middle";
       for (let s = lo; s <= hi; s++) if (((s % 12) + 12) % 12 === 0) g.fillText(`C${Math.floor(s / 12) - 1}`, kw - 2, rowY(s) + rh / 2);
     }

@@ -162,7 +162,7 @@ export const UNIT1: Unit = {
       parts: [
         `<p>Play this and sing along with the names musicians use for its notes: do, re, mi, fa, sol, la, ti, do.</p>`,
         { code: `-- the C major scale: all white keys from C to C.\n-- Change f4 to f#4 and listen: one note now sounds out of place.\nvoice c_major = [c4 d4 e4 f4 g4 a4 b4 c5]` },
-        `<p>A <b>scale</b> is a set of notes in order, usually spanning an octave. The <b>major scale</b> uses seven of the twelve half steps, chosen by a pattern of whole (W) and half (H) steps: <b>W W H W W W H</b>. On C that pattern lands on the white keys.</p>
+        `<p>A <b>scale</b> is a set of notes in order, usually spanning an octave. The <b>major scale</b> uses seven of the twelve notes in an octave, chosen by a pattern of whole (W) and half (H) steps: <b>W W H W W W H</b>. On C that pattern lands on the white keys.</p>
          <p>Now stop the scale one note early and listen to how it hangs.</p>`,
         { code: `-- seven notes, then a bar of silence. It sounds unfinished. Replace the . after b4 with c5 and it lands.\nvoice hang = <[c4 d4 e4 f4 g4 a4 b4 .] .>` },
         `<p>That pull comes from the <b>leading tone</b>, the seventh note. It sits a half step below the tonic, the home note (C here). It leans so hard toward the tonic that stopping on it feels like a question. Each degree of the scale has a name and a job, and you will use these words all through the course.</p>
@@ -178,6 +178,7 @@ export const UNIT1: Unit = {
          <p>Sharps are added in the order F C G D A E B, flats in the reverse, B E A D G C F. Jazz lives on the flat side. Trumpets, clarinets and tenor saxophones are pitched in Bb, alto and baritone saxes in Eb, so tunes are written in F, Bb, Eb and Ab far more than in E or B.</p>`,
         `<p>Because every major key has the same pattern, a tune keeps its shape in any key. Musicians call moving it <b>transposing</b>. Here is the start of a melody written in degrees, so it plays in whatever key you name.</p>`,
         { code: `-- change key f major to key eb major: same tune, new key, every note moves together\nkey f major\nvoice tune = <[^5 [^3 ^4] ^5 _] [^6 [^5 ^3] ^1 _]>.swing.inst(vibes)`, bars: 2 },
+        { code: `-- Partly done: F major from F4 up to F5. Replace the dots with the next five notes, counting W W H W W W H. One of them is a flat.\nvoice f_major = [f4 g4 a4 . . . . .]` },
         { exercise: {
           task: `<p>Write <code>voice scale</code>: the <b>Eb major</b> scale from Eb4 up to Eb5, using note names (no degrees). Work out the flats yourself from the W W H W W W H pattern, and spell them as flats. Tine plays G# and Ab alike, but the check reads your spelling too.</p>`,
           starter: `voice scale = [eb4]`,
@@ -187,9 +188,11 @@ export const UNIT1: Unit = {
             const m = need(n, "scale"); if (m) return m;
             const l = line(n, "scale"), want = [63, 65, 67, 68, 70, 72, 74, 75];
             if (l.length !== 8) return `That is ${l.length} note${l.length === 1 ? "" : "s"}; a scale from Eb to Eb has 8.`;
+            if (src && /\^\d/.test(src.replace(/--.*$/gm, ""))) return "Write note names like eb4, not degrees: the task is to work out the flats yourself.";
             if (src && /\b[a-g]#/i.test(src.replace(/--.*$/gm, ""))) return "Eb major uses only flats: Eb F G Ab Bb C D. Write the black keys as flats (ab4, bb4), not sharps.";
             const bad = l.findIndex((x, i) => x !== want[i]);
-            return bad < 0 ? null : `Note ${bad + 1} is ${nmo(l[bad])}; it should be ${nmo(want[bad])}.`;
+            const FL = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"], flat = (x: number) => FL[x % 12] + (Math.floor(x / 12) - 1);
+            return bad < 0 ? null : `Note ${bad + 1} is ${flat(l[bad])}; it should be ${flat(want[bad])}.`;
           },
         } },
         { quiz: [
@@ -261,12 +264,13 @@ export const UNIT1: Unit = {
         { code: `-- every interval from C, smallest to largest. The printed list names them in order.\n-- (run(13) counts 0 to 12; map turns each number k into the interval from c4 to c4 + k.)\nprint(map(run(13), k => interval(c4, c4 + k)))\nvoice up = run(13).map(k => {c4 (c4 + k)}).slow(4)`, bars: 4 },
         { code: `-- bar 1: three intervals. Bar 2: three more. Which bar sounds settled?\n-- Try {c4 d4} in place of {c4 db4}: a major second, softer than the minor second.\nvoice consonant = <[{c4 g4} {c4 e4} {c4 a4} .] .>\nvoice dissonant = <. [{c4 db4} {c4 b4} {c4 f#4} .]>`, bars: 2 },
         `<p>Bar 1 played <b>consonances</b>, bar 2 <b>dissonances</b>: words for how stable an interval sounds. Octaves, fifths and unisons are <b>perfect consonances</b>; thirds and sixths are <b>imperfect consonances</b>; seconds, sevenths and the tritone are <b>dissonant</b>. The fourth is consonant in a melody but treated as a dissonance above the bass in classical harmony.</p>
-         <p>Jazz moves the line. Sevenths and ninths are everyday colors, stacked fourths are a whole style of piano voicing (lesson 30), and the tritone inside every dominant seventh chord is what makes it want to resolve.</p>`,
+         <p>Jazz draws that line in a different place. Sevenths and ninths are everyday colors, stacked fourths are a whole style of piano voicing (lesson 30), and the tritone inside every dominant seventh chord is what makes it want to resolve.</p>`,
         { code: `-- C up to E, then E up to the next C: the same two letters, flipped. The print names both.\nprint(interval(c4, e4), interval(e4, c5))\nvoice flip = [{c4 e4} _ {e4 c5} _]` },
         `<p>Flipping an interval like that is <b>inverting</b> it: the lower note goes up an octave. The numbers add to nine (a third becomes a sixth) and the half steps add to twelve. Major becomes minor, augmented becomes diminished, and perfect stays perfect. So if you know a minor third (3 half steps), you know a major sixth (9).</p>`,
         { code: `-- three intervals wider than an octave. Change d5 to d4 in the voice line: the same note an octave down, now a plain 2nd, much harsher.\nprint(interval(c4, d5), interval(c4, f5), interval(c4, a5))\nvoice compound = [{c4 d5} {c4 f5} {c4 a5} .]` },
         `<p>Intervals larger than an octave, like those, are <b>compound</b>. A ninth is a second plus an octave, an eleventh a fourth plus an octave, a thirteenth a sixth plus an octave. These are the names of jazz chord extensions: the 9, 11 and 13 in a symbol like <code>G13</code>.</p>`,
         { code: `tempo 140\n-- G13 as a pianist voices it: G in the bass, then F, B and E (the 7th, the 3rd and the 13th) above it. It resolves to Cmaj9.\n-- Change both e4s to eb4: the 13 becomes a b13, darker and more tense.\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.5)\nvoice comp = <[{g2 f3 b3 e4} . . {g2 f3 b3 e4} . . . .] [{c3 e3 b3 d4} _ _ _ _ _ _ _]>.swing.vel(.6)`, bars: 2 },
+        { code: `-- Partly done: two intervals above D4. The major 3rd is done. Make the second one a perfect 5th: change the second d4 inside {d4 d4} to the note 7 half steps up.\nprint(interval(d4, f#4), interval(d4, a4))\nvoice above_d = [{d4 f#4} _ {d4 d4} _]` },
         { exercise: {
           task: `<p>Write <code>voice dyads</code> that plays three harmonic intervals in turn: a <b>major 6th above F4</b>, a <b>minor 7th above G3</b>, and a <b>perfect 4th above Bb3</b>.</p>`,
           starter: `voice dyads = [{f4 f4} {g3 g3} {bb3 bb3}]`,
@@ -280,6 +284,8 @@ export const UNIT1: Unit = {
             for (let i = 0; i < 3; i++) {
               if (!g[i]) return `I hear ${g.length} interval${g.length === 1 ? "" : "s"}; I expected 3.`;
               if (JSON.stringify(g[i].semis) !== JSON.stringify(want[i])) {
+                const [lo, hi] = g[i].semis;
+                if (g[i].semis.length === 2 && hi === want[i][0] && (want[i][1] - lo) % 12 === 0 && lo < want[i][0]) return `Interval ${i + 1}: your ${nmo(lo)} is below ${nmo(want[i][0])}. A ${names[i]} needs the ${nms([want[i][1]])} above it, ${nmo(want[i][1])}.`;
                 if (g[i].semis.length === 2 && g[i].semis[1] - g[i].semis[0] === want[i][1] - want[i][0]) return `Interval ${i + 1} is the right size, but its lower note should be ${["F4", "G3", "Bb3"][i]}.`;
                 const got = g[i].semis.length === 2 ? `${g[i].semis[1] - g[i].semis[0]} half steps (${nms(g[i].semis)})` : nms(g[i].semis);
                 return `Interval ${i + 1} is ${got}; a ${names[i]} is ${want[i][1] - want[i][0]} half steps, ${nms(want[i])}.`;
