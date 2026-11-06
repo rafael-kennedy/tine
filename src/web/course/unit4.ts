@@ -14,8 +14,10 @@ export const UNIT4: Unit = {
     {
       id: "tensions", title: "Extensions and tensions",
       parts: [
-        `<p>Keep stacking thirds above a seventh chord and you reach the <b>9th</b>, <b>11th</b> and <b>13th</b>, the same notes as the 2nd, 4th and 6th an octave up. Jazz calls them <b>extensions</b> or <b>tensions</b>. A seventh chord tells you a chord's function; its tensions are its color.</p>
-         <p>Not every tension works on every chord. The rule of thumb: a tension a <b>half step above a chord tone</b> (a minor 9th above it) rubs hard against it. Such a note is an <b>avoid note</b>, fine in passing but not held in the chord.</p>
+        `<p>Cmaj7, then the same chord with one note added on top, twice. Listen to how each added note sits.</p>`,
+        { code: `-- Cmaj7, then Cmaj7 with F on top, then with F# on top.\n-- Change f4 in bar 2 to d4 (the 9th): no clash at all.\nvoice comp = <{c3 e3 b3} {c3 e3 b3 d4 f4} {c3 e3 b3 d4 f#4}>.inst(keys)`, bars: 3 },
+        `<p>Keep stacking thirds above a seventh chord and you reach the <b>9th</b>, <b>11th</b> and <b>13th</b>, the 2nd, 4th and 6th an octave up. Jazz calls them <b>extensions</b> or <b>tensions</b>. The seventh chord sets the function; the tensions are its color. F is the 11th of Cmaj7, and it rubs against E, the third, a half step below it. F# is the #11, and it shimmers.</p>
+         <p>The rule of thumb: a tension a <b>half step above a chord tone</b> (a minor 9th above it, counting octaves) clashes. Such a note is an <b>avoid note</b>, fine in passing but not held in the chord.</p>
          <table class="t"><tr><th>chord</th><th>available tensions</th><th>avoid</th></tr>
          <tr><td>maj7</td><td>9, #11, 13</td><td>11 (a half step above the 3rd)</td></tr>
          <tr><td>m7</td><td>9, 11, and 13 when it is ii (dorian)</td><td>b9 on iii, b13 on iii and vi</td></tr>
@@ -23,11 +25,11 @@ export const UNIT4: Unit = {
          <tr><td>7 (altered)</td><td>b9, #9, #11, b13</td><td></td></tr>
          <tr><td>m7b5</td><td>11, b13, 9 (from melodic minor)</td><td>b9</td></tr>
          <tr><td>dim7</td><td>a whole step above each chord tone</td><td></td></tr></table>`,
-        { code: `-- Cmaj7 with the 11th (F), then with the #11th (F#): hear the clash, then the shimmer\nvoice comp = <{c3 e3 b3 d4 f4} {c3 e3 b3 d4 f#4}>.inst(keys)`, bars: 2 },
-        `<p>Dominant chords take the widest range of tensions, because their job is tension. Natural 9 and 13 sound sweet and bluesy. Altered tensions (b9, #9, b13) sound urgent and dark, and they lead by half step into the notes of the tonic. Compare a G13 and a G7alt, each resolving to C.</p>`,
-        { code: `tempo 90\nvoice comp = <g3@13 c3@maj9 g3@7alt c3@maj9>.voicelead\nvoice bass = <g1 c2 g1 c2>.inst(upright)`, bars: 4 },
-        `<p>Pianists don't play every note of a 13th chord. A common two-hand shape puts the root and seventh low, then the third and the tension on top. Here is G13 as root, 7, 3, 13, a voicing that sounds complete with four notes because the 5th, 9th and 11th are the least necessary.</p>`,
-        { code: `print(name({g2 f3 b3 e4}))\nvoice g13 = <{g2 f3 b3 e4} {c3 e3 b3 d4}>.inst(keys)`, bars: 2 },
+        { code: `-- G13 to C, then G7alt to C.\n-- Change g3@7alt to g3@7b9: one altered tension instead of three, a milder pull.\ntempo 90\nvoice comp = <g3@13 c3@maj9 g3@7alt c3@maj9>.voicelead\nvoice bass = <g1 c2 g1 c2>.inst(upright)`, bars: 4 },
+        `<p>Dominant chords take the widest range of tensions, because their job is tension. Natural 9 and 13 sound sweet and bluesy. Altered tensions (b9, #9, b13) sound urgent and dark, and they lead by half step into the notes of the tonic: Ab to G, Eb to E.</p>`,
+        { code: `-- G13 as four notes: root and 7th low, 3rd and 13th high. Then Cmaj9 without its 5th.\n-- Change e4 to d4: that is plain G7 (root, 7, 3, 5), and the color is gone.\nvoice g13 = <{g2 f3 b3 e4} {c3 e3 b3 d4}>.inst(keys)`, bars: 2 },
+        `<p>Pianists don't play every note of a 13th chord. That shape is common: the root and seventh in the left hand, the third and the tension in the right. The 5th, 9th and 11th are the least necessary notes, and the ear fills them in. (Tine's <code>name</code> cannot name it, because a chord symbol assumes more notes than this.)</p>`,
+        { code: `-- Partly done: root, 7th and 3rd of C7. Add the 13th (A) on top, a4, to make C13.\nvoice comp = {c3 bb3 e4}.inst(keys)` },
         { exercise: {
           task: `<p>Write <code>voice comp</code>: a <b>G13</b> voicing that contains the root, 3rd, 7th and 13th (G, B, F, E) and does <b>not</b> contain the avoid note C.</p>`,
           starter: `voice comp = g3@11`,
@@ -35,15 +37,18 @@ export const UNIT4: Unit = {
           check: (_s, n) => {
             const m = need(n, "comp"); if (m) return m;
             const g = groups(of(n, "comp"))[0];
-            if (!has(g.semis, [7, 11, 5, 4])) return `Your chord (${nms(g.semis)}) needs G, B, F and E.`;
+            const miss = [[7, "G"], [11, "B"], [5, "F"], [4, "E"]].filter(([p]) => !has(g.semis, [p as number])).map(([, s]) => s);
+            if (miss.length) return `Your chord (${nms(g.semis)}) is missing ${miss.join(" and ")}.`;
             if (has(g.semis, [0])) return "It still has C, the 11th, a half step above the 3rd.";
             return null;
           },
         } },
         { quiz: [
+          { q: "Listen. Cmaj7 first, then with a note on top. Is the top note the 11 or the #11?", listen: `voice x = <{c3 e3 b3} {c3 e3 b3 d4 f#4}>.inst(keys)`, bars: 2, options: ["11", "#11"], answer: 1, explain: "Bright, no clash with the third." },
+          { q: "Listen. G7 with tensions, resolving to C. Natural or altered?", listen: `voice x = <g3@7alt c3@maj9>.voicelead\nvoice b = <g1 c2>.inst(upright)`, bars: 2, options: ["Natural (9, 13)", "Altered (b9, #9, b13)"], answer: 1, explain: "Dark and urgent: Ab, Bb and Eb all slide by half step into C major." },
           { q: "Which note is the avoid note on Cmaj7?", options: ["D", "F", "A", "F#"], answer: 1, explain: "F is a half step above E, the third." },
           { q: "Which tensions are altered on a dominant chord?", options: ["9 and 13", "b9, #9, #11, b13", "11 and 13", "6 and 9"], answer: 1 },
-          { q: "Listen. Natural 11 or #11 on top?", listen: `voice x = [{c3 e3 b3 d4 f#4} _ _ .].inst(keys)`, options: ["11", "#11"], answer: 1, explain: "Bright, no clash with the third." },
+          { q: "From the minor ii-V lesson: G7b9 in C minor gets its b9 from which note of the key?", options: ["The flat sixth, Ab", "The flat third, Eb", "The leading tone, B", "The flat seventh, Bb"], answer: 0 },
         ] },
       ],
     },
@@ -51,7 +56,9 @@ export const UNIT4: Unit = {
     {
       id: "modes", title: "Chord-scales: the modes of major",
       parts: [
-        `<p>Start the major scale on each of its notes and you get seven <b>modes</b>. They have Greek names, and each one is the scale that matches one diatonic seventh chord. This is <b>chord-scale theory</b>: for each chord, a scale that contains its chord tones and its available tensions. Improvisers use it to know which notes are safe and which are colors.</p>
+        `<p>Seven scales, all starting on D. Each bar changes one note from the bar before. Listen to the scale get darker.</p>`,
+        { code: `-- Brightest to darkest, one per bar.\n-- Change d4 to a4 and hear the same ladder from A.\nlet ladder = [lydian ionian mixolydian dorian aeolian phrygian locrian]\nvoice m = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(d4, at(ladder, bar))).inst(vibes)\nvoice drone = d2.inst(pad).vel(.3)`, bars: 7 },
+        `<p>Those are the seven <b>modes</b> of the major scale, each one the major scale started on a different note. Played on one root they form a ladder from bright to dark: <b>lydian, ionian, mixolydian, dorian, aeolian, phrygian, locrian</b>, each lowering one note. Each mode matches one diatonic seventh chord. That is <b>chord-scale theory</b>: for each chord, a scale holding its chord tones and its available tensions.</p>
          <table class="t"><tr><th>mode</th><th>from</th><th>chord</th><th>signature note</th></tr>
          <tr><td>ionian</td><td>^1</td><td>Imaj7</td><td>4 (an avoid note)</td></tr>
          <tr><td>dorian</td><td>^2</td><td>ii7</td><td>natural 6</td></tr>
@@ -60,12 +67,12 @@ export const UNIT4: Unit = {
          <tr><td>mixolydian</td><td>^5</td><td>V7</td><td>b7</td></tr>
          <tr><td>aeolian</td><td>^6</td><td>vi7</td><td>b6</td></tr>
          <tr><td>locrian</td><td>^7</td><td>viiø7</td><td>b2 and b5</td></tr></table>
-         <p>Played on the same root, the modes form a ladder from bright to dark: lydian, ionian, mixolydian, dorian, aeolian, phrygian, locrian. Each step lowers one note. Tine builds a mode with <code>mode(scale, n)</code>, so <code>mode(major, 2)</code> is dorian.</p>`,
-        { code: `-- all seven on D, brightest to darkest, one per bar\nlet ladder = [lydian ionian mixolydian dorian aeolian phrygian locrian]\nvoice m = per_bar(bar => [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(d4, at(ladder, bar))).inst(vibes)`, bars: 7 },
-        `<p>Over a ii-V-I, the modes line up: D dorian over Dm7, G mixolydian over G7, C ionian (or lydian) over Cmaj7. All three are the C major scale, which is why beginners are told "just play C major". The modes matter because of which notes land on strong beats and which ones need to move.</p>`,
-        { code: `tempo 140\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead.vel(.5)\nvoice bass = tune.root.octave(-1).inst(upright)\nvoice line = <[^1 ^2 ^3 ^5 ^6 ^5 ^3 ^1].key(d4, dorian) [^3 ^4 ^5 ^7 ^9 ^7 ^5 ^4].key(g3, mixolydian) [^3 ^5 ^7 ^9 ^7 ^5 ^3 ^2].key(c4, lydian) [^1 _ _ _ . . . .].key(c4, major)>.swing.inst(vibes)`, bars: 4 },
-        `<p>A <b>modal vamp</b> sits on one chord for a long time, and the mode's signature note carries its flavor. On a dorian vamp, lean on the natural 6th; on lydian, the #4. Without them the music sounds like plain minor or plain major.</p>`,
-        { code: `tempo 120\nkey d dorian\nvoice pad  = d3@m9.inst(pad).vel(.4)\nvoice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\n-- the B natural is the dorian color\nvoice line = [^5 ^6 ^5 ^3 ^4 ^6 ^8 ^6].swing.inst(vibes)` },
+         <p>Tine also builds a mode by number: <code>mode(major, 2)</code> is dorian.</p>`,
+        { code: `-- A line through Dm7 G7 Cmaj7: D dorian, G mixolydian, C lydian.\n-- Change the third bar's lydian to major and listen: the line uses no F or F#, so nothing changes. The scale matters only where the notes differ.\ntempo 140\nlet tune = changes("Dm7 | G7 | Cmaj7 | %")\nvoice comp = tune.rootless.voicelead.vel(.5)\nvoice bass = tune.root.octave(-1).inst(upright)\nvoice line = <[^1 ^2 ^3 ^5 ^6 ^5 ^3 ^1].key(d4, dorian) [^3 ^4 ^5 ^7 ^9 ^7 ^5 ^4].key(g3, mixolydian) [^3 ^5 ^7 ^9 ^7 ^5 ^3 ^2].key(c4, lydian) [^1 _ _ _ . . . .].key(c4, major)>.swing.inst(vibes)`, bars: 4 },
+        `<p>Over a ii-V-I the modes line up: D dorian, G mixolydian, C ionian (or lydian). With ionian, all three are the C major scale, which is why beginners are told "just play C major". The modes matter for which notes land on strong beats, and for the one note that changes, like the F# of lydian.</p>`,
+        { code: `-- A D dorian vamp. The B natural is the dorian color.\n-- Change key d dorian to key d aeolian: B becomes Bb, and the vamp turns plain minor.\ntempo 120\nkey d dorian\nvoice pad  = d3@m9.inst(pad).vel(.4)\nvoice bass = [^1 _ _ ^5 . ^1 _ .].octave(-2).inst(upright)\nvoice line = [^5 ^6 ^5 ^3 ^4 ^6 ^8 ^6].swing.inst(vibes)` },
+        `<p>A <b>modal vamp</b> sits on one chord for a long time, and the mode's signature note carries its flavor. On a dorian vamp, lean on the natural 6th. On lydian, the #4. Without them it sounds like plain minor or plain major.</p>`,
+        { code: `-- Partly done: a G mixolydian line with two gaps.\n-- Fill them with f5 (the b7, mixolydian's color) and b4.\nvoice pad  = g3@7.inst(pad).vel(.4)\nvoice line = [g4 a4 b4 d5 . d5 . g4].swing.inst(vibes)` },
         { exercise: {
           task: `<p>Over a <b>Dm7</b> vamp, write <code>voice line</code>: eight notes, all from <b>D dorian</b>, and include the dorian signature note (B natural) at least once.</p>`,
           starter: `voice pad = d3@m7.inst(pad)\nvoice line = [d5 c5 a4 f4 e4 d4 c4 d4]`,
@@ -81,10 +88,11 @@ export const UNIT4: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. An F chord, then a scale on F. Lydian or ionian?", listen: `voice p = f3@maj7.inst(pad).vel(.4)\nvoice x = <. [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(f4, lydian)>.inst(vibes)`, bars: 2, options: ["Ionian", "Lydian"], answer: 1, explain: "The fourth note, B, is a half step higher than F major's Bb." },
+          { q: "Listen. A D minor vamp. Dorian or aeolian?", listen: `key d aeolian\nvoice pad = d3@m7.inst(pad).vel(.4)\nvoice line = [^5 ^6 ^5 ^3 ^4 ^6 ^8 ^6].swing.inst(vibes)`, bars: 2, options: ["Dorian", "Aeolian"], answer: 1, explain: "The sixth is Bb, the darker one." },
           { q: "Which mode matches a V7 chord?", options: ["Ionian", "Dorian", "Mixolydian", "Lydian"], answer: 2 },
-          { q: "Which mode is brightest?", options: ["Ionian", "Lydian", "Mixolydian", "Dorian"], answer: 1, explain: "It raises the fourth: every note is as high as it can be." },
           { q: "What is <code>mode(major, 6)</code>?", options: ["Dorian", "Lydian", "Aeolian", "Locrian"], answer: 2 },
-          { q: "Listen. Lydian or ionian?", listen: `voice x = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].key(f4, lydian).inst(vibes)`, options: ["Ionian", "Lydian"], answer: 1, explain: "The fourth note is a half step higher than you expect." },
+          { q: "From the minor-key lesson: aeolian is another name for which scale?", options: ["Harmonic minor", "Natural minor", "Melodic minor", "The blues scale"], answer: 1 },
         ] },
       ],
     },
@@ -92,7 +100,9 @@ export const UNIT4: Unit = {
     {
       id: "melodicminor", title: "Chord-scales: melodic minor and symmetric scales",
       parts: [
-        `<p>Jazz melodic minor (a major scale with a flat third) has seven modes of its own, and they cover the chords the major modes can't: altered dominants, #11 dominants, half-diminished chords with a natural 9.</p>
+        `<p>A dominant chord full of altered tensions, with a line that matches it, resolving to C.</p>`,
+        { code: `-- G7alt, a descending G altered scale, then C.\n-- Change altered to mixolydian: the line goes sweet and loses its pull.\ntempo 120\nvoice comp = <g3@7alt c3@maj9>.rootless.voicelead.vel(.5)\nvoice bass = <g1 c2>.inst(upright)\nvoice line = <[^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(g4, altered) [^3 _ _ _ . . . .].key(c4, major)>.swing.inst(vibes)`, bars: 2 },
+        `<p>That is the <b>altered scale</b>: G Ab Bb B Db Eb F, or root, b9, #9, 3, #11, b13, b7. Every tension is altered, and each one is a half step from a note of C major, so the resolution is strong. It is the seventh mode of <b>jazz melodic minor</b> (a major scale with a flat third), here Ab melodic minor. Melodic minor has seven modes, and they cover the chords the major modes can't.</p>
          <table class="t"><tr><th>mode</th><th>Tine name</th><th>chord</th></tr>
          <tr><td>1 melodic minor</td><td><code>melodic_minor</code></td><td>mmaj7, m6 (the minor tonic)</td></tr>
          <tr><td>2 dorian b2</td><td><code>dorian_b2</code></td><td>7sus(b9)</td></tr>
@@ -100,16 +110,15 @@ export const UNIT4: Unit = {
          <tr><td>4 lydian dominant</td><td><code>lydian_dominant</code></td><td>7#11: subV7, IV7 in the blues, bVII7</td></tr>
          <tr><td>5 mixolydian b6</td><td><code>mixolydian_b6</code></td><td>7b13</td></tr>
          <tr><td>6 locrian natural 2</td><td><code>locrian_nat2</code></td><td>m7b5 (iiø7)</td></tr>
-         <tr><td>7 altered</td><td><code>altered</code></td><td>7alt: b9, #9, #11, b13</td></tr></table>
-         <p>The <b>altered scale</b> is the most used. G altered (the 7th mode of Ab melodic minor) is G Ab Bb B Db Eb F: root, b9, #9, 3, #11, b13, b7. Every tension is altered, and each altered tension is a half step from a note of C major, so the resolution is very strong.</p>`,
-        { code: `tempo 120\nvoice comp = <g3@7alt c3@maj9>.rootless.voicelead.vel(.5)\nvoice bass = <g1 c2>.inst(upright)\nvoice line = <[^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(g4, altered) [^3 _ _ _ . . . .].key(c4, major)>.swing.inst(vibes)`, bars: 2 },
-        `<p><b>Lydian dominant</b> is a mixolydian with a raised 4th, and it is the natural scale for a tritone substitute. Over Db7 in a ii-subV-I, Db lydian dominant contains G, the root of the chord it replaces.</p>`,
-        { code: `tempo 120\nvoice comp = <d3@m9 db3@7#11 c3@maj9 .>.rootless.voicelead.vel(.5)\nvoice bass = <d2 db2 c2 .>.inst(upright)\nvoice line = <[^1 ^3 ^5 ^7 ^9 ^7 ^5 ^3].key(d4, dorian) [^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(db4, lydian_dominant) [^3 _ _ _ . . . .].key(c4, major) [.]>.swing.inst(vibes)`, bars: 4 },
-        `<p>Three <b>symmetric scales</b> repeat their own pattern inside the octave, so they sound the same from several starting notes.</p>
-         <ul><li><b>Whole tone</b> (six notes, all whole steps) for 7#5 and 9#5 chords. Only two exist.</li>
+         <tr><td>7 altered</td><td><code>altered</code></td><td>7alt: b9, #9, #11, b13</td></tr></table>`,
+        { code: `-- Dm9, Db7#11 (the tritone sub), Cmaj9, with a Db lydian dominant line in bar 2.\n-- Change lydian_dominant to mixolydian: the G in the line becomes Gb, and the link to the original G7 is lost.\ntempo 120\nvoice comp = <d3@m9 db3@7#11 c3@maj9 .>.rootless.voicelead.vel(.5)\nvoice bass = <d2 db2 c2 .>.inst(upright)\nvoice line = <[^1 ^3 ^5 ^7 ^9 ^7 ^5 ^3].key(d4, dorian) [^8 ^7 ^6 ^5 ^4 ^3 ^2 ^1].key(db4, lydian_dominant) [^3 _ _ _ . . . .].key(c4, major) [.]>.swing.inst(vibes)`, bars: 4 },
+        `<p><b>Lydian dominant</b> is mixolydian with a raised 4th, the natural scale for a tritone substitute. Over Db7, its raised 4th is G, the root of the chord it replaces.</p>`,
+        { code: `-- A whole-tone scale over C7#5.\n-- Change whole_tone to half_whole and c3@7#5 to c3@7b9: the other symmetric dominant sound.\nvoice whole = [^1 ^2 ^3 ^4 ^5 ^6 ^7 .].key(c4, whole_tone).inst(vibes)\nvoice comp  = c3@7#5.vel(.4)` },
+        `<p>The <b>whole-tone</b> scale has six notes, all whole steps apart, so it sounds the same from any of its notes. It fits 7#5 and 9#5 chords, and only two different ones exist. With the two diminished scales from the diminished lesson, it makes three <b>symmetric scales</b>:</p>
+         <ul><li><b>Whole tone</b> for 7#5 and 9#5. Two exist.</li>
          <li><b>Half-whole diminished</b> for 7b9 chords with a natural 13. Three exist.</li>
          <li><b>Whole-half diminished</b> for diminished seventh chords.</li></ul>`,
-        { code: `voice whole = [^1 ^2 ^3 ^4 ^5 ^6 ^7 .].key(c4, whole_tone).inst(vibes)\nvoice comp  = c3@7#5.vel(.4)` },
+        { code: `-- Partly done: a G altered line with two gaps. Fill them with ab4 (b9) and bb4 (#9).\nvoice comp = g3@7alt.vel(.4)\nvoice line = [g4 . . b4 c#5 eb5 f5 g5].inst(vibes)` },
         { exercise: {
           task: `<p>Over <b>G7alt</b>, write <code>voice line</code>: eight notes using only the <b>G altered scale</b>, and include both the <b>b9</b> (Ab) and the <b>#9</b> (Bb).</p>`,
           starter: `voice comp = g3@7alt.vel(.4)\nvoice line = [g4 a4 b4 c5 d5 e5 f5 g5]`,
@@ -120,17 +129,18 @@ export const UNIT4: Unit = {
             if (l.length !== 8) return `That is ${l.length} notes; write 8.`;
             const alt = [7, 8, 10, 11, 1, 3, 5];
             const bad = l.find(x => !subset([x], alt));
-            if (bad !== undefined) return `${nm(bad)} is not in G altered.`;
+            if (bad !== undefined) return `${nm(bad)} is not in G altered (G Ab Bb B Db Eb F).`;
             if (!l.some(x => pc(x) === 8)) return "Include the b9, Ab.";
             if (!l.some(x => pc(x) === 10)) return "Include the #9, Bb.";
             return null;
           },
         } },
         { quiz: [
+          { q: "Listen. C7#5 sounds, then a scale on C. Whole tone or altered?", listen: `voice p = c3@7#5.vel(.4)\nvoice x = <. [^1 ^2 ^3 ^4 ^5 ^6 ^7 .].key(c4, whole_tone)>.inst(vibes)`, bars: 2, options: ["Whole tone", "Altered"], answer: 0, explain: "Six equal steps: no half steps anywhere." },
           { q: "The G altered scale is a mode of which melodic minor scale?", options: ["G", "Ab", "C", "Db"], answer: 1, explain: "Its seventh mode." },
           { q: "Which scale fits a tritone substitute like Db7#11?", options: ["Altered", "Lydian dominant", "Dorian", "Whole-half"], answer: 1 },
           { q: "Which scale fits C7#5?", options: ["Whole tone", "Mixolydian", "Dorian b2", "Major"], answer: 0 },
-          { q: "Listen. Whole tone or altered?", listen: `voice x = [^1 ^2 ^3 ^4 ^5 ^6 ^7 .].key(c4, whole_tone).inst(vibes)`, options: ["Whole tone", "Altered"], answer: 0, explain: "Six equal steps: no half steps anywhere." },
+          { q: "From the tensions lesson: which tensions does a 7alt chord carry?", options: ["9 and 13", "b9, #9, #11, b13", "11 only", "#11 only"], answer: 1 },
         ] },
       ],
     },
