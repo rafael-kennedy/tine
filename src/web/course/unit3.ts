@@ -157,18 +157,20 @@ export const UNIT3: Unit = {
     {
       id: "aug6", title: "The Neapolitan and augmented sixths",
       parts: [
-        `<p>Two chromatic predominants come from the classical minor key, and both turn out to be jazz chords in disguise.</p>
-         <p>The <b>Neapolitan</b> is a major triad on the lowered second degree, bII. In C minor that is Db F Ab. It usually appears in first inversion (with F in the bass), so it is called the <b>Neapolitan sixth</b>, N6, and it moves to V.</p>`,
-        { code: `key c minor\nvoice comp = <{f3 ab3 db4} {g3 b3 d4 f4} {g3 c4 eb4} .>\nvoice bass = <f2 g2 c2 .>.inst(upright)`, bars: 4 },
-        `<p><b>Augmented sixth chords</b> put the lowered sixth degree (Ab in C minor) in the bass and the raised fourth (F#) above it. Those two notes are an augmented sixth apart, and they spread outward by half step to the octave G, the root of V. Three national flavors add different middle notes:</p>
+        `<p>A cadence in C minor with an unusual first chord. Listen to the top voice of that chord fall to the next.</p>`,
+        { code: `-- Db major over F, then G7, then C minor.\n-- Change db4 to d4 (an ordinary ii°, D F Ab): the darkness of the first chord drains away.\nvoice comp = <{f3 ab3 db4} {g3 b3 d4 f4} {g3 c4 eb4} .>\nvoice bass = <f2 g2 c2 .>.inst(upright)`, bars: 4 },
+        `<p>That first chord is the <b>Neapolitan</b>: a major triad on the lowered second degree, bII. In C minor it is Db F Ab. It usually has its third (F) in the bass, so it is called the <b>Neapolitan sixth</b>, N6, and it moves to V. Its Db falls to B, a diminished third, a voice-leading move you rarely hear anywhere else.</p>`,
+        { code: `-- Three chords on Ab, each resolving outward to an octave G.\n-- Bars 1-2, 3-4, 5-6. Change f#4 to g4 in bar 1 and the outward pull is gone.\nvoice it  = <{ab2 c4 f#4} {g2 b3 g4}>\nvoice fr  = <. . {ab2 c4 d4 f#4} {g2 b3 d4 g4}>\nvoice ger = <. . . . {ab2 c4 eb4 f#4} {g2 b3 d4 g4}>`, bars: 6 },
+        `<p>Those are the <b>augmented sixth chords</b>. Each puts the lowered sixth degree (Ab in C minor) in the bass and the raised fourth (F#) above it. The two notes are an augmented sixth apart, and they spread by half step to the octave G, the root of V. Three national flavors add different middle notes:</p>
          <table class="t"><tr><th>chord</th><th>notes in C</th><th>sounds like</th></tr>
          <tr><td>Italian +6</td><td>Ab C F#</td><td>Ab7 without its fifth</td></tr>
          <tr><td>French +6</td><td>Ab C D F#</td><td>Ab7b5, or a whole-tone chord</td></tr>
-         <tr><td>German +6</td><td>Ab C Eb F#</td><td>Ab7, exactly</td></tr></table>`,
-        { code: `-- Italian, French, German, each resolving outward to G\nvoice it  = <{ab2 c4 f#4} {g2 b3 g4}>\nvoice fr  = <. . {ab2 c4 d4 f#4} {g2 b3 d4 g4}>\nvoice ger = <. . . . {ab2 c4 eb4 f#4} {g2 b3 d4 g4}>`, bars: 6 },
-        `<p>Here is the catch that a pitch-based language exposes. Tine only knows the sounding notes, and to the ear a German sixth <i>is</i> a dominant seventh. Ask <code>name</code> and it says Ab7. The difference is spelling (F# versus Gb) and where the chord goes: Ab7 as a dominant would resolve to Db, while the German sixth resolves down a half step to G.</p>`,
-        { code: `print(name({ab3 c4 eb4 f#4}))\nvoice x = {ab3 c4 eb4 f#4}` },
-        `<p>An Ab7 that falls a half step to G is exactly what jazz calls a <b>tritone substitution</b> (next lesson): Ab7 stands in for D7, the V of V, and resolves to G. Classical and jazz theory describe the same sound with different words. This is a good place to remember that notation, and therefore spelling, encodes function. Tine can play these chords, but it can't tell you which name a composer would have written.</p>`,
+         <tr><td>German +6</td><td>Ab C Eb F#</td><td>Ab7, exactly</td></tr></table>
+         <p>The German's Eb falls to D while the bass falls Ab to G: parallel fifths. Classical writers usually avoid them by passing through C minor over G first.</p>`,
+        { code: `-- The German sixth through C minor over G, then G.\n-- Delete the middle chord and hear the parallel fifths (Ab-Eb to G-D) come back.\nvoice ger = <{ab2 c4 eb4 f#4} {g2 c4 eb4 g4} {g2 b3 d4 g4}>`, bars: 3 },
+        { code: `-- Ask Tine what the German sixth is.\n-- Change {ab3 c4 eb4 f#4} to {ab3 c4 d4 f#4} and print the French sixth.\nprint(name({ab3 c4 eb4 f#4}))\nvoice x = {ab3 c4 eb4 f#4}` },
+        `<p>Tine knows only the sounding notes, and to the ear a German sixth <i>is</i> a dominant seventh, so <code>name</code> says Ab7. The difference is spelling (F# versus Gb) and where the chord goes. Ab7 as a dominant would resolve to Db. The German sixth resolves down a half step to G. An Ab7 that falls a half step to G is what jazz calls a <b>tritone substitution</b>, the next lesson: Ab7 standing in for D7, the V of V. Classical and jazz theory describe one sound with two names, and the spelling records which job the writer meant.</p>`,
+        { code: `-- Partly done: bar 1 is empty. Put the Italian sixth there, {ab2 c4 f#4}, and hear it open out to G.\nvoice comp = <. {g2 b3 d4 g4} {c3 c4 eb4 g4}>`, bars: 3 },
         { exercise: {
           task: `<p>In <b>C minor</b>, write <code>voice comp</code>: a <b>German augmented sixth</b> with Ab as its lowest note, resolving to <b>G</b> (a G or G7 chord) in bar 2, and to <b>C minor</b> in bar 3.</p>`,
           starter: `voice comp = <{f3 ab3 c4 eb4} {g2 b3 d4 g4} {c3 c4 eb4 g4}>`,
@@ -179,15 +181,17 @@ export const UNIT3: Unit = {
             const c = barChords(n, "comp", 3);
             if (!c[0] || !isChord(c[0], 8, "7") ) return `Bar 1 should hold Ab, C, Eb and F# (you have ${c[0] ? nms(c[0]) : "nothing"}).`;
             if (c[0][0] % 12 !== 8) return `The German sixth needs Ab in the bass; your lowest note is ${nm(c[0][0])}.`;
-            if (!c[1] || !(isChord(c[1], 7, "") || isChord(c[1], 7, "7"))) return "Bar 2 should be G or G7.";
-            if (!c[2] || !(isChord(c[2], 0, "m") || isChord(c[2], 0, "m7") || isChord(c[2], 0, "m6"))) return "Bar 3 should be C minor.";
+            if (!c[1] || !(isChord(c[1], 7, "") || isChord(c[1], 7, "7"))) return `Bar 2 should be G or G7${c[1] ? `; you have ${nms(c[1])}` : ""}.`;
+            if (!c[2] || !(isChord(c[2], 0, "m") || isChord(c[2], 0, "m7") || isChord(c[2], 0, "m6"))) return `Bar 3 should be C minor${c[2] ? `; you have ${nms(c[2])}` : ""}.`;
             return null;
           },
         } },
         { quiz: [
+          { q: "Listen. The cadence is in C minor. Which augmented sixth opens it?", listen: `voice x = <{ab2 c4 d4 f#4} {g2 b3 d4 g4} {c3 c4 eb4 g4}>`, bars: 3, options: ["Italian (three notes)", "French (has D)", "German (has Eb)"], answer: 1, explain: "Ab C D F#: the D gives it the whole-tone sound." },
           { q: "In C minor, the Neapolitan chord is built on...", options: ["D", "Db", "Ab", "Bb"], answer: 1 },
           { q: "Which augmented sixth chord sounds identical to a dominant seventh?", options: ["Italian", "French", "German"], answer: 2 },
           { q: "The augmented sixth (Ab up to F#) resolves...", options: ["inward to a unison", "outward to an octave", "up a fourth", "it does not resolve"], answer: 1, explain: "Ab falls to G, F# rises to G." },
+          { q: "From the voice-leading lesson: what is wrong with Ab-Eb moving to G-D in two voices?", options: ["Parallel fifths", "A doubled leading tone", "An unresolved seventh", "Nothing"], answer: 0 },
         ] },
       ],
     },
@@ -195,12 +199,15 @@ export const UNIT3: Unit = {
     {
       id: "tritone", title: "Tritone substitution",
       parts: [
-        `<p>A dominant seventh gets its pull from the tritone between its third and seventh. G7 has B and F. The dominant seventh a tritone away, Db7, has F and Cb, and Cb is B. The two chords share the same tritone with the roles swapped. So either one can resolve to C. Using bII7 in place of V7 is a <b>tritone substitution</b>, and the substitute is often written <b>subV7</b>.</p>`,
-        { code: `-- the same two guide tones, swapped\nprint(tones(g3@7.guide), tones(db3@7.guide))\nvoice x = [g3@7.guide db3@7.guide]` },
-        `<p>The substitution turns a bass line falling by fifths into one falling by half steps: Dm7, Db7, Cmaj7. Listen for the bass.</p>`,
-        { code: `tempo 120\nlet plain = changes("Dm7 | G7 | Cmaj7 | %")\nlet subbed = changes("Dm7 | Db7 | Cmaj7 | %")\nlet both = arrange(plain, 4, subbed, 4)\nvoice comp = both.rootless.voicelead\nvoice bass = both.root.octave(-1).inst(upright)`, bars: 8 },
-        `<p>The upper notes of the substitute add tension to the original. Db7 over a G bass is G7 with b9, #11 and b13. That is why the substitute often appears as <b>7#11</b>: Db7#11 contains a G. Any dominant can be substituted, including secondary ones, and a ii-V can be substituted as a pair: <b>Abm7 Db7</b> in place of Dm7 G7.</p>`,
-        { code: `tempo 130\n-- I VI7 ii V, then every dominant replaced by its substitute\nlet orig = changes("Cmaj7 | A7 | Dm7 | G7")\nlet subs = changes("Cmaj7 | Eb7 | Dm7 | Db7#11")\nlet both = arrange(orig, 4, subs, 4)\nvoice comp = both.rootless.voicelead\nvoice bass = both.root.octave(-1).inst(upright)`, bars: 8 },
+        `<p>The same ii-V-I twice. The second time, one chord is replaced. Listen to the bass.</p>`,
+        { code: `-- Bars 1-4: Dm7 G7 Cmaj7. Bars 5-8: Dm7 Db7 Cmaj7.\n-- Change Db7 to Db7#11 and the substitute gets a little brighter on top.\ntempo 120\nlet plain  = changes("Dm7 | G7 | Cmaj7 | %")\nlet subbed = changes("Dm7 | Db7 | Cmaj7 | %")\nlet both = arrange(plain, 4, subbed, 4)\nvoice comp = ([0 . . 0 . . . .] + both).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + both.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 8 },
+        `<p>The first time the bass falls by fifths: D, G, C. The second time it falls by half steps: D, Db, C. Yet Db7 does the same job as G7. Here is why.</p>`,
+        { code: `-- The guide tones (3rd and 7th) of G7, then of Db7.\n-- Change db3@7 to d3@7: the guide tones move, and the match is gone.\nprint(tones(g3@7.guide), tones(db3@7.guide))\nvoice x = [g3@7.guide db3@7.guide]` },
+        `<p>A dominant seventh gets its pull from the tritone between its third and seventh. G7 has B and F. Db7, the dominant a tritone away, has F and Cb, and Cb is B. The same tritone, roles swapped, so either chord can resolve to C. Using bII7 in place of V7 is a <b>tritone substitution</b>, and the substitute is often written <b>subV7</b>.</p>
+         <p>The other notes of the substitute color the original. Db7 over a G bass gives G7 a b9 (Ab) and a #11 (Db). Add Db9's Eb and you get the b13 too. That is why the substitute is often written <b>7#11</b>: Db7#11 contains a G, the original root.</p>`,
+        { code: `-- I VI7 ii V, then the same with both dominants replaced: Eb7 for A7, Db7#11 for G7.\n-- Change Eb7 back to A7 and only the last chord is substituted.\ntempo 130\nlet orig = changes("Cmaj7 | A7 | Dm7 | G7")\nlet subs = changes("Cmaj7 | Eb7 | Dm7 | Db7#11")\nlet both = arrange(orig, 4, subs, 4)\nvoice comp = both.rootless.voicelead\nvoice bass = both.root.octave(-1).inst(upright)`, bars: 8 },
+        `<p>Any dominant can be substituted, secondary ones included. A ii-V can be substituted as a pair too: <b>Abm7 Db7</b> in place of Dm7 G7.</p>`,
+        { code: `-- Partly done, in F: Gm7, then an empty bar, then Fmaj7.\n-- Fill bar 2 with the tritone substitute of C7: Gb7.\nvoice comp = changes("Gm7 | N.C. | Fmaj7 | %").voicelead\nvoice bass = changes("Gm7 | N.C. | Fmaj7 | %").root.octave(-1).inst(upright)`, bars: 4 },
         { exercise: {
           task: `<p>Reharmonize <b>Dm7 | G7 | Cmaj7 | Cmaj7</b> with a <b>tritone substitute in bar 2</b>. Write it as <code>voice comp</code>. Any dominant chord on the substitute root counts (7, 9, 7#11, 13...).</p>`,
           starter: `voice comp = changes("Dm7 | G7 | Cmaj7 | %")`,
@@ -218,9 +225,11 @@ export const UNIT3: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. Is bar 2 the dominant (V7) or the tritone substitute (bII7)?", listen: `voice c = changes("Dm7 | Db7 | Cmaj7 | %").rootless.voicelead\nvoice b = changes("Dm7 | Db7 | Cmaj7 | %").root.octave(-1).inst(upright)`, bars: 4, options: ["V7", "bII7"], answer: 1, explain: "The bass slides down by half steps: D, Db, C." },
+          { q: "Listen. The last chord is home. Is bar 2 V7 or bII7?", listen: `voice c = changes("Gm7 | C7 | Fmaj7 | %").rootless.voicelead\nvoice b = changes("Gm7 | C7 | Fmaj7 | %").root.octave(-1).inst(upright)`, bars: 4, options: ["V7", "bII7"], answer: 0, explain: "The bass falls a fifth, G to C to F." },
           { q: "What is the tritone substitute for G7?", options: ["C#m7", "Db7", "D7", "F#7"], answer: 1 },
           { q: "Which two notes do G7 and Db7 share?", options: ["G and Db", "B and F", "D and Ab", "C and E"], answer: 1 },
-          { q: "Listen. Is bar 2 the dominant (V7) or the tritone substitute (bII7)?", listen: `voice c = changes("Dm7 | Db7 | Cmaj7 | %").rootless.voicelead\nvoice b = changes("Dm7 | Db7 | Cmaj7 | %").root.octave(-1).inst(upright)`, bars: 4, options: ["V7", "bII7"], answer: 1, explain: "The bass slides down by half steps: D, Db, C." },
+          { q: "From the secondary-dominant lesson: A7 in C is V7/ii. What is its tritone substitute?", options: ["Eb7", "D7", "E7", "Bb7"], answer: 0, explain: "Eb is a tritone from A. Eb7 shares A7's G and C#." },
         ] },
       ],
     },
@@ -228,31 +237,32 @@ export const UNIT3: Unit = {
     {
       id: "diminished", title: "Diminished seventh chords",
       parts: [
-        `<p>A diminished seventh chord is four notes a minor third apart: B D F Ab. Stack another minor third and you are back at B. Because the chord divides the octave into four equal parts, every inversion is another diminished seventh chord. There are only <b>three</b> different ones.</p>`,
-        { code: `print(name(b3@dim7), name(b3@dim7.invert), name(b3@dim7.invert(2)), name(b3@dim7.invert(3)))\nvoice three = [c4@dim7 c#4@dim7 d4@dim7 eb4@dim7]` },
-        `<p>vii°7 is V7b9 without its root. B D F Ab is G7b9 minus the G. Since the chord is symmetrical, it is also the top of Bb7b9, Db7b9 and E7b9, so one diminished chord can resolve as a dominant to four different keys. Put a different bass under it and listen.</p>`,
-        { code: `voice dim = <b3@dim7 . b3@dim7 . b3@dim7 . b3@dim7 .>.voicelead\nvoice bass = <g2 c2 bb1 eb2 db2 gb1 e2 a1>.inst(upright)\nvoice res = <. c3@maj . eb3@maj . gb3@maj . a3@maj>.voicelead`, bars: 8 },
-        `<p>Jazz uses diminished chords in three ways.</p>
-         <ul><li><b>As a dominant</b>: vii°7 of a chord, or a rootless 7b9.</li>
-         <li><b>Passing</b>: between two chords a whole step apart, a diminished chord on the note in between connects them chromatically. Cmaj7, C#dim7, Dm7 is the most common: the C#dim7 is really A7b9, the V of ii, without its root.</li>
-         <li><b>Common-tone</b>: a diminished chord sharing a note with the chord around it, like Cdim7 over a C pedal, a neighbor-chord embellishment.</li></ul>`,
-        { code: `tempo 120\n-- passing diminished chords: I, #I dim, ii, #II dim, iii\nlet tune = changes("Cmaj7 C#dim7 | Dm7 D#dim7 | Em7 A7 | Dm7 G7")\nvoice comp = tune.voicelead\nvoice bass = tune.root.octave(-1).inst(upright)`, bars: 4 },
-        { code: `-- common-tone diminished: C6, C dim7, C6 over a C pedal\nvoice comp = <c4@6 c4@dim7 c4@6 .>.voicelead\nvoice bass = <c2 c2 c2 .>.inst(upright)`, bars: 4 },
-        `<p>The scale for a diminished chord is the <b>whole-half</b> diminished scale (whole step, half step, repeating), eight notes and as symmetrical as the chord. For a 7b9 chord, start the pattern with a half step instead: the <b>half-whole</b> scale. Tine has both, as <code>whole_half</code> and <code>half_whole</code>.</p>`,
-        { code: `key g half_whole\nvoice comp = g3@7b9.rootless\nvoice line = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].swing.inst(vibes)` },
+        `<p>One four-note chord, played over four different bass notes. Each time it resolves somewhere new.</p>`,
+        { code: `-- The same B D F Ab chord over G, Bb, Db and E, resolving to C, Eb, Gb and A.\n-- Change the bass's g2 to c2 and the first pair stops sounding like a cadence.\nvoice dim  = <b3@dim7 . b3@dim7 . b3@dim7 . b3@dim7 .>.voicelead\nvoice bass = <g2 c2 bb1 eb2 db2 gb1 e2 a1>.inst(upright)\nvoice res  = <. c3@maj . eb3@maj . gb3@maj . a3@maj>.voicelead`, bars: 8 },
+        `<p>That chord is a <b>diminished seventh</b>: four notes a minor third apart, B D F Ab. Stack one more minor third and you are back at B. The chord divides the octave into four equal parts, so every inversion is another diminished seventh, and there are only <b>three</b> different ones.</p>`,
+        { code: `-- Its four inversions all name as diminished sevenths. Then four dim7 chords on C, C#, D, Eb.\n-- Listen: the fourth (Eb) has the same notes as the first (C).\nprint(name(b3@dim7), name(b3@dim7.invert), name(b3@dim7.invert(2)), name(b3@dim7.invert(3)))\nvoice three = [c4@dim7 c#4@dim7 d4@dim7 eb4@dim7]` },
+        `<p>vii°7 is V7b9 without its root: B D F Ab is G7b9 minus the G. Since the chord is symmetrical, it is also the top of Bb7b9, Db7b9 and E7b9. That is why one diminished chord resolved four ways in the first example.</p>`,
+        { code: `-- Passing diminished chords between Cmaj7 and Dm7, and between Dm7 and Em7.\n-- Change C#dim7 to A7b9 and the sound barely changes: same upper notes, new root.\ntempo 120\nlet tune = changes("Cmaj7 C#dim7 | Dm7 D#dim7 | Em7 A7 | Dm7 G7")\nvoice comp = ([0 . . 0 0 . . 0] + tune).voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + tune.root.octave(-1)).inst(upright)`, bars: 4 },
+        `<p>That is the <b>passing</b> diminished chord: between two chords a whole step apart, a diminished chord on the note between connects them chromatically. C#dim7 is A7b9 without its A, the V of ii.</p>`,
+        { code: `-- C6, Cdim7, C6 over a C pedal.\n-- Change c4@dim7 to c4@6 and the shimmer in bar 2 is gone.\nvoice comp = <c4@6 c4@dim7 c4@6 .>.voicelead\nvoice bass = <c2 c2 c2 .>.inst(upright)`, bars: 4 },
+        `<p>That is the <b>common-tone</b> diminished chord: it shares a note with the chord around it (here C) and decorates it, like a neighbor tone made of a whole chord. With the dominant use you heard first, that makes three jobs.</p>`,
+        { code: `-- The half-whole scale over G7b9: half step, whole step, repeating.\n-- Change half_whole to whole_half: now it fits a diminished chord, not G7.\nkey g half_whole\nvoice comp = g3@7b9.rootless\nvoice line = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8].swing.inst(vibes)` },
+        `<p>The scale for a diminished chord is the <b>whole-half</b> diminished scale (whole step, half step, repeating), eight notes and as symmetrical as the chord. For a 7b9 chord start the pattern with a half step: the <b>half-whole</b> scale.</p>`,
+        { code: `-- Partly done: Cmaj7, then a gap, then Dm7 G7. Fill the gap with C#dim7.\nvoice comp = changes("Cmaj7 N.C. | Dm7 G7").voicelead`, bars: 2 },
         { exercise: {
-          task: `<p>Write <code>voice comp</code>: two bars, two chords per bar: <b>Cmaj7</b>, a <b>passing diminished chord</b>, <b>Dm7</b>, <b>G7</b>.</p>`,
-          starter: `voice comp = changes("Cmaj7 Am7 | Dm7 G7")`,
-          solution: `voice comp = changes("Cmaj7 C#dim7 | Dm7 G7").voicelead`,
+          task: `<p>Write <code>voice comp</code>: two bars, two chords per bar, <b>Fmaj7</b>, a <b>passing diminished chord</b>, <b>Gm7</b>, <b>C7</b>.</p>`,
+          starter: `voice comp = changes("Fmaj7 Dm7 | Gm7 C7")`,
+          solution: `voice comp = changes("Fmaj7 F#dim7 | Gm7 C7").voicelead`,
           bars: 2,
-          hint: "The passing chord sits on the note between C and D.",
-          check: (_s, n) => expectChords(n, "comp", [[0, "maj7"], [1, "dim7"], [2, "m7"], [7, "7"]]),
+          hint: "The passing chord sits on the note between F and G.",
+          check: (_s, n) => expectChords(n, "comp", [[5, "maj7"], [6, "dim7"], [7, "m7"], [0, "7"]]),
         } },
         { quiz: [
+          { q: "Listen. The first chord is home. Which chord is the diminished seventh?", listen: `voice c = [c4@maj7 c#4@dim7 d4@m7 g3@7].voicelead`, bars: 1, options: ["The first", "The second", "The third", "The fourth"], answer: 1 },
           { q: "How many different diminished seventh chords are there?", options: ["12", "4", "3", "1"], answer: 2 },
           { q: "Bdim7 is G7b9 without which note?", options: ["B", "G", "F", "Ab"], answer: 1 },
           { q: "In Cmaj7, C#dim7, Dm7, the C#dim7 acts like which chord without its root?", options: ["G7b9", "A7b9", "C#7", "Bb7"], answer: 1, explain: "A7b9 is the V of Dm7: A C# E G Bb, minus the A." },
-          { q: "Listen. Which chord is the diminished seventh?", listen: `voice c = [c4@maj7 c#4@dim7 d4@m7 g3@7].voicelead`, bars: 1, options: ["The first", "The second", "The third", "The fourth"], answer: 1 },
+          { q: "From the tritone-substitution lesson: Bdim7 is the top of G7b9 and of Db7b9. How far apart are G and Db?", options: ["A fifth", "A tritone", "A half step", "A minor third"], answer: 1, explain: "Tritone substitutes share their diminished chord as well as their tritone." },
         ] },
       ],
     },
@@ -260,25 +270,29 @@ export const UNIT3: Unit = {
     {
       id: "rhythmchanges", title: "Turnarounds and rhythm changes",
       parts: [
-        `<p>A <b>turnaround</b> fills the last two bars of a form, or any spot where the harmony sits on I, and leads back to the top. Every substitution from this unit applies to it, and jazz musicians swap among them freely.</p>
+        `<p>Five two-bar endings in C, one after another. Each leads back to the top. Listen to how each one gets there.</p>`,
+        { code: `-- Five turnarounds, two bars each.\n-- Change t3's Em7 to Cmaj7 and it becomes t2.\ntempo 140\nlet t1 = changes("Cmaj7 Am7 | Dm7 G7")\nlet t2 = changes("Cmaj7 A7 | Dm7 G7")\nlet t3 = changes("Em7 A7 | Dm7 G7")\nlet t4 = changes("Cmaj7 C#dim7 | Dm7 G7")\nlet t5 = changes("Cmaj7 Eb7 | Abmaj7 Db7")\nlet all = arrange(t1, 2, t2, 2, t3, 2, t4, 2, t5, 2)\nvoice comp = ([0 . . 0 0 . . 0] + all).rootless.voicelead.swing.vel(.6)\nvoice bass = ([0 0 0 0] + all.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 10 },
+        `<p>Each is a <b>turnaround</b>: it fills the last two bars of a form, or any spot where the harmony sits on I, and leads back to the top. Every substitution from this unit applies to it.</p>
          <table class="t"><tr><th>turnaround (in C)</th><th>what changed</th></tr>
          <tr><td>Cmaj7 Am7 | Dm7 G7</td><td>I vi ii V, diatonic</td></tr>
          <tr><td>Cmaj7 A7 | Dm7 G7</td><td>vi becomes V7/ii</td></tr>
          <tr><td>Em7 A7 | Dm7 G7</td><td>I replaced by iii</td></tr>
          <tr><td>Cmaj7 C#dim7 | Dm7 G7</td><td>passing diminished (A7b9 without its root)</td></tr>
          <tr><td>Cmaj7 Eb7 | Abmaj7 Db7</td><td>tritone substitutes and borrowed bVI</td></tr></table>`,
-        { code: `tempo 140\nlet t1 = changes("Cmaj7 Am7 | Dm7 G7")\nlet t2 = changes("Cmaj7 A7 | Dm7 G7")\nlet t3 = changes("Em7 A7 | Dm7 G7")\nlet t4 = changes("Cmaj7 C#dim7 | Dm7 G7")\nlet t5 = changes("Cmaj7 Eb7 | Abmaj7 Db7")\nlet all = arrange(t1, 2, t2, 2, t3, 2, t4, 2, t5, 2)\nvoice comp = all.rootless.voicelead\nvoice bass = all.root.octave(-1).inst(upright)`, bars: 10 },
-        `<p><b>Rhythm changes</b> are the chords of Gershwin's "I Got Rhythm", reused for hundreds of bebop tunes. The form is AABA in Bb. The A sections are turnarounds strung together, with a quick move to IV in the middle. The bridge is a chain of extended dominants, each lasting two bars: <b>D7, G7, C7, F7</b>, the V of the V of the V of the V. Players learn it as the second form after the blues.</p>`,
-        { code: `tempo 200\nsection main 8\n  let h = changes("Bb6 G7 | Cm7 F7 | Dm7 G7 | Cm7 F7 | Fm7 Bb7 | Ebmaj7 Ab7 | Dm7 G7 | Cm7 F7")\n  voice comp = h.rootless.voicelead.vel(.55)\n  voice bass = h.root.octave(-1).inst(upright)\nsection bridge 8\n  let h = changes("D7 | % | G7 | % | C7 | % | F7 | %")\n  voice comp = h.rootless.voicelead.vel(.55)\n  voice bass = h.root.octave(-1).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)\nvoice hat = [. pedal . pedal].vel(.5)\nform main main bridge main` },
-        `<p>The bridge is also a place to practice substitution. Replace every other dominant with its tritone substitute, or put a related ii in front of each one (Am7 D7, Dm7 G7, Gm7 C7, Cm7 F7), and the bridge turns into a string of ii-Vs.</p>`,
+        { code: `-- Rhythm changes in Bb, AABA, at a bebop tempo.\n-- Change tempo 200 to tempo 140 and follow the bridge (D7 G7 C7 F7) more easily.\ntempo 200\nsection main 8\n  let h = changes("Bb6 G7 | Cm7 F7 | Dm7 G7 | Cm7 F7 | Fm7 Bb7 | Ebmaj7 Ab7 | Dm7 G7 | Cm7 F7")\n  voice comp = ([0 . . 0 0 . . 0] + h).rootless.voicelead.swing.vel(.55)\n  voice bass = ([0 0 0 0] + h.root.octave(-1)).inst(upright)\nsection bridge 8\n  let h = changes("D7 | % | G7 | % | C7 | % | F7 | %")\n  voice comp = ([0 . . 0 . . . .] + h).rootless.voicelead.swing.vel(.55)\n  voice bass = ([0 0 0 0] + h.root.octave(-1)).inst(upright)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)\nvoice hat = [. pedal . pedal].vel(.5)\nform main main bridge main` },
+        `<p>Those are <b>rhythm changes</b>, the chords of Gershwin's "I Got Rhythm", reused for hundreds of bebop tunes. The A sections are turnarounds strung together, with a quick move to IV (Fm7 Bb7 into Ebmaj7) in the middle. The bridge is a chain of extended dominants, two bars each: <b>D7, G7, C7, F7</b>, the V of the V of the V of the V. Players learn it as the second form after the blues.</p>`,
+        { code: `-- The bridge as ii-Vs: a related ii in front of each dominant.\n-- Change the last Cm7 F7 to Gbm7 B7, the tritone-substituted ii-V: the bass slides down a half step into the A section's Bb.\ntempo 160\nlet h = changes("Am7 D7 | % | Dm7 G7 | % | Gm7 C7 | % | Cm7 F7 | %")\nvoice comp = ([0 . . 0 0 . . 0] + h).rootless.voicelead.swing.vel(.55)\nvoice bass = ([0 0 0 0] + h.root.octave(-1)).inst(upright)`, bars: 8 },
+        `<p>The bridge is a place to practice substitution. That version puts a related ii in front of each dominant and turns the bridge into a string of ii-Vs. Tritone substitutes fit anywhere a dominant does.</p>`,
+        { code: `-- Partly done: the first half of the bridge. Add C7 for two bars and F7 for two bars.\nvoice comp = changes("D7 | % | G7 | %").rootless.voicelead`, bars: 4 },
         { exercise: {
-          task: `<p>Write <code>voice comp</code>: the <b>rhythm-changes bridge in Bb</b>, eight bars, a dominant seventh chord every two bars, each the V of the next, ending on F7.</p>`,
-          starter: `voice comp = changes("D7 | % | G7 | %")`,
-          solution: `voice comp = changes("D7 | % | G7 | % | C7 | % | F7 | %").rootless.voicelead`,
+          task: `<p>Write <code>voice comp</code>: the <b>rhythm-changes bridge in Eb</b>, eight bars, a dominant seventh chord every two bars, each the V of the next, ending on Bb7 (the V of Eb).</p>`,
+          starter: `voice comp = changes("G7 | % | C7 | %")`,
+          solution: `voice comp = changes("G7 | % | C7 | % | F7 | % | Bb7 | %").rootless.voicelead`,
           bars: 8,
+          hint: "Count back from Bb7 by fifths: each chord is a fifth above the next.",
           check: (_s, n) => {
             const m = need(n, "comp"); if (m) return m;
-            const c = barChords(n, "comp", 8), roots = [2, 2, 7, 7, 0, 0, 5, 5];
+            const c = barChords(n, "comp", 8), roots = [7, 7, 0, 0, 5, 5, 10, 10];
             for (let b = 0; b < 8; b++) {
               const ch = c[b];
               if (!ch) return `Bar ${b + 1} has no chord.`;
@@ -289,9 +303,11 @@ export const UNIT3: Unit = {
           },
         } },
         { quiz: [
+          { q: "Listen. The first chord is home. Which turnaround is this?", listen: `voice c = changes("Cmaj7 Eb7 | Abmaj7 Db7").rootless.voicelead\nvoice b = changes("Cmaj7 Eb7 | Abmaj7 Db7").root.octave(-1).inst(upright)`, bars: 2, options: ["I vi ii V", "I VI7 ii V", "I bIII7 bVI bII7", "iii VI7 ii V"], answer: 2, explain: "Every root after the first is a tritone sub or a borrowed chord: the bass falls C, Eb, Ab, Db." },
+          { q: "Listen. The first chord is home. Is the second chord vi7 or a passing diminished?", listen: `voice c = changes("Fmaj7 F#dim7 | Gm7 C7").voicelead\nvoice b = changes("Fmaj7 F#dim7 | Gm7 C7").root.octave(-1).inst(upright)`, bars: 2, options: ["vi7", "Passing diminished"], answer: 1, explain: "The bass climbs by half step, F, F#, G." },
           { q: "The rhythm-changes bridge chords D7 G7 C7 F7 are related how?", options: ["Each is the V of the next", "Each is a tritone from the next", "They are all diatonic to Bb", "They are borrowed from Bb minor"], answer: 0 },
           { q: "In a I #I°7 ii V turnaround, the #I°7 replaces...", options: ["I", "vi (as VI7b9 without its root)", "ii", "V"], answer: 1 },
-          { q: "Listen. Which turnaround is this?", listen: `voice c = changes("Cmaj7 Eb7 | Abmaj7 Db7").rootless.voicelead\nvoice b = changes("Cmaj7 Eb7 | Abmaj7 Db7").root.octave(-1).inst(upright)`, bars: 2, options: ["I vi ii V", "I VI7 ii V", "I bIII7 bVI bII7", "iii VI7 ii V"], answer: 2, explain: "Every root after the first is a tritone sub or a borrowed chord: the bass falls C, Eb, Ab, Db." },
+          { q: "From the song-form lesson: rhythm changes, like most standards, are in which form?", options: ["Twelve-bar blues", "AABA", "ABAC", "Through-composed"], answer: 1 },
         ] },
       ],
     },
