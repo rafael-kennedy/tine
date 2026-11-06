@@ -41,14 +41,15 @@ export class Roll {
     if (!isFinite(lo)) { lo = 48; hi = 72; }
     lo = Math.floor(lo) - 2; hi = Math.ceil(hi) + 2;
     const rows = hi - lo + 1, rh = h / rows;
-    const kw = this.keys ? Math.round(Math.min(28, Math.max(14, w * 0.04))) : 0;
-    const x = (b: number) => kw + ((b - start) / this.window) * (w - kw);
+    const kw = this.keys ? Math.round(Math.min(12, Math.max(8, w * 0.012))) : 0;
+    const gx = kw ? kw + 2 : 0; // a small gap keeps a lit key apart from its note
+    const x = (b: number) => gx + ((b - start) / this.window) * (w - gx);
     const black = (s: number) => [1, 3, 6, 8, 10].includes(((s % 12) + 12) % 12);
     const rowY = (s: number) => h - (s - lo + 1) * rh;
     // black-key rows are shaded across the grid, as in a DAW
     if (this.keys) {
       g.fillStyle = "rgba(0,0,0,0.14)";
-      for (let s = lo; s <= hi; s++) if (black(s)) g.fillRect(kw, rowY(s), w - kw, rh);
+      for (let s = lo; s <= hi; s++) if (black(s)) g.fillRect(gx, rowY(s), w - gx, rh);
     }
     // grid
     g.strokeStyle = css.getPropertyValue("--line"); g.lineWidth = 1;
@@ -65,7 +66,11 @@ export class Roll {
       g.fillRect(nx, y, nw, Math.max(2, rh - 1));
     }
     g.globalAlpha = 1;
-    if (this.keys) this.drawKeys(g, kw, h, lo, hi, rh, black, rowY, css);
+    if (this.keys) {
+      // keys light up, in the voice's color, while a note at that pitch sounds
+      const on = this.head >= 0 ? vis.filter(n => n.bar <= this.head && n.bar + n.bars > this.head) : [];
+      this.drawKeys(g, kw, h, lo, hi, rh, black, rowY, css, on);
+    }
     if (this.head >= start && this.head <= end) {
       g.fillStyle = css.getPropertyValue("--brass2");
       g.fillRect(x(this.head), 0, 2, h);
@@ -74,7 +79,7 @@ export class Roll {
 
   // A small keyboard: one row per half step, white keys full width, black keys shorter and dark.
   private drawKeys(g: CanvasRenderingContext2D, kw: number, h: number, lo: number, hi: number, rh: number,
-                   black: (s: number) => boolean, rowY: (s: number) => number, css: CSSStyleDeclaration) {
+                   black: (s: number) => boolean, rowY: (s: number) => number, css: CSSStyleDeclaration, on: RollNote[]) {
     g.fillStyle = "#ece7dc"; g.fillRect(0, 0, kw, h);
     g.strokeStyle = "rgba(0,0,0,0.28)"; g.lineWidth = 1;
     // lines between adjacent white keys: below C and below F (B|C and E|F have no black key between)
@@ -84,12 +89,20 @@ export class Roll {
     }
     g.fillStyle = "#1d1b19";
     for (let s = lo; s <= hi; s++) if (black(s)) g.fillRect(0, rowY(s) + rh * 0.08, Math.round(kw * 0.62), rh * 0.84);
-    // name the Cs when there is room
-    if (rh >= 3.5) {
-      g.fillStyle = "rgba(0,0,0,0.55)"; g.font = `${Math.max(7, Math.min(9, Math.floor(rh * 1.4)))}px system-ui, sans-serif`;
-      g.textAlign = "right"; g.textBaseline = "middle";
-      for (let s = lo; s <= hi; s++) if (((s % 12) + 12) % 12 === 0) g.fillText(`C${Math.floor(s / 12) - 1}`, kw - 2, rowY(s) + rh / 2);
+    for (const n of on) {
+      const s = Math.round(n.semi);
+      if (s < lo || s > hi) continue;
+      g.fillStyle = this.color(n.voice);
+      g.fillRect(0, rowY(s), black(s) ? Math.round(kw * 0.62) : kw - 1, rh);
     }
     g.fillStyle = css.getPropertyValue("--line") || "rgba(0,0,0,.3)"; g.fillRect(kw - 1, 0, 1, h);
+    // name the Cs, just right of the strip, when there is room
+    if (rh >= 3.5) {
+      g.fillStyle = css.getPropertyValue("--mute") || "rgba(128,128,128,.8)"; g.globalAlpha = 0.7;
+      g.font = `${Math.max(7, Math.min(9, Math.floor(rh * 1.4)))}px system-ui, sans-serif`;
+      g.textAlign = "left"; g.textBaseline = "middle";
+      for (let s = lo; s <= hi; s++) if (((s % 12) + 12) % 12 === 0) g.fillText(`C${Math.floor(s / 12) - 1}`, kw + 4, rowY(s) + rh / 2);
+      g.globalAlpha = 1;
+    }
   }
 }
