@@ -47,8 +47,7 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;padding:0 5px;border-ra
 .cm-content{caret-color:var(--brass)}
 .cm-cursor{border-left-color:var(--brass)!important;border-left-width:2px!important}
 .cm-selectionBackground,.cm-focused .cm-selectionBackground{background:color-mix(in srgb,var(--teal) 30%,transparent)!important}
-.cm-tooltip{background:var(--ink3);border:1px solid var(--line);border-radius:8px;color:var(--text)}
-.cm-tooltip-autocomplete ul li[aria-selected]{background:var(--teal);color:#0d1414}
+/* tooltip colors live in editor.ts (tooltipTheme): CodeMirror's own scoped rules outrank plain selectors here */
 .tine-tip{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;padding:6px 9px;max-width:420px}
 .tine-error{text-decoration:underline wavy var(--coral);text-underline-offset:3px;background:color-mix(in srgb,var(--coral) 15%,transparent)}
 .tine-flash{background:color-mix(in srgb,var(--brass) 30%,transparent);transition:background .2s}

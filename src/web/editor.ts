@@ -93,6 +93,22 @@ const hover = hoverTooltip((view, pos) => {
   };
 });
 
+// Tooltip colors. CodeMirror's base theme paints tooltips light grey under a
+// scoped selector (".ͼ2 .cm-tooltip") that outranks any plain rule in theme.ts,
+// so our light text landed on a light background in dark mode. A theme
+// extension is scoped the same way and is ordered after the base theme, so it
+// wins. It reads the palette's CSS variables, so it follows the light/dark
+// switch without reconfiguring the editor.
+const tooltipTheme = EditorView.theme({
+  ".cm-tooltip": { backgroundColor: "var(--ink3)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: "8px" },
+  ".cm-tooltip .cm-tooltip-arrow:before": { borderTopColor: "var(--line)", borderBottomColor: "var(--line)" },
+  ".cm-tooltip .cm-tooltip-arrow:after": { borderTopColor: "var(--ink3)", borderBottomColor: "var(--ink3)" },
+  ".cm-tooltip-section:not(:first-child)": { borderTop: "1px solid var(--line)" },
+  ".cm-tooltip-autocomplete ul li[aria-selected]": { background: "var(--teal)", color: "var(--ink)" },
+  ".cm-tooltip-autocomplete-disabled ul li[aria-selected]": { background: "var(--faint)", color: "var(--ink)" },
+  ".cm-completionDetail": { color: "var(--mute)" },
+});
+
 // error underline
 export const setErrorEffect = StateEffect.define<{ from: number; to: number; msg: string } | null>();
 const errorMark = Decoration.mark({ class: "tine-error" });
@@ -165,7 +181,7 @@ export function makeEditor(o: EditorOpts): EditorView {
     tineMode,
     syntaxHighlighting(tineHighlight),
     autocompletion({ override: [complete], icons: false }),
-    hover,
+    hover, tooltipTheme,
     errorField, flashField,
     keymap.of([...defaultKeymap, ...historyKeymap]),
     EditorView.lineWrapping,
