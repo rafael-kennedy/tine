@@ -7,6 +7,7 @@ import { resolve, dirname, basename, extname, join } from "node:path";
 import { evaluate, formatError, renderNotes, toMidiFile, toMusicXml, randomSeed, VERSION, timeline, pitchName, keySpelling, Scene, TineError, lineCol } from "../core";
 import { repl } from "./repl";
 import { renderToWav, playWav, openBrowser, loadSamples, bundledPack, fetchNeeded } from "./audio";
+import { dirtSender, dirtMode } from "./dirt";
 import { roll } from "./roll";
 import * as assets from "./assets.gen";
 
@@ -33,6 +34,8 @@ usage:
                                package a piece as a single-file HTML player
   tine pack <file> --exe [--runtime tine-windows-x64.exe] [-o name]
                                package a piece as a standalone executable
+  tine dirt <file>             play through SuperDirt (TidalCycles' engine) over OSC;
+                               save the file to change the music at the next bar
   tine new <name>              start a new piece from a template
   tine lsp                     run the language server (for editors)
 
@@ -40,7 +43,8 @@ options:
   --seed N     override the seed for this run (files with 'seed' keep theirs)
   --bars N     how many bars to render when a file has no 'form'
   --port N     port for daw/learn/theory (default 7357)
-  --samples D  folder of .wav files usable as sample("name")
+  --samples D  folder of sounds: files are sample names, subfolders are banks
+  --dirt H:P   where SuperDirt listens (default 127.0.0.1:57120)
 `;
 
 function args() {
@@ -140,6 +144,17 @@ async function main() {
     }
     case "daw": case "learn": case "theory": { await serve(cmd, pos[0], flags); return; }
     case "pack": { await pack(pos[0], flags); return; }
+    case "dirt": {
+      const { scene } = load(pos[0], flags);
+      // a save with a mistake prints it and keeps the last good version playing
+      const reload = (f: string, fl: Record<string, any>) => {
+        const src = readFileSync(f, "utf8");
+        try { return evaluate(src, { seed: parseInt(fl.seed, 10), readFile: p => readFileSync(resolve(dirname(f), p), "utf8") }); }
+        catch (e) { console.error(red(formatError(src, e, f))); throw e; }
+      };
+      await dirtMode(pos[0], scene, flags, reload);
+      return;
+    }
     case "new": {
       const name = pos[0] ?? "untitled";
       const file = name.endsWith(".tine") ? name : `${name}.tine`;
@@ -182,10 +197,16 @@ async function serve(kind: "daw" | "learn" | "theory", file: string | undefined,
       for (const l of listeners) { try { l.enqueue(`data: ${JSON.stringify({ content })}\n\n`); } catch { listeners.delete(l); } }
     });
   }
+  const dirt = dirtSender(flags.dirt as string | undefined);
   const server = Bun.serve({
     port, hostname: "127.0.0.1",
-    async fetch(req) {
+    websocket: {
+      // notes the DAW routes to SuperDirt with .dirt(): see core/dirt.ts
+      message(_ws, m) { try { const { t, note } = JSON.parse(String(m)); dirt.send(note, t); } catch { /* not a note */ } },
+    },
+    async fetch(req, srv) {
       const url = new URL(req.url);
+      if (url.pathname === "/api/dirt") { if (srv.upgrade(req)) return undefined as any; return new Response("expected a WebSocket", { status: 400 }); }
       if (url.pathname === "/" || url.pathname === "/index.html") return new Response(kind === "learn" ? assets.LEARN_HTML : kind === "theory" ? assets.THEORY_HTML : assets.DAW_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
       if (url.pathname === "/learn") return new Response(assets.LEARN_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
       if (url.pathname === "/theory") return new Response(assets.THEORY_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });

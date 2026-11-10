@@ -173,7 +173,7 @@ export class Engine {
   prepare(notes: PlayableNote[]) {
     if (!this.worker) return;
     for (const n of notes) {
-      if (n.params.midi !== undefined || n.params.ccOut !== undefined) continue;
+      if (n.params.midi !== undefined || n.params.ccOut !== undefined || n.params.dirt !== undefined) continue;
       const inst = String(n.params.inst ?? "keys");
       if (inst.startsWith("sample:")) { this.sampleName(n, inst, true); continue; }
       const dur = Math.min(n.durSec, 12), key = this.keyOf(n, inst, dur);
@@ -195,6 +195,7 @@ export class Engine {
   }
 
   play(n: PlayableNote, when: number) {
+    if (n.params.dirt !== undefined) { this.sendDirt(n, when); return; }
     if (n.params.midi !== undefined || n.params.ccOut !== undefined) { this.sendMidi(n, when); return; }
     const buf = this.bufferFor(n);
     if (!buf) return;
@@ -374,6 +375,23 @@ export class Engine {
     const t0 = this.toPerf(when);
     for (const msg of m.on) out.send(msg, t0);
     if (m.off) out.send(m.off, this.toPerf(when + Math.max(0.01, n.durSec)));
+  }
+
+  // ---------- SuperDirt (see core/dirt.ts) ----------
+  // A browser cannot send UDP, so notes go to tine daw over a WebSocket and
+  // it sends the OSC. Each carries the wall-clock time it should sound.
+  private dirtWs: WebSocket | null = null;
+  private dirtQueue: string[] = [];
+  sendDirt(n: PlayableNote, when: number) {
+    if (typeof location === "undefined" || !/^https?:$/.test(location.protocol) || !/^(127\.0\.0\.1|localhost)$/.test(location.hostname)) { once("dirt() needs the DAW opened by tine daw, which sends the OSC to SuperDirt"); return; }
+    if (!this.dirtWs || this.dirtWs.readyState > 1) {
+      this.dirtWs = new WebSocket(`ws://${location.host}/api/dirt`);
+      this.dirtWs.onopen = () => { for (const m of this.dirtQueue.splice(0)) this.dirtWs!.send(m); };
+      this.dirtWs.onerror = () => once("could not reach tine daw for SuperDirt");
+    }
+    const t = (performance.timeOrigin + this.toPerf(when)) / 1000;
+    const msg = JSON.stringify({ t, note: { semi: n.semi + 12 * Math.log2(this.tuningRef / 440), vel: n.vel, durSec: n.durSec, bars: (n as any).bars ?? 0, bar: (n as any).bar ?? 0, params: plainParams(n.params) } });
+    if (this.dirtWs.readyState === 1) this.dirtWs.send(msg); else this.dirtQueue.push(msg);
   }
 
   sendClock(when: number) { const out = this.output(); out?.send([0xf8], this.toPerf(when)); }

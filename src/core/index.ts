@@ -18,3 +18,5 @@ export * from "./musicxml";
 export * from "./harmony";
 export * from "./samples";
 export * from "./adpcm";
+export * from "./osc";
+export * from "./dirt";

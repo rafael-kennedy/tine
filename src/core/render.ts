@@ -20,7 +20,7 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
   for (const v of fxVoices) buses.set(v, { L: new Float32Array(len), R: new Float32Array(len), changes: [] });
   if (notes.some(n => n.params.cut !== undefined)) notes = applyCuts(notes);
   for (const n of notes) {
-    if (n.params.midi !== undefined || n.params.ccOut !== undefined) continue; // routed to external gear
+    if (n.params.midi !== undefined || n.params.ccOut !== undefined || n.params.dirt !== undefined) continue; // routed to external gear
     const inst = String(n.params.inst ?? "keys");
     let buf: Float32Array;
     if (inst.startsWith("sample:")) {

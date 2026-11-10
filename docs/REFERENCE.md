@@ -104,6 +104,18 @@ Fractional pitches are sent as pitch bend with a range of 2 semitones, reset aft
 
 In the DAW's MIDI panel, *send MIDI clock* makes other gear follow Tine, and *follow MIDI clock* makes Tine follow other gear: its tempo (measured from the clock and smoothed), start, continue and stop. Following works on tempo and phase in live mode; in form mode it follows start and stop only.
 
+## SuperDirt
+
+`.dirt()` sends a voice to SuperDirt, the sound engine of TidalCycles, over OSC, instead of Tine's own sound. Start SuperDirt in SuperCollider as usual (`SuperDirt.start`), then either open the DAW with `tine daw` (a browser cannot send OSC itself, so `tine daw` does it), or run `tine dirt piece.tine`, which plays every voice through SuperDirt with no browser and picks up the file each time you save it, at the next bar. That makes any text editor a live-coding editor.
+
+| Code | Effect |
+| --- | --- |
+| `.dirt()` | the sound is chosen for you: a sample name becomes `s` and `n` (`"bd:3"` is `s: bd, n: 3`), a drum name a Dirt-Samples bank (`snare` is `sn`), an instrument the nearest SuperDirt synth (`keys` is `superpiano`) |
+| `.dirt("superzow")` | name the SuperDirt sound yourself |
+| `.dirt(orbit: 1)` | choose the orbit (SuperDirt's effect bus) |
+
+A Tine bar is a Tidal cycle, so `cps` is bars per second. Tine's parameters are translated where SuperDirt has the same idea: `begin`, `end`, `speed`, `accel` (accelerate), `cut`, `crush`, `coarse`, `drive` (shape), `lpf` and `cutoff` (cutoff), `hpf` (hcutoff), `res`, `vowel`, `room` and its size, `delay`, `ring`, `pan`, `gain`, and `loopAt`. `--dirt host:port` sends somewhere other than 127.0.0.1:57120.
+
 ## Performing
 
 | In the code | Effect |
@@ -220,6 +232,7 @@ tine daw [file]           live-coding DAW in the browser
 tine learn                interactive tutorial
 tine pack <file>          single-file HTML player
 tine pack <file> --exe    standalone executable for one piece
+tine dirt <file>          play through SuperDirt; saving the file changes the music
 tine new <name>           new piece from a template
 tine lsp                  language server
 ```
@@ -352,6 +365,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `slice(p, n, i)` | Cut the sample into n equal pieces and play piece i (from 0). i may be a pattern: .slice(8, [0 3 2 7]). |
 | `splice(p, n, i)` | Like slice, but each piece is stretched to fill its note, so a sliced loop stays in tempo. |
 | `chop(p, n)` | Split each note into n notes that play successive parts of its sample. With loopAt, a loop follows the tempo: loop_amen.loopAt(2).chop(16). |
+| `dirt(p, sound: "", orbit: 0)` | Send to SuperDirt (TidalCycles' sound engine) instead of the built-in sound, over OSC from tine daw or tine dirt. sound is a SuperDirt sample bank or synth; without it, sample names, drum names and instruments are translated. |
 | `midi(p, channel: 1, port: "")` | Send to an external MIDI device instead of the built-in synth. |
 | `ctl(p, number, value)` | Send a MIDI control change (value 0 to 1) just before each note. value may be a pattern or signal: .ctl(74, sine(4)). |
 | `program(p, n)` | Choose an instrument on external gear with a MIDI program change (1 to 128, as printed in General MIDI lists). It is sent only when it changes. |

@@ -494,6 +494,11 @@ def("chop", "chop(p, n)", "Split each note into n notes that play successive par
   });
 });
 def("samples", "samples(source)", "Load a sample pack, as a top-level line: a folder (command line), a URL of a strudel.json sample map, or \"github:user/repo\" for that repository's strudel.json. Sounds load on first use.", cat.io, ([src]) => ({ __samples: String(src) }));
+def("dirt", "dirt(p, sound: \"\", orbit: 0)", "Send to SuperDirt (TidalCycles' sound engine) instead of the built-in sound, over OSC from tine daw or tine dirt. sound is a SuperDirt sample bank or synth; without it, sample names, drum names and instruments are translated.", cat.param, ([p, snd, orbit], named) => {
+  let q = setParam(P(p), "dirt", named.sound ?? snd ?? "");
+  const o = named.orbit ?? orbit; if (o !== undefined) q = setParam(q, "orbit", o);
+  return q;
+});
 def("midi", "midi(p, channel: 1, port: \"\")", "Send to an external MIDI device instead of the built-in synth.", cat.param, ([p, ch, port], named) => {
   let q = setParam(P(p), "midi", Math.round(N(named.channel ?? ch, 1)));
   const pt = named.port ?? port; if (pt !== undefined) q = setParam(q, "port", String(pt));
