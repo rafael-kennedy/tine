@@ -1,6 +1,7 @@
 // Turning a Scene into concrete, timed notes. Two modes:
 //  - live: top-level voices loop forever (plus a launched section, in the DAW)
 //  - form: sections play in the order of the `form` line, then the piece ends
+import { PRESETS } from "./synth";
 import { R } from "./rational";
 import { Scene, SectionDef, VoiceDef } from "./interp";
 import { Ctx, makeCtx, resolveNotes, Inputs, NO_INPUTS, Note } from "./pattern";
@@ -49,13 +50,30 @@ export interface QueryOptions {
 function queryVoice(v: VoiceDef, a: R, b: R, ctx: Ctx, opts: QueryOptions): Note[] {
   if (opts.muted?.has(v.name)) return [];
   const before = R.inexact;
-  try { return resolveNotes(v.name, v.pat.query(a, b, ctx), ctx); }
+  try {
+    const notes = resolveNotes(v.name, v.pat.query(a, b, ctx), ctx);
+    return notes.some(n => n.params.glide !== undefined) ? withGlide(notes, v, a, ctx) : notes;
+  }
   catch (e) {
     if (opts.onError) { opts.onError(v.name, e); return []; }
     throw e instanceof TineError ? e : new TineError("runtime", `in voice '${v.name}': ${(e as Error).message}`, v.span);
   } finally {
     if (opts.onInexact && R.inexact > before) opts.onInexact(v.name, R.inexact - before);
   }
+}
+
+// Glide needs the note before each one. A pattern is a function of time, so
+// the note before the window is found by asking for the bar before it: the
+// same answer live, in a render, from any starting bar.
+function withGlide(notes: Note[], v: VoiceDef, a: R, ctx: Ctx): Note[] {
+  const before = resolveNotes(v.name, v.pat.query(a.sub(new R(1)), a, ctx), ctx).filter(n => n.start.lt(a));
+  const onsets = [...before, ...notes].sort((x, y) => x.start.cmp(y.start));
+  return notes.map(n => {
+    if (n.params.glide === undefined) return n;
+    let prev: Note | undefined;
+    for (const o of onsets) { if (!o.start.lt(n.start)) break; if (!prev || !o.start.eq(prev.start)) prev = o; }
+    return prev ? { ...n, params: { ...n.params, glideFrom: prev.semi } } : n;
+  });
 }
 
 function finish(scene: Scene, n: Note, offsetBar: number, offsetSec: number, tempo: number, section?: string): TimedNote {
@@ -65,6 +83,11 @@ function finish(scene: Scene, n: Note, offsetBar: number, offsetSec: number, tem
   if (n.params.durBeats !== undefined) bars = Number(n.params.durBeats) / scene.meter[0];
   const params = { ...n.params }; delete params.durBeats;
   if (params.loopAt !== undefined) { params.loopSec = Number(params.loopAt instanceof R ? params.loopAt.toNumber() : params.loopAt) * bs; delete params.loopAt; }
+  // wobble is in cycles per bar, so it locks to the tempo
+  const wob = params.wobble ?? PRESETS[String(params.inst)]?.wobble;
+  if (wob !== undefined) { params.wobbleHz = Number(wob instanceof R ? wob.toNumber() : wob) / bs; delete params.wobble; }
+  // the fm function switches the synth to its fm wave
+  if (params.fm !== undefined && params.wave === undefined && (params.inst === undefined || params.inst === "synth")) { params.wave = "fm"; params.inst = "synth"; }
   if (params.duckRelease !== undefined) { params.duckSec = Number(params.duckRelease instanceof R ? params.duckRelease.toNumber() : params.duckRelease) * bs; delete params.duckRelease; }
   if (params.delayTime !== undefined) { params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs; delete params.delayTime; }
   return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section };

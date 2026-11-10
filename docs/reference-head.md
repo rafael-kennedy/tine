@@ -145,6 +145,32 @@ voice acid = ([c2 c2 c3 c2 eb2 c2 g2 bb1]*2).inst(saw).vowel(["a" "o"]).phaser(.
 
 The DAW runs these effects with the same code as WAV export, on the audio thread. A page that cannot start that code (very old browsers) plays only hpf, lpf, drive and delay, and says so.
 
+## Synths
+
+Besides the fixed instruments (`keys`, `pluck`, `bass` and the rest, listed under Instruments below), `synth` is a general synthesizer, and ten named sounds are presets of it: `fm`, `supersaw`, `tb303`, `reese`, `wobble`, `chip`, `brass`, `strings`, `marimba`, `noise`. A preset is only default settings, so any of the calls below changes it: `.inst(tb303).res(.6)`.
+
+| Code | What it does |
+| --- | --- |
+| `.wave(name)` | the oscillator: `saw`, `square`, `pulse`, `tri`, `sine`, `super` (detuned saws), `fm`, `noise` |
+| `.pw(x)` | pulse width, 0 to 1 |
+| `.unison(n)`, `.detune(cents)` | how many oscillators, spread over this many cents either side |
+| `.sub(x)` | a sine an octave below |
+| `.cutoff(hz)`, `.res(x)` | the synth's own low-pass filter |
+| `.fenv(octaves, attack: .001, decay: .2)` | filter envelope: the cutoff jumps up and falls back on every note |
+| `.wobble(rate: 2, depth: 2)` | the cutoff swings `rate` times per bar, `depth` octaves |
+| `.fm(index, ratio: 2, decay: .4)` | two-operator FM; on a plain voice it switches to the FM synth |
+| `.vibrato(rate: 5, depth: .3)` | pitch wobble in Hz and semitones |
+| `.glide(seconds)` | slide into each note from the one before it |
+| `.attack`, `.decay`, `.sustain`, `.release` | the volume envelope |
+
+```tine
+voice acid = [a1 a1 a2 a1 c2 a1 g2 a1].inst(tb303).fenv([4 2 3 1]).glide([0 0 .06 0])
+voice lead = <[e4 . g4 a4] [b4 . a4 g4]>.inst(supersaw).vibrato(5, depth: .1)
+voice wub  = [a0 . . . c1 . . .].inst(wobble).wobble([2 4], depth: 4)
+```
+
+Glide needs the note before. A pattern is a function of time, so Tine asks the voice for the bar before; in a loop, the first note glides from the loop's last.
+
 ## Samples
 
 Tine ships with about 200 CC0 (public domain) sounds: drums, hats, loops, bass hits, ambient beds, tabla, glitches. The Tracks panel in the DAW lists them by bank; click a name to hear it. A sound has a full name (`bd_haus`) and a bank (`bd`, everything named `bd_...`).

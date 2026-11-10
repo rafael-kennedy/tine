@@ -28,6 +28,32 @@ export const INSTRUMENT_DOCS: Record<string, string> = {
   upright: "Upright (acoustic) bass: a round plucked tone with a soft finger thump. For walking lines.",
   vibes: "Vibraphone: struck metal bars with a motor tremolo and a long ring.",
   kit: "Drum kit: plays General MIDI drum note numbers (kick, snare, hat, ...).",
+  synth: "The general synth: choose .wave (saw, square, pulse, tri, sine, super, fm, noise), then shape it with .fenv, .pw, .unison, .sub, .vibrato, .wobble and .glide.",
+  fm: "Two-operator FM: a sine modulated by a sine. .fm(index, ratio, decay) sets the colour.",
+  supersaw: "Seven detuned saws, the trance and big-room lead.",
+  tb303: "Acid bass: a resonant filter that snaps shut on every note. Add .glide(.06) for slides.",
+  reese: "Detuned saws with a sub, the drum and bass bass.",
+  wobble: "Saw and sub through a filter that wobbles in time: .wobble(rate per bar, depth).",
+  chip: "Pulse wave with a quick vibrato, like a game console.",
+  brass: "Saws with a filter that opens slowly, for stabs and swells.",
+  strings: "A soft detuned ensemble with slow attack and gentle vibrato.",
+  marimba: "FM mallet: a short woody strike.",
+  noise: "Filtered white noise, for risers, sweeps and hats.",
+};
+
+// Named sounds made from the general synth: a preset is only default
+// parameters, so anything set in code overrides it: inst(tb303).res(.5).
+export const PRESETS: Record<string, Record<string, any>> = {
+  fm: { wave: "fm", fm: 3, fmRatio: 2, fmDecay: 0.4, attack: 0.002, decay: 0.8, sustain: 0.3, release: 0.2 },
+  supersaw: { wave: "super", unison: 7, detune: 25, cutoff: 7000, attack: 0.01, decay: 0.2, sustain: 0.85, release: 0.3 },
+  tb303: { wave: "saw", cutoff: 350, res: 0.85, fenv: 3.5, fdecay: 0.18, attack: 0.002, decay: 0.3, sustain: 0.6, release: 0.04 },
+  reese: { wave: "super", unison: 3, detune: 18, sub: 0.5, cutoff: 900, res: 0.2, attack: 0.005, decay: 0.1, sustain: 1, release: 0.1 },
+  wobble: { wave: "saw", sub: 0.6, cutoff: 250, res: 0.5, wobble: 2, wobbleDepth: 3.5, attack: 0.005, decay: 0.1, sustain: 1, release: 0.06 },
+  chip: { wave: "pulse", pw: 0.25, vibrato: 6, vibratoDepth: 0.15, vibratoDelay: 0.15, attack: 0.001, decay: 0.1, sustain: 0.7, release: 0.02 },
+  brass: { wave: "super", unison: 2, detune: 8, cutoff: 600, res: 0.1, fenv: 2.2, fattack: 0.06, fdecay: 0.5, attack: 0.04, decay: 0.3, sustain: 0.85, release: 0.15 },
+  strings: { wave: "super", unison: 4, detune: 12, cutoff: 3200, vibrato: 5, vibratoDepth: 0.08, vibratoDelay: 0.3, attack: 0.4, decay: 0.3, sustain: 0.9, release: 0.8 },
+  marimba: { wave: "fm", fm: 2.2, fmRatio: 4, fmDecay: 0.04, attack: 0.001, decay: 0.45, sustain: 0, release: 0.12 },
+  noise: { wave: "noise", cutoff: 8000, attack: 0.005, decay: 0.2, sustain: 0.8, release: 0.2 },
 };
 
 let noiseSeed = 22222;
@@ -81,6 +107,7 @@ function osc(kind: string, phase: number, dt: number): number {
 export function noteLength(spec: NoteSpec): number {
   const rel = Number(spec.params.release ?? defaultsFor(spec.inst).r);
   if (spec.inst === "kit") return drumLength(Math.round(spec.semi));
+  if (PRESETS[spec.inst]) { const p = { ...PRESETS[spec.inst], ...spec.params }; return Math.min(20, spec.dur + Number(p.release ?? 0.12)); }
   if (spec.inst === "vibes") return Math.min(8, spec.dur + rel + 0.1);
   if (spec.inst === "pluck" || spec.inst === "bell") return Math.min(8, spec.dur + rel + (spec.inst === "bell" ? 2.5 : 1.2));
   return Math.min(20, spec.dur + rel);
@@ -88,6 +115,7 @@ export function noteLength(spec: NoteSpec): number {
 
 function defaultsFor(inst: string) {
   switch (inst) {
+    case "synth": return { a: 0.005, d: 0.2, s: 0.75, r: 0.12 };
     case "pad": return { a: 0.35, d: 0.3, s: 0.8, r: 0.9 };
     case "bass": return { a: 0.004, d: 0.18, s: 0.6, r: 0.06 };
     case "organ": return { a: 0.01, d: 0.05, s: 1, r: 0.08 };
@@ -101,6 +129,7 @@ function defaultsFor(inst: string) {
 }
 
 export function renderNote(spec: NoteSpec, sr: number): Float32Array {
+  if (PRESETS[spec.inst]) spec = { ...spec, inst: "synth", params: { ...PRESETS[spec.inst], ...spec.params } };
   const len = Math.max(1, Math.ceil(noteLength(spec) * sr));
   const out = new Float32Array(len);
   // Noise restarts for every note, so a note sounds the same whichever thread
@@ -224,6 +253,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       }
       return out;
     }
+    case "synth": return renderSynth(spec, sr, out, amp, a, dc, s, r, held);
     default: {
       const kind = ["sine", "tri", "square", "saw"].includes(spec.inst) ? spec.inst : "saw";
       const cutoff = Number(p.cutoff ?? (kind === "saw" || kind === "square" ? 4000 : 18000));
@@ -307,4 +337,71 @@ export function reverb(L: Float32Array, R: Float32Array, sr: number) {
     return out;
   };
   return [run(L, 0), run(R, 23)];
+}
+
+// ---------- the general synth ----------
+// One oscillator section (saw, square, pulse, tri, sine, a detuned stack of
+// saws, two-operator FM, or noise) with a sub, a resonant low-pass with its
+// own envelope and a tempo-synced wobble, vibrato, and glide from the
+// previous note. Every named preset above is this with different defaults.
+
+const num = (v: any, d: number) => { const x = v && typeof v.toNumber === "function" ? v.toNumber() : Number(v ?? d); return Number.isFinite(x) ? x : d; };
+
+function pulse(phase: number, dt: number, w: number): number {
+  let v = phase < w ? 1 : -1;
+  v += polyblep(phase, dt);
+  v -= polyblep((phase - w + 1) % 1, dt);
+  return v - (2 * w - 1); // remove the DC a narrow pulse carries
+}
+
+function renderSynth(spec: NoteSpec, sr: number, out: Float32Array, amp: number, a: number, dc: number, s: number, r: number, held: number): Float32Array {
+  const p = spec.params, len = out.length;
+  const wave = String(p.wave ?? "saw");
+  const pw = Math.max(0.02, Math.min(0.98, num(p.pw, 0.5)));
+  const unison = Math.max(1, Math.min(16, Math.round(num(p.unison, wave === "super" ? 7 : 1))));
+  const detune = num(p.detune, wave === "super" ? 25 : 0);
+  const sub = Math.max(0, Math.min(1, num(p.sub, 0)));
+  const cutoff = num(p.cutoff, 18000), res = Math.max(0, Math.min(0.98, num(p.res, 0.1)));
+  const fenv = num(p.fenv, 0), fa = Math.max(1e-4, num(p.fattack, 0.001)), fd = Math.max(1e-4, num(p.fdecay, 0.2));
+  const vib = num(p.vibrato, 0), vibD = num(p.vibratoDepth, 0.3), vibDelay = num(p.vibratoDelay, 0);
+  const wob = num(p.wobbleHz, 0), wobD = num(p.wobbleDepth, 2);
+  const glide = num(p.glide, 0), from = p.glideFrom !== undefined ? num(p.glideFrom, spec.semi) - spec.semi : 0;
+  const fmI = num(p.fm, 0), fmR = num(p.fmRatio, 2), fmD = Math.max(1e-4, num(p.fmDecay, 0.4));
+  const filtered = p.cutoff !== undefined || fenv !== 0 || wob > 0 || wave === "noise" || cutoff < 18000;
+  // unison voices spread evenly over +-detune cents, with fixed starting phases
+  const ratios = Array.from({ length: unison }, (_, k) => unison === 1 ? 1 : Math.pow(2, (detune * (2 * k / (unison - 1) - 1)) / 1200));
+  const phases = ratios.map((_, k) => (k * 0.618034) % 1);
+  const gainU = 1 / Math.sqrt(unison);
+  let pm = 0, ps = 0;
+  const lp = new LP();
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    let semis = 0;
+    if (glide > 0 && from !== 0 && t < glide) semis += from * (1 - t / glide);
+    if (vib > 0 && t > vibDelay) semis += vibD * Math.sin(2 * Math.PI * vib * (t - vibDelay)) * Math.min(1, (t - vibDelay) / 0.2);
+    const f = spec.freq * (semis ? Math.pow(2, semis / 12) : 1), dt = f / sr;
+    let v = 0;
+    if (wave === "noise") v = noise();
+    else if (wave === "fm") {
+      const idx = fmI * Math.exp(-t / fmD);
+      v = Math.sin(2 * Math.PI * phases[0] + idx * Math.sin(2 * Math.PI * pm));
+      phases[0] = (phases[0] + dt) % 1; pm = (pm + dt * fmR) % 1;
+    } else {
+      for (let k = 0; k < unison; k++) {
+        const d = dt * ratios[k];
+        v += wave === "pulse" ? pulse(phases[k], d, pw) : wave === "super" ? osc("saw", phases[k], d) : osc(wave, phases[k], d);
+        phases[k] = (phases[k] + d) % 1;
+      }
+      v *= gainU;
+    }
+    if (sub > 0) { v += sub * Math.sin(2 * Math.PI * ps); ps = (ps + dt / 2) % 1; }
+    if (filtered) {
+      let oct = 0;
+      if (fenv) oct += fenv * (t < fa ? t / fa : Math.exp(-(t - fa) / fd));
+      if (wob > 0) oct += wobD * (0.5 - 0.5 * Math.cos(2 * Math.PI * wob * t));
+      v = lp.run(v, Math.min(sr * 0.45, cutoff * Math.pow(2, oct)), res, sr);
+    }
+    out[i] = v * env(i, sr, a, dc, s, r, held) * amp * 0.8;
+  }
+  return out;
 }

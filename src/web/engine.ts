@@ -17,6 +17,9 @@ export function plainParams(p: Record<string, any>): Record<string, any> {
   return out;
 }
 
+const NOT_SOUND = new Set(["inst", "pan", "reverb", "chordRoot", "hpf", "lpf", "drive", "delay", "delaySec", "feedback", "vowel", "crush", "coarse", "ring", "ringMix",
+  "chorus", "chorusHz", "chorusDepth", "phaser", "phaserHz", "phaserDepth", "comp", "compRatio", "room", "roomSize", "duck", "duckDepth", "duckSec", "midi", "port", "mpe", "cut", "ctl"]);
+
 // effects that need the worklet; the Web Audio fallback has only hpf, lpf, drive and delay
 const NEW_FX = ["vowel", "crush", "coarse", "ring", "chorus", "phaser", "comp", "room", "duck"];
 
@@ -122,9 +125,14 @@ export class Engine {
     } catch { this.worker = null; } // a page that forbids blob workers renders on the main thread
   }
 
+  // Every parameter that can change how a note sounds is in its cache key;
+  // routing and bus settings are not, so they do not defeat the cache.
   private keyOf(n: PlayableNote, inst: string, dur: number) {
-    return `${inst}|${n.semi.toFixed(3)}|${n.vel.toFixed(2)}|${dur.toFixed(3)}|${n.params.cutoff ?? ""}|${n.params.res ?? ""}|${n.params.attack ?? ""}|${n.params.decay ?? ""}|${n.params.sustain ?? ""}|${n.params.release ?? ""}|${n.params.gain ?? ""}|${this.tuningRef}`;
+    const p = plainParams(n.params), parts: string[] = [];
+    for (const k of Object.keys(p).sort()) if (!NOT_SOUND.has(k)) parts.push(`${k}=${p[k]}`);
+    return `${inst}|${n.semi.toFixed(3)}|${n.vel.toFixed(2)}|${dur.toFixed(3)}|${this.tuningRef}|${parts.join(",")}`;
   }
+
 
   private job(n: PlayableNote, inst: string, dur: number) {
     return { inst, freq: freqOf(n.semi, this.tuningRef), semi: n.semi, vel: n.vel, dur, params: plainParams(n.params) };

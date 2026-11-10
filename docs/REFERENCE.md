@@ -145,6 +145,32 @@ voice acid = ([c2 c2 c3 c2 eb2 c2 g2 bb1]*2).inst(saw).vowel(["a" "o"]).phaser(.
 
 The DAW runs these effects with the same code as WAV export, on the audio thread. A page that cannot start that code (very old browsers) plays only hpf, lpf, drive and delay, and says so.
 
+## Synths
+
+Besides the fixed instruments (`keys`, `pluck`, `bass` and the rest, listed under Instruments below), `synth` is a general synthesizer, and ten named sounds are presets of it: `fm`, `supersaw`, `tb303`, `reese`, `wobble`, `chip`, `brass`, `strings`, `marimba`, `noise`. A preset is only default settings, so any of the calls below changes it: `.inst(tb303).res(.6)`.
+
+| Code | What it does |
+| --- | --- |
+| `.wave(name)` | the oscillator: `saw`, `square`, `pulse`, `tri`, `sine`, `super` (detuned saws), `fm`, `noise` |
+| `.pw(x)` | pulse width, 0 to 1 |
+| `.unison(n)`, `.detune(cents)` | how many oscillators, spread over this many cents either side |
+| `.sub(x)` | a sine an octave below |
+| `.cutoff(hz)`, `.res(x)` | the synth's own low-pass filter |
+| `.fenv(octaves, attack: .001, decay: .2)` | filter envelope: the cutoff jumps up and falls back on every note |
+| `.wobble(rate: 2, depth: 2)` | the cutoff swings `rate` times per bar, `depth` octaves |
+| `.fm(index, ratio: 2, decay: .4)` | two-operator FM; on a plain voice it switches to the FM synth |
+| `.vibrato(rate: 5, depth: .3)` | pitch wobble in Hz and semitones |
+| `.glide(seconds)` | slide into each note from the one before it |
+| `.attack`, `.decay`, `.sustain`, `.release` | the volume envelope |
+
+```tine
+voice acid = [a1 a1 a2 a1 c2 a1 g2 a1].inst(tb303).fenv([4 2 3 1]).glide([0 0 .06 0])
+voice lead = <[e4 . g4 a4] [b4 . a4 g4]>.inst(supersaw).vibrato(5, depth: .1)
+voice wub  = [a0 . . . c1 . . .].inst(wobble).wobble([2 4], depth: 4)
+```
+
+Glide needs the note before. A pattern is a function of time, so Tine asks the voice for the bar before; in a loop, the first note glides from the loop's last.
+
 ## Samples
 
 Tine ships with about 200 CC0 (public domain) sounds: drums, hats, loops, bass hits, ambient beds, tabla, glitches. The Tracks panel in the DAW lists them by bank; click a name to hear it. A sound has a full name (`bd_haus`) and a bank (`bd`, everything named `bd_...`).
@@ -294,6 +320,16 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `lpf(p, hz)` | Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep. |
 | `drive(p, amount)` | Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp. |
 | `delay(p, mix, time: 3/16, feedback: .4)` | An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats. |
+| `wave(p, name)` | Oscillator of the synth instrument (and its presets): saw, square, pulse, tri, sine, super, fm or noise. |
+| `pw(p, width)` | Pulse width of the pulse wave, 0 to 1 (.5 is square). May be a pattern or a signal. |
+| `detune(p, cents)` | Spread of the unison voices, in cents either side. |
+| `unison(p, n)` | How many detuned oscillators sound together (1 to 16). |
+| `sub(p, level)` | A sine one octave below, 0 to 1. |
+| `glide(p, seconds)` | Slide into each note from the one before it in the voice. |
+| `fenv(p, octaves, attack: .001, decay: .2)` | Filter envelope: the cutoff jumps up by this many octaves and falls back over decay seconds. The acid squelch. |
+| `fm(p, index, ratio: 2, decay: .4)` | Frequency modulation (switches the synth to the fm wave): index is brightness, ratio the modulator's pitch, decay how fast the brightness fades. |
+| `vibrato(p, rate: 5, depth: .3)` | Pitch wobble, rate in Hz, depth in semitones. |
+| `wobble(p, rate: 2, depth: 2)` | Filter wobble in time with the music: rate in cycles per bar, depth in octaves. |
 | `vowel(p, v)` | Formant filter: makes the voice say a vowel, "a" "e" "i" "o" or "u". v may be a pattern: .vowel(["a" "o"]). |
 | `crush(p, bits)` | Bit crusher: fewer bits (1 to 16) is rougher. .crush(4) is very lo-fi. |
 | `coarse(p, n)` | Sample-rate reduction: holds every nth sample, for aliasing and grit. 1 is off. |
@@ -536,3 +572,14 @@ Also available by name: `5`, `6`, `7`, `9`, `11`, `13`, `maj`, `M`, `min`, `m`, 
 | `upright` | Upright (acoustic) bass: a round plucked tone with a soft finger thump. For walking lines. |
 | `vibes` | Vibraphone: struck metal bars with a motor tremolo and a long ring. |
 | `kit` | Drum kit: plays General MIDI drum note numbers (kick, snare, hat, ...). |
+| `synth` | The general synth: choose .wave (saw, square, pulse, tri, sine, super, fm, noise), then shape it with .fenv, .pw, .unison, .sub, .vibrato, .wobble and .glide. |
+| `fm` | Two-operator FM: a sine modulated by a sine. .fm(index, ratio, decay) sets the colour. |
+| `supersaw` | Seven detuned saws, the trance and big-room lead. |
+| `tb303` | Acid bass: a resonant filter that snaps shut on every note. Add .glide(.06) for slides. |
+| `reese` | Detuned saws with a sub, the drum and bass bass. |
+| `wobble` | Saw and sub through a filter that wobbles in time: .wobble(rate per bar, depth). |
+| `chip` | Pulse wave with a quick vibrato, like a game console. |
+| `brass` | Saws with a filter that opens slowly, for stabs and swells. |
+| `strings` | A soft detuned ensemble with slow attack and gentle vibrato. |
+| `marimba` | FM mallet: a short woody strike. |
+| `noise` | Filtered white noise, for risers, sweeps and hats. |

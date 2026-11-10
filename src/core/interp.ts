@@ -38,7 +38,8 @@ export interface EvalOptions {
 }
 
 export const MAX_DEPTH = 400;
-export const INSTRUMENTS = ["keys", "sine", "tri", "saw", "square", "pluck", "bass", "pad", "bell", "organ", "kit", "lead", "upright", "vibes"];
+export const INSTRUMENTS = ["keys", "sine", "tri", "saw", "square", "pluck", "bass", "pad", "bell", "organ", "kit", "lead", "upright", "vibes",
+  "synth", "fm", "supersaw", "tb303", "reese", "wobble", "chip", "brass", "strings", "marimba", "noise"];
 
 export class Interp {
   env: Env;

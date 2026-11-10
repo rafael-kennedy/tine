@@ -409,15 +409,25 @@ def("delay", "delay(p, mix, time: 3/16, feedback: .4)", "An echo on the whole vo
   q = setParam(q, "delayTime", named.time ?? time ?? 3 / 16);
   return setParam(q, "feedback", named.feedback ?? fb ?? 0.4);
 });
-param("vowel", "vowel(p, v)", "Formant filter: makes the voice say a vowel, \"a\" \"e\" \"i\" \"o\" or \"u\". v may be a pattern: .vowel([\"a\" \"o\"]).");
-param("crush", "crush(p, bits)", "Bit crusher: fewer bits (1 to 16) is rougher. .crush(4) is very lo-fi.");
-param("coarse", "coarse(p, n)", "Sample-rate reduction: holds every nth sample, for aliasing and grit. 1 is off.");
 const fxdef = (name: string, sig: string, doc: string, keys: [string, string, any][]) =>
   def(name, sig, doc, cat.param, ([p, ...pos], named) => {
     let q = P(p);
     keys.forEach(([arg, key, d], i) => { const v = named[arg] ?? pos[i] ?? d; if (v !== undefined) q = setParam(q, key, v); });
     return q;
   });
+param("wave", "wave(p, name)", "Oscillator of the synth instrument (and its presets): saw, square, pulse, tri, sine, super, fm or noise.");
+param("pw", "pw(p, width)", "Pulse width of the pulse wave, 0 to 1 (.5 is square). May be a pattern or a signal.");
+param("detune", "detune(p, cents)", "Spread of the unison voices, in cents either side.");
+param("unison", "unison(p, n)", "How many detuned oscillators sound together (1 to 16).");
+param("sub", "sub(p, level)", "A sine one octave below, 0 to 1.");
+param("glide", "glide(p, seconds)", "Slide into each note from the one before it in the voice.");
+fxdef("fenv", "fenv(p, octaves, attack: .001, decay: .2)", "Filter envelope: the cutoff jumps up by this many octaves and falls back over decay seconds. The acid squelch.", [["octaves", "fenv", 2], ["attack", "fattack", undefined], ["decay", "fdecay", undefined]]);
+fxdef("fm", "fm(p, index, ratio: 2, decay: .4)", "Frequency modulation (switches the synth to the fm wave): index is brightness, ratio the modulator's pitch, decay how fast the brightness fades.", [["index", "fm", 3], ["ratio", "fmRatio", undefined], ["decay", "fmDecay", undefined]]);
+fxdef("vibrato", "vibrato(p, rate: 5, depth: .3)", "Pitch wobble, rate in Hz, depth in semitones.", [["rate", "vibrato", 5], ["depth", "vibratoDepth", undefined]]);
+fxdef("wobble", "wobble(p, rate: 2, depth: 2)", "Filter wobble in time with the music: rate in cycles per bar, depth in octaves.", [["rate", "wobble", 2], ["depth", "wobbleDepth", undefined]]);
+param("vowel", "vowel(p, v)", "Formant filter: makes the voice say a vowel, \"a\" \"e\" \"i\" \"o\" or \"u\". v may be a pattern: .vowel([\"a\" \"o\"]).");
+param("crush", "crush(p, bits)", "Bit crusher: fewer bits (1 to 16) is rougher. .crush(4) is very lo-fi.");
+param("coarse", "coarse(p, n)", "Sample-rate reduction: holds every nth sample, for aliasing and grit. 1 is off.");
 fxdef("ring", "ring(p, hz, mix: 1)", "Ring modulation: multiplies the voice by a sine at hz, for metallic and bell-like tones.", [["hz", "ring", 440], ["mix", "ringMix", 1]]);
 fxdef("chorus", "chorus(p, mix: .5, rate: .8, depth: .5)", "Chorus: thickens the voice with slightly detuned, moving copies. rate in Hz.", [["mix", "chorus", 0.5], ["rate", "chorusHz", undefined], ["depth", "chorusDepth", undefined]]);
 fxdef("phaser", "phaser(p, mix: .5, rate: .5, depth: .7)", "Phaser: a sweeping notch, the classic swirl. rate in Hz.", [["mix", "phaser", 0.5], ["rate", "phaserHz", undefined], ["depth", "phaserDepth", undefined]]);
@@ -433,7 +443,8 @@ def("duck", "duck(p, voice, depth: .8, release: 1/8)", "Sidechain-style ducking:
 def("dur", "dur(p, beats)", "Fixed note length in beats, independent of the step length.", cat.param, ([p, v]) => setParam(P(p), "durBeats", v));
 def("set", "set(p, name, value)", "Attach any named parameter to events (it is passed through to MIDI CC maps and exports).", cat.param, ([p, n, v]) => setParam(P(p), String(n), v));
 def("inst", "inst(p, name, ...options)", "Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name.", cat.param, ([p, name], named) => {
-  const nm = name instanceof Pitch && name.drum ? name.drum : String(name);
+  // instrument names that are also functions (sine, saw, square, tri, noise, fm) arrive as the function
+  const nm = name instanceof Pitch && name.drum ? name.drum : name instanceof Builtin ? name.name : String(name);
   let q = setParam(P(p), "inst", nm);
   for (const [k, v] of Object.entries(named)) q = setParam(q, k, v);
   return q;
@@ -442,7 +453,7 @@ def("sample", "sample(p, name, n: 0, fit: false)", "Play a sound from the sample
   const nm = name ?? named.name ?? "", n = named.n;
   let q = mapEv(P(p), (ev, ctx) => {
     const v = sampleAt(nm, ev.s, ctx);
-    const out = { ...ev.p, inst: `sample:${v instanceof Pitch && v.drum ? v.drum : v === undefined ? "" : String(v)}` };
+    const out = { ...ev.p, inst: `sample:${v instanceof Pitch && v.drum ? v.drum : v instanceof Builtin ? v.name : v === undefined ? "" : String(v)}` };
     if (n !== undefined) out.sampleN = N(sampleAt(n, ev.s, ctx), 0);
     return { ...ev, p: out };
   });
