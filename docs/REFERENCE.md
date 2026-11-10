@@ -178,7 +178,7 @@ Besides the fixed instruments (`keys`, `pluck`, `bass` and the rest, listed unde
 ```tine
 voice acid = [a1 a1 a2 a1 c2 a1 g2 a1].inst(tb303).fenv([4 2 3 1]).glide([0 0 .06 0])
 voice lead = <[e4 . g4 a4] [b4 . a4 g4]>.inst(supersaw).vibrato(5, depth: .1)
-voice wub  = [a0 . . . c1 . . .].inst(wobble).wobble([2 4], depth: 4)
+voice wub  = [a0 _ _ _ c1 _ _ _].inst(wobble).wobble([2 4], depth: 4)
 ```
 
 Glide needs the note before. A pattern is a function of time, so Tine asks the voice for the bar before; in a loop, the first note glides from the loop's last.
@@ -191,7 +191,7 @@ Tine ships with about 200 CC0 (public domain) sounds: drums, hats, loops, bass h
 voice beat = ["bd_haus" . "sn_dolf" "bd_haus"]          -- names in a phrase play as recorded
 voice hats = ["hat" "hat:3" "hat:5" "hat:7"]              -- a bank, and bank:n for its nth sound
 voice kit  = [kick . snare . kick kick snare .].sample()  -- drum names through the bundled kit
-voice bass = [c2 . eb2 g2].sample("bass_voxy_c")          -- pitched: c4 plays it as recorded
+voice bass = [c4 . eb4 g4].sample("bass_voxy_c").cut(1)   -- pitched: c4 plays it as recorded
 voice amen = ["loop_amen"].loopAt(2).chop(16)             -- a loop that follows the tempo
 ```
 

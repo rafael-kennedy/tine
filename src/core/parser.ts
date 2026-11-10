@@ -144,7 +144,7 @@ class Parser {
       this.next();
       const nameTok = this.tok;
       // voice names live in their own namespace, so even note-like names are fine
-      if (nameTok.type !== "ident" && nameTok.type !== "note") this.err("expected a voice name", nameTok);
+      if (nameTok.type !== "ident" && nameTok.type !== "note") this.err(nameTok.type === "kw" ? `'${nameTok.text}' is a keyword and cannot name a voice` : "expected a voice name", nameTok);
       this.next();
       this.expectOp("=");
       const value = this.valueOrBlock();
@@ -173,7 +173,7 @@ class Parser {
     if (this.isKw("section")) {
       this.next();
       const nameTok = this.tok;
-      if (nameTok.type !== "ident") this.err("expected a section name", nameTok);
+      if (nameTok.type !== "ident") this.err(nameTok.type === "note" ? `'${nameTok.text}' is a note name and cannot name a section` : nameTok.type === "kw" ? `'${nameTok.text}' is a keyword and cannot name a section` : "expected a section name", nameTok, nameTok.type === "note" ? renameHint(nameTok.text) : undefined);
       this.next();
       const bars = this.unary();
       if (this.tok.type === "ident" && (this.tok.text === "bars" || this.tok.text === "bar")) this.next();
@@ -394,6 +394,7 @@ class Parser {
       if (this.tok.type === "eof" || this.tok.type === "newline" || this.tok.type === "dedent") this.err(`unclosed '${open}'`, s, `add a matching '${close}'`);
       // newlines inside brackets are ignored, so a forgotten bracket swallows the next statement
       if (this.tok.type === "kw" && STATEMENT_KW.has(this.tok.text)) this.err(`unclosed '${open}': the next line starts with '${this.tok.text}' before it was closed`, s, `add a matching '${close}' at the end of this line`);
+      if (this.isOp(",")) this.err("unexpected ',' in a phrase", this.tok, "steps in a phrase are separated by spaces, like [c e g]; a chord is c4@maj or {c e g}");
       if (this.isOp("_")) {
         const h = this.next();
         if (!items.length) throw new TineError("syntax", "'_' extends the previous step, so it cannot come first", this.spanOf(h));

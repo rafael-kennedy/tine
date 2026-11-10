@@ -405,7 +405,7 @@ param("hpf", "hpf(p, hz)", "High-pass filter on the whole voice: removes rumble 
 param("lpf", "lpf(p, hz)", "Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep.");
 param("drive", "drive(p, amount)", "Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp.");
 def("delay", "delay(p, mix, time: 3/16, feedback: .4)", "An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats.", cat.param, ([p, mix, time, fb], named) => {
-  let q = setParam(P(p), "delay", mix ?? 0.3);
+  let q = setParam(P(p), "delay", named.mix ?? mix ?? 0.3);
   q = setParam(q, "delayTime", named.time ?? time ?? 3 / 16);
   return setParam(q, "feedback", named.feedback ?? fb ?? 0.4);
 });

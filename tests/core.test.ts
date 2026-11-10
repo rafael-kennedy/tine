@@ -235,3 +235,17 @@ describe("inexact timing", () => {
     expect([...hit]).toEqual(["deep"]);
   });
 });
+
+describe("errors that name the real problem", () => {
+  const msg = (src: string) => { try { evaluate(src, { seed: 1 }); return ""; } catch (e: any) { return `${e.message} | ${e.hint ?? ""}`; } };
+  test("a note name or keyword as a section or voice name", () => {
+    expect(msg("section a 2\n  voice x = [c]\nform a")).toContain("'a' is a note name");
+    expect(msg("voice key = [c]")).toContain("'key' is a keyword");
+  });
+  test("commas in a phrase", () => {
+    expect(msg("voice x = [c, e, g]")).toContain("separated by spaces");
+  });
+  test("delay takes mix by name", () => {
+    expect(notes("voice x = [c].delay(mix: .5)")[0].params.delay.valueOf()).toBe(0.5);
+  });
+});
