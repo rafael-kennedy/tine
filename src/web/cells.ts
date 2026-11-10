@@ -140,6 +140,8 @@ export function makeCell(cell: Cell, o: CellOptions): HTMLElement & { view: () =
   stopBtn.onclick = () => stopAll();
   resetBtn.onclick = () => { view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: cell.code } }); compile(); };
   requestAnimationFrame(() => compile());
+  // a page can ask every cell to run again in place (a new seed), keeping the reader's edits
+  box.addEventListener("tine:recompile", () => compile());
   box.view = () => view;
   return box;
 }

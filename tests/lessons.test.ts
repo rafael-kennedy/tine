@@ -22,11 +22,13 @@ for (const lesson of LESSONS) {
         expect(verdict(ex.starter)).not.toBeNull();
       });
       // other correct answers must pass too, and each listed mistake must be caught
-      for (const src of ex.alsoRight ?? []) test(`${lesson.id} exercise ${i} accepts: ${src.replace(/\n/g, " / ")}`, () => { expect(verdict(src)).toBeNull(); });
-      for (const src of ex.wrong ?? []) test(`${lesson.id} exercise ${i} rejects: ${src.replace(/\n/g, " / ")}`, () => { expect(verdict(src)).not.toBeNull(); });
-      // chance exercises must hold for any seed
-      test(`${lesson.id} exercise ${i}: the answer passes on 40 seeds`, () => {
-        for (let seed = 1; seed <= 40; seed++) { const s = evaluate(ex.solution, { seed }); expect(ex.check(s, renderNotes(s, ex.bars ?? 1).notes, ex.solution)).toBeNull(); }
+      // (on 40 seeds each, so an exercise about chance cannot pass or fail by luck)
+      const seeded = (src: string, seed: number) => { const s = evaluate(src, { seed }); return ex.check(s, renderNotes(s, ex.bars ?? 1).notes, src); };
+      for (const src of [ex.solution, ...(ex.alsoRight ?? [])]) test(`${lesson.id} exercise ${i} accepts: ${src.replace(/\n/g, " / ")}`, () => {
+        for (let seed = 1; seed <= 40; seed++) expect([seed, seeded(src, seed)]).toEqual([seed, null]);
+      });
+      for (const src of ex.wrong ?? []) test(`${lesson.id} exercise ${i} rejects: ${src.replace(/\n/g, " / ")}`, () => {
+        for (let seed = 1; seed <= 40; seed++) expect([seed, seeded(src, seed) === null]).toEqual([seed, false]);
       });
     } else {
       test(`${lesson.id} example ${i}`, () => {
