@@ -1630,6 +1630,8 @@ function valueToSemis(v, key) {
     return v.notes.flatMap((n) => valueToSemis(n, key));
   if (v === true)
     return [60];
+  if (typeof v === "string")
+    return [60];
   if (typeof v === "object" && !(v instanceof Pat) && "note" in v)
     return valueToSemis(v.note, key);
   return [];
@@ -1649,6 +1651,13 @@ function resolveNotes(voice, evs, ctx) {
     const params = { ...ev.p };
     if (ev.v instanceof Pitch && ev.v.drum && params.inst === undefined)
       params.inst = "kit";
+    if (ev.v instanceof Pitch && ev.v.drum && typeof params.inst === "string" && (params.inst.startsWith("sample:") || params.inst === "gm"))
+      params.drum = ev.v.drum;
+    if (typeof ev.v === "string") {
+      if (params.inst === undefined || params.inst === "sample:")
+        params.inst = `sample:${ev.v}`;
+      params.hit = true;
+    }
     delete params.key;
     delete params.vel;
     delete params.legato;
@@ -2748,19 +2757,116 @@ def("delay", "delay(p, mix, time: 3/16, feedback: .4)", "An echo on the whole vo
   q = setParam(q, "delayTime", named.time ?? time ?? 3 / 16);
   return setParam(q, "feedback", named.feedback ?? fb ?? 0.4);
 });
+var fxdef = (name, sig, doc, keys) => def(name, sig, doc, cat.param, ([p, ...pos], named) => {
+  let q = P(p);
+  keys.forEach(([arg, key, d], i) => {
+    const v = named[arg] ?? pos[i] ?? d;
+    if (v !== undefined)
+      q = setParam(q, key, v);
+  });
+  return q;
+});
+param("wave", "wave(p, name)", "Oscillator of the synth instrument (and its presets): saw, square, pulse, tri, sine, super, fm or noise.");
+param("pw", "pw(p, width)", "Pulse width of the pulse wave, 0 to 1 (.5 is square). May be a pattern or a signal.");
+param("detune", "detune(p, cents)", "Spread of the unison voices, in cents either side.");
+param("unison", "unison(p, n)", "How many detuned oscillators sound together (1 to 16).");
+param("sub", "sub(p, level)", "A sine one octave below, 0 to 1.");
+param("glide", "glide(p, seconds)", "Slide into each note from the one before it in the voice.");
+fxdef("fenv", "fenv(p, octaves, attack: .001, decay: .2)", "Filter envelope: the cutoff jumps up by this many octaves and falls back over decay seconds. The acid squelch.", [["octaves", "fenv", 2], ["attack", "fattack", undefined], ["decay", "fdecay", undefined]]);
+fxdef("fm", "fm(p, index, ratio: 2, decay: .4)", "Frequency modulation (switches the synth to the fm wave): index is brightness, ratio the modulator's pitch, decay how fast the brightness fades.", [["index", "fm", 3], ["ratio", "fmRatio", undefined], ["decay", "fmDecay", undefined]]);
+fxdef("vibrato", "vibrato(p, rate: 5, depth: .3)", "Pitch wobble, rate in Hz, depth in semitones.", [["rate", "vibrato", 5], ["depth", "vibratoDepth", undefined]]);
+fxdef("wobble", "wobble(p, rate: 2, depth: 2)", "Filter wobble in time with the music: rate in cycles per bar, depth in octaves.", [["rate", "wobble", 2], ["depth", "wobbleDepth", undefined]]);
+param("vowel", "vowel(p, v)", 'Formant filter: makes the voice say a vowel, "a" "e" "i" "o" or "u". v may be a pattern: .vowel(["a" "o"]).');
+param("crush", "crush(p, bits)", "Bit crusher: fewer bits (1 to 16) is rougher. .crush(4) is very lo-fi.");
+param("coarse", "coarse(p, n)", "Sample-rate reduction: holds every nth sample, for aliasing and grit. 1 is off.");
+fxdef("ring", "ring(p, hz, mix: 1)", "Ring modulation: multiplies the voice by a sine at hz, for metallic and bell-like tones.", [["hz", "ring", 440], ["mix", "ringMix", 1]]);
+fxdef("chorus", "chorus(p, mix: .5, rate: .8, depth: .5)", "Chorus: thickens the voice with slightly detuned, moving copies. rate in Hz.", [["mix", "chorus", 0.5], ["rate", "chorusHz", undefined], ["depth", "chorusDepth", undefined]]);
+fxdef("phaser", "phaser(p, mix: .5, rate: .5, depth: .7)", "Phaser: a sweeping notch, the classic swirl. rate in Hz.", [["mix", "phaser", 0.5], ["rate", "phaserHz", undefined], ["depth", "phaserDepth", undefined]]);
+fxdef("compress", "compress(p, threshold: -18, ratio: 4)", "Compressor on the whole voice: levels above threshold (dB) are reduced by ratio, then made up. Evens out a part.", [["threshold", "comp", -18], ["ratio", "compRatio", undefined]]);
+fxdef("room", "room(p, mix: .3, size: .5)", "A reverb on this voice alone, unlike reverb(), which sends to the shared room. size 0 to 1.", [["mix", "room", 0.3], ["size", "roomSize", undefined]]);
+def("duck", "duck(p, voice, depth: .8, release: 1/8)", 'Sidechain-style ducking: this voice dips each time the named voice plays a note, then recovers over release bars. .duck("kick") pumps a pad against the kick.', cat.param, ([p, v, depth, rel], named) => {
+  const nm = v instanceof Pitch && v.drum ? v.drum : String(named.voice ?? v ?? "");
+  let q = setParam(P(p), "duck", nm);
+  const d = named.depth ?? depth, r = named.release ?? rel;
+  if (d !== undefined)
+    q = setParam(q, "duckDepth", d);
+  return setParam(q, "duckRelease", r ?? new R(1, 8));
+});
 def("dur", "dur(p, beats)", "Fixed note length in beats, independent of the step length.", cat.param, ([p, v]) => setParam(P(p), "durBeats", v));
 def("set", "set(p, name, value)", "Attach any named parameter to events (it is passed through to MIDI CC maps and exports).", cat.param, ([p, n, v]) => setParam(P(p), String(n), v));
 def("inst", "inst(p, name, ...options)", "Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name.", cat.param, ([p, name], named) => {
-  const nm = name instanceof Pitch && name.drum ? name.drum : String(name);
+  const nm = name instanceof Pitch && name.drum ? name.drum : name instanceof Builtin ? name.name : String(name);
   let q = setParam(P(p), "inst", nm);
   for (const [k, v] of Object.entries(named))
     q = setParam(q, k, v);
   return q;
 });
-def("sample", "sample(p, name, fit: false)", "Play a loaded audio sample (drop files into the DAW). With fit: true it is stretched to the event length, for loops.", cat.param, ([p, name, fit], named) => {
-  let q = setParam(P(p), "inst", `sample:${String(name)}`);
+def("sample", "sample(p, name, n: 0, fit: false)", `Play a sound from the sample library: a full name ("bd_haus"), a bank ("bd", with n choosing among its sounds), or "bank:n". On a drum phrase with no name it plays the bundled kit. name and n may be patterns. With fit: true the sound is stretched to the note's length.`, cat.param, ([p, name, fit], named) => {
+  const nm = name ?? named.name ?? "", n = named.n;
+  let q = mapEv(P(p), (ev, ctx) => {
+    const v = sampleAt(nm, ev.s, ctx);
+    const out = { ...ev.p, inst: `sample:${v instanceof Pitch && v.drum ? v.drum : v instanceof Builtin ? v.name : v === undefined ? "" : String(v)}` };
+    if (n !== undefined)
+      out.sampleN = N(sampleAt(n, ev.s, ctx), 0);
+    return { ...ev, p: out };
+  });
   if (truthy(named.fit ?? fit ?? false))
     q = setParam(q, "fit", true);
+  return q;
+});
+param("begin", "begin(p, x)", "Start playing a sample from this point, 0 (its start) to 1 (its end).");
+param("end", "end(p, x)", "Stop playing a sample at this point, 0 to 1.");
+param("speed", "speed(p, x)", "Sample playback rate: 2 is an octave up and twice as fast, -1 plays it backwards.");
+param("accel", "accel(p, x)", "Change a sample's speed by x every second while it plays: speed(1).accel(-1) is a tape stop.");
+param("cut", "cut(p, group)", "Cut group: a sample in this group stops the one before it, in any voice. Choke an open hat with a closed one.");
+def("loopAt", "loopAt(p, bars)", 'Make a sample last this many bars, whatever the tempo: the phrase is slowed to that length and the sample stretched to fit. Add chop to keep a long loop in time: ["loop_amen"].loopAt(2).chop(16).', cat.param, ([p, n]) => setParam(fast(ONE.div(RR(n)), P(p)), "loopAt", n));
+var sliceOf = (p, n, i, fit) => mapEv(P(p), (ev, ctx) => {
+  const k = Math.max(1, Math.round(N(sampleAt(n, ev.s, ctx), 1)));
+  const j = (Math.floor(N(sampleAt(i, ev.s, ctx), 0)) % k + k) % k;
+  const out = { ...ev.p, begin: j / k, end: (j + 1) / k };
+  if (fit)
+    out.fit = true;
+  return { ...ev, p: out };
+});
+def("slice", "slice(p, n, i)", "Cut the sample into n equal pieces and play piece i (from 0). i may be a pattern: .slice(8, [0 3 2 7]).", cat.param, ([p, n, i]) => sliceOf(p, n, i, false));
+def("splice", "splice(p, n, i)", "Like slice, but each piece is stretched to fill its note, so a sliced loop stays in tempo.", cat.param, ([p, n, i]) => sliceOf(p, n, i, true));
+def("chop", "chop(p, n)", "Split each note into n notes that play successive parts of its sample. With loopAt, a loop follows the tempo: loop_amen.loopAt(2).chop(16).", cat.param, ([p, n]) => {
+  const q = P(p);
+  return new Pat((a, b, ctx) => {
+    const out = [];
+    for (const ev of q.query(new R(a.floor() - 8), b.add(ONE), ctx)) {
+      if (ev.e.le(a))
+        continue;
+      const k = Math.max(1, Math.round(N(sampleAt(n, ev.s, ctx), 1)));
+      const step = ev.e.sub(ev.s).div(new R(k));
+      const b0 = ev.p.begin !== undefined ? N(ev.p.begin) : 0, b1 = ev.p.end !== undefined ? N(ev.p.end) : 1;
+      for (let i = 0;i < k; i++) {
+        const s = ev.s.add(step.mul(new R(i)));
+        if (s.ge(a) && s.lt(b))
+          out.push({ s, e: s.add(step), v: ev.v, p: { ...ev.p, begin: b0 + (b1 - b0) * i / k, end: b0 + (b1 - b0) * (i + 1) / k } });
+      }
+    }
+    return out;
+  });
+});
+def("soundfont", "soundfont(source)", 'Load a SoundFont 2 (.sf2) bank, as a top-level line: a file next to the piece, a URL, or "github:user/repo/path.sf2". Then play its instruments with .gm(). General MIDI banks such as GeneralUser GS give all 128 standard instruments and the drum kits.', cat.io, ([src]) => ({ __soundfont: String(src) }));
+def("gm", "gm(p, program, bank: 0)", 'Play notes on an instrument of the loaded SoundFont: a General MIDI program number from 1 (piano) to 128, or a name to search for, .gm("violin"). On drum names with no program it plays the drum kit.', cat.param, ([p, prog, bank], named) => {
+  let q = setParam(P(p), "inst", "gm");
+  const pr = named.program ?? prog, bk = named.bank ?? bank;
+  if (typeof pr === "string")
+    q = setParam(q, "gmName", pr);
+  else if (pr !== undefined)
+    q = mapEv(q, (ev, ctx) => ({ ...ev, p: { ...ev.p, gmProgram: Math.max(0, Math.min(127, Math.round(N(sampleAt(pr, ev.s, ctx))) - 1)) } }));
+  if (bk !== undefined)
+    q = setParam(q, "gmBank", bk);
+  return q;
+});
+def("samples", "samples(source)", `Load a sample pack, as a top-level line: a folder (command line), a URL of a strudel.json sample map, or "github:user/repo" for that repository's strudel.json. Sounds load on first use.`, cat.io, ([src]) => ({ __samples: String(src) }));
+def("dirt", 'dirt(p, sound: "", orbit: 0)', "Send to SuperDirt (TidalCycles' sound engine) instead of the built-in sound, over OSC from tine daw or tine dirt. sound is a SuperDirt sample bank or synth; without it, sample names, drum names and instruments are translated.", cat.param, ([p, snd, orbit], named) => {
+  let q = setParam(P(p), "dirt", named.sound ?? snd ?? "");
+  const o = named.orbit ?? orbit;
+  if (o !== undefined)
+    q = setParam(q, "orbit", o);
   return q;
 });
 def("midi", 'midi(p, channel: 1, port: "")', "Send to an external MIDI device instead of the built-in synth.", cat.param, ([p, ch, port], named) => {
@@ -2984,7 +3090,33 @@ def("interval", "interval(a, b, long: false)", 'The interval between two pitches
 
 // ../../src/core/interp.ts
 var MAX_DEPTH = 400;
-var INSTRUMENTS = ["keys", "sine", "tri", "saw", "square", "pluck", "bass", "pad", "bell", "organ", "kit", "lead", "upright", "vibes"];
+var INSTRUMENTS = [
+  "keys",
+  "sine",
+  "tri",
+  "saw",
+  "square",
+  "pluck",
+  "bass",
+  "pad",
+  "bell",
+  "organ",
+  "kit",
+  "lead",
+  "upright",
+  "vibes",
+  "synth",
+  "fm",
+  "supersaw",
+  "tb303",
+  "reese",
+  "wobble",
+  "chip",
+  "brass",
+  "strings",
+  "marimba",
+  "noise"
+];
 
 class Interp {
   env;
@@ -3014,6 +3146,8 @@ class Interp {
       form: null,
       prints: [],
       errors: [],
+      sampleSources: [],
+      soundfontSources: [],
       env: this.env
     };
     this.stream = new Stream([seed, 0]);
@@ -3163,7 +3297,18 @@ class Interp {
       }
       case "expr": {
         this.beginStatement(`expr:${st.span.start}`);
-        return this.eval(st.e, env);
+        const v = this.eval(st.e, env);
+        if (v && typeof v === "object" && typeof v.__soundfont === "string") {
+          if (!this.scene.soundfontSources.includes(v.__soundfont))
+            this.scene.soundfontSources.push(v.__soundfont);
+          return null;
+        }
+        if (v && typeof v === "object" && typeof v.__samples === "string") {
+          if (!this.scene.sampleSources.includes(v.__samples))
+            this.scene.sampleSources.push(v.__samples);
+          return null;
+        }
+        return v;
       }
     }
   }
@@ -3576,6 +3721,47 @@ function evaluate(src, opts = {}) {
   const it = new Interp(opts);
   return it.run(src);
 }
+// ../../src/core/synth.ts
+var INSTRUMENT_DOCS = {
+  keys: "Electric piano: FM tines, warm and bell-like. The default.",
+  sine: "Pure sine wave.",
+  tri: "Triangle wave, soft and hollow.",
+  saw: "Sawtooth through a low-pass filter, bright.",
+  square: "Square wave, reedy.",
+  pluck: "Plucked string (Karplus-Strong).",
+  bass: "Saw-and-sub bass with a filter envelope.",
+  pad: "Three detuned saws, slow attack, wide.",
+  bell: "FM bell with a long ring.",
+  organ: "Drawbar-style additive organ.",
+  lead: "Detuned square and saw lead.",
+  upright: "Upright (acoustic) bass: a round plucked tone with a soft finger thump. For walking lines.",
+  vibes: "Vibraphone: struck metal bars with a motor tremolo and a long ring.",
+  kit: "Drum kit: plays General MIDI drum note numbers (kick, snare, hat, ...).",
+  synth: "The general synth: choose .wave (saw, square, pulse, tri, sine, super, fm, noise), then shape it with .fenv, .pw, .unison, .sub, .vibrato, .wobble and .glide.",
+  fm: "Two-operator FM: a sine modulated by a sine. .fm(index, ratio, decay) sets the colour.",
+  supersaw: "Seven detuned saws, the trance and big-room lead.",
+  tb303: "Acid bass: a resonant filter that snaps shut on every note. Add .glide(.06) for slides.",
+  reese: "Detuned saws with a sub, the drum and bass bass.",
+  wobble: "Saw and sub through a filter that wobbles in time: .wobble(rate per bar, depth).",
+  chip: "Pulse wave with a quick vibrato, like a game console.",
+  brass: "Saws with a filter that opens slowly, for stabs and swells.",
+  strings: "A soft detuned ensemble with slow attack and gentle vibrato.",
+  marimba: "FM mallet: a short woody strike.",
+  noise: "Filtered white noise, for risers, sweeps and hats."
+};
+var PRESETS = {
+  fm: { wave: "fm", fm: 3, fmRatio: 2, fmDecay: 0.4, attack: 0.002, decay: 0.8, sustain: 0.3, release: 0.2 },
+  supersaw: { wave: "super", unison: 7, detune: 25, cutoff: 7000, attack: 0.01, decay: 0.2, sustain: 0.85, release: 0.3 },
+  tb303: { wave: "saw", cutoff: 350, res: 0.85, fenv: 3.5, fdecay: 0.18, attack: 0.002, decay: 0.3, sustain: 0.6, release: 0.04 },
+  reese: { wave: "super", unison: 3, detune: 18, sub: 0.5, cutoff: 900, res: 0.2, attack: 0.005, decay: 0.1, sustain: 1, release: 0.1 },
+  wobble: { wave: "saw", sub: 0.6, cutoff: 250, res: 0.5, wobble: 2, wobbleDepth: 3.5, attack: 0.005, decay: 0.1, sustain: 1, release: 0.06 },
+  chip: { wave: "pulse", pw: 0.25, vibrato: 6, vibratoDepth: 0.15, vibratoDelay: 0.15, attack: 0.001, decay: 0.1, sustain: 0.7, release: 0.02 },
+  brass: { wave: "super", unison: 2, detune: 8, cutoff: 600, res: 0.1, fenv: 2.2, fattack: 0.06, fdecay: 0.5, attack: 0.04, decay: 0.3, sustain: 0.85, release: 0.15 },
+  strings: { wave: "super", unison: 4, detune: 12, cutoff: 3200, vibrato: 5, vibratoDepth: 0.08, vibratoDelay: 0.3, attack: 0.4, decay: 0.3, sustain: 0.9, release: 0.8 },
+  marimba: { wave: "fm", fm: 2.2, fmRatio: 4, fmDecay: 0.04, attack: 0.001, decay: 0.45, sustain: 0, release: 0.12 },
+  noise: { wave: "noise", cutoff: 8000, attack: 0.005, decay: 0.2, sustain: 0.8, release: 0.2 }
+};
+
 // ../../src/core/scene.ts
 function barSeconds(scene, tempo = scene.tempo) {
   return scene.meter[0] * 60 / tempo;
@@ -3601,7 +3787,8 @@ function queryVoice(v, a, b, ctx, opts) {
     return [];
   const before = R.inexact;
   try {
-    return resolveNotes(v.name, v.pat.query(a, b, ctx), ctx);
+    const notes = resolveNotes(v.name, v.pat.query(a, b, ctx), ctx);
+    return notes.some((n) => n.params.glide !== undefined) ? withGlide(notes, v, a, ctx) : notes;
   } catch (e) {
     if (opts.onError) {
       opts.onError(v.name, e);
@@ -3613,6 +3800,22 @@ function queryVoice(v, a, b, ctx, opts) {
       opts.onInexact(v.name, R.inexact - before);
   }
 }
+function withGlide(notes, v, a, ctx) {
+  const before = resolveNotes(v.name, v.pat.query(a.sub(new R(1)), a, ctx), ctx).filter((n) => n.start.lt(a));
+  const onsets = [...before, ...notes].sort((x, y) => x.start.cmp(y.start));
+  return notes.map((n) => {
+    if (n.params.glide === undefined)
+      return n;
+    let prev;
+    for (const o of onsets) {
+      if (!o.start.lt(n.start))
+        break;
+      if (!prev || !o.start.eq(prev.start))
+        prev = o;
+    }
+    return prev ? { ...n, params: { ...n.params, glideFrom: prev.semi } } : n;
+  });
+}
 function finish(scene, n, offsetBar, offsetSec, tempo, section) {
   const bs = barSeconds(scene, tempo);
   const local = n.start.toNumber();
@@ -3621,6 +3824,23 @@ function finish(scene, n, offsetBar, offsetSec, tempo, section) {
     bars = Number(n.params.durBeats) / scene.meter[0];
   const params = { ...n.params };
   delete params.durBeats;
+  if (params.loopAt !== undefined) {
+    params.loopSec = Number(params.loopAt instanceof R ? params.loopAt.toNumber() : params.loopAt) * bs;
+    delete params.loopAt;
+  }
+  const wob = params.wobble ?? PRESETS[String(params.inst)]?.wobble;
+  if (wob !== undefined) {
+    params.wobbleHz = Number(wob instanceof R ? wob.toNumber() : wob) / bs;
+    delete params.wobble;
+  }
+  if (params.fm !== undefined && params.wave === undefined && (params.inst === undefined || params.inst === "synth")) {
+    params.wave = "fm";
+    params.inst = "synth";
+  }
+  if (params.duckRelease !== undefined) {
+    params.duckSec = Number(params.duckRelease instanceof R ? params.duckRelease.toNumber() : params.duckRelease) * bs;
+    delete params.duckRelease;
+  }
   if (params.delayTime !== undefined) {
     params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs;
     delete params.delayTime;
@@ -3677,23 +3897,45 @@ function renderNotes(scene, bars, opts = {}) {
   const n = bars ?? 8;
   return { notes: liveNotes(scene, 0, n, opts), seconds: n * barSeconds(scene), bars: n };
 }
-// ../../src/core/synth.ts
-var INSTRUMENT_DOCS = {
-  keys: "Electric piano: FM tines, warm and bell-like. The default.",
-  sine: "Pure sine wave.",
-  tri: "Triangle wave, soft and hollow.",
-  saw: "Sawtooth through a low-pass filter, bright.",
-  square: "Square wave, reedy.",
-  pluck: "Plucked string (Karplus-Strong).",
-  bass: "Saw-and-sub bass with a filter envelope.",
-  pad: "Three detuned saws, slow attack, wide.",
-  bell: "FM bell with a long ring.",
-  organ: "Drawbar-style additive organ.",
-  lead: "Detuned square and saw lead.",
-  upright: "Upright (acoustic) bass: a round plucked tone with a soft finger thump. For walking lines.",
-  vibes: "Vibraphone: struck metal bars with a motor tremolo and a long ring.",
-  kit: "Drum kit: plays General MIDI drum note numbers (kick, snare, hat, ...)."
+// ../../src/core/adpcm.ts
+var SCALE = Array.from({ length: 32 }, (_, i) => Math.pow(2, i / 2));
+
+// ../../src/core/sf2.ts
+var G = {
+  startOffset: 0,
+  endOffset: 1,
+  loopStartOffset: 2,
+  loopEndOffset: 3,
+  startCoarse: 4,
+  filterFc: 8,
+  filterQ: 9,
+  endCoarse: 12,
+  pan: 17,
+  delayVol: 33,
+  attackVol: 34,
+  holdVol: 35,
+  decayVol: 36,
+  sustainVol: 37,
+  releaseVol: 38,
+  keynumToVolHold: 39,
+  keynumToVolDecay: 40,
+  instrument: 41,
+  keyRange: 43,
+  velRange: 44,
+  loopStartCoarse: 45,
+  keynum: 46,
+  velocity: 47,
+  attenuation: 48,
+  loopEndCoarse: 50,
+  coarseTune: 51,
+  fineTune: 52,
+  sampleID: 53,
+  sampleModes: 54,
+  scaleTuning: 56,
+  rootKey: 58
 };
+var RANGE = new Set([G.keyRange, G.velRange]);
+var presetCache = new WeakMap;
 // ../../src/core/docs.ts
 var builtins = new Map(builtinList().map((b) => [b.name, b]));
 function describeWord(word) {
@@ -3735,9 +3977,11 @@ Frequency of A4 in Hz.`
   };
   return k[word] ?? null;
 }
+// ../../src/core/dirt.ts
+var DRUM_NAME = new Map(Object.entries(DRUMS).map(([k, v]) => [v, k]).reverse());
 
 // ../../src/core/index.ts
-var VERSION = "1.1.0";
+var VERSION = "1.2.0";
 
 // ../../src/lsp/server.ts
 var import_node_fs = require("node:fs");

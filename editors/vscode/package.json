@@ -2,7 +2,7 @@
   "name": "tine",
   "displayName": "Tine",
   "description": "Language support for Tine, a programming language for music: diagnostics, completion, hover, signatures, outline, and commands to play, render and live-code.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "tine-lang",
   "license": "MIT",
   "icon": "icon.png",
