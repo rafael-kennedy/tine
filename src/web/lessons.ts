@@ -1,218 +1,590 @@
 // The tutorial's content. Prose is small HTML; code cells are live.
+//
+// The reader is assumed to program already and to know no music vocabulary.
+// Rules for this file (see docs/COURSE-PEDAGOGY.md, "The language tutorial"):
+//   - every music term is defined in the sentence that first uses it;
+//   - every Tine feature is taught before an example relies on it;
+//   - the example plays before the paragraph that names what it did;
+//   - examples suggest a specific edit and say what it will do;
+//   - every lesson ends with a checked exercise.
 import type { Scene, TimedNote } from "../core";
 
 export interface Cell { code: string; bars?: number }
-export interface Exercise { task: string; starter: string; solution: string; bars?: number; check: (s: Scene, n: TimedNote[]) => string | null }
+export interface Exercise {
+  task: string; starter: string; solution: string; bars?: number; hint?: string;
+  check: (s: Scene, n: TimedNote[], src?: string) => string | null;
+  // for the tests: other answers that must pass, and wrong answers that must fail
+  alsoRight?: string[]; wrong?: string[];
+}
 export type Part = string | Cell | { exercise: Exercise };
 export interface Lesson { id: string; title: string; parts: Part[] }
 
-const voiceNotes = (n: TimedNote[], v?: string) => (v ? n.filter(x => x.voice === v) : n);
+// ---------- helpers for exercise checks ----------
+
+const EPS = 1e-6;
+const voiceNotes = (n: TimedNote[], v: string) => n.filter(x => x.voice === v);
+const firstBar = (n: TimedNote[], v: string) => voiceNotes(n, v).filter(x => x.bar < 1 - EPS);
 const round = (x: number) => Math.round(x * 1000) / 1000;
+const num = (x: any): number => (x && typeof x === "object" && "n" in x ? x.n / x.d : Number(x));
+const LETTERS = ["c", "c#", "d", "eb", "e", "f", "f#", "g", "ab", "a", "bb", "b"];
+/** A pitch number as a note name, as lesson 1 teaches it: 60 is c4. */
+export const noteName = (semi: number) => {
+  const r = Math.round(semi);
+  const cents = Math.round((semi - r) * 100);
+  return LETTERS[((r % 12) + 12) % 12] + (Math.floor(r / 12) - 1) + (cents ? ` ${cents > 0 ? "+" : ""}${cents}c` : "");
+};
+const names = (n: TimedNote[]) => n.map(x => noteName(x.semi)).join(" ") || "nothing";
+const same = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => Math.abs(x - b[i]) < 0.001);
+/** Where in the bar something starts, in the words the lessons use. */
+const place = (bar: number, grid: number) => {
+  const p = (bar - Math.floor(bar + EPS)) * grid;
+  return Math.abs(p - Math.round(p)) < 0.001 ? `step ${Math.round(p) + 1} of ${grid}` : `${round(bar)} of the way through the bar`;
+};
+const noVoice = (n: TimedNote[], v: string) => (voiceNotes(n, v).length ? null : `There is no voice named ${v} playing yet.`);
+const KICK = 36, SNARE = 38, CLAP = 39, HAT = 42;
 
 export const LESSONS: Lesson[] = [
+  // ------------------------------------------------------------------
   {
     id: "first", title: "1. A first sound",
     parts: [
-      `<p>Tine is a programming language for music. You write <em>voices</em>, and each voice is a pattern that repeats every bar. Press <b>▶</b> (or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd> inside the code) to hear this one.</p>`,
+      `<p>Press <b>▶ play</b> (or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd> inside the code).</p>`,
       { code: `voice hello = [c e g]` },
-      `<p>The square brackets make a <b>phrase</b>. A phrase divides one bar into equal steps, so three notes each get a third of the bar. Add a fourth note and they all get shorter; the bar stays the same length.</p>`,
+      `<p>You heard three notes, then the same three again, and again. A Tine program is a list of <b>voices</b>. A voice is a named part that loops. The length of that loop is one <b>bar</b>, and the bar is Tine's unit of time: every voice loops on it and lines up with every other voice on it.</p>`,
+      `<p>The square brackets make a <b>phrase</b>. A phrase divides one bar into equal steps, so three notes each get a third of the bar. Add a fourth note and all four get shorter. The bar stays the same length.</p>`,
       { code: `voice hello = [c e g c5]` },
-      `<p>Note names are <code>c d e f g a b</code>, with <code>#</code> for sharp and <code>b</code> for flat, and an octave number: <code>c4</code> is middle C, <code>f#3</code> is below it, <code>eb5</code> above. Without a number you get octave 4. Because these are notes, a bare <code>a</code> or <code>e</code> can never be a variable name.</p>`,
-      `<p>The drawing under each example is a piano roll: time runs left to right, pitch bottom to top, one vertical line per bar.</p>`,
+      `<p>How long is a bar? A <code>tempo</code> line sets it. Tempo is counted in <b>beats</b> per minute, and a bar holds four beats unless you say otherwise. The default is 120, which makes a bar two seconds. Change the 80 below to 160 and the loop takes half as long.</p>`,
+      { code: `tempo 80\nvoice hello = [c e g c5]` },
+      `<p>Now the notes. This plays eight in a row, low to high.</p>`,
+      { code: `voice climb = [c4 d4 e4 f4 g4 a4 b4 c5]` },
+      `<p>The letters <code>a</code> to <code>g</code> are the white keys of a piano. After <code>g</code> the letters start again at <code>a</code>, higher up. The number says which repetition you are in, and it is called the <b>octave</b>. Octave numbers change at <code>c</code>, not at <code>a</code>, which is why the note after <code>b4</code> is <code>c5</code>. <code>c4</code> is the C in the middle of a piano. With no number you get octave 4.</p>`,
+      `<p>Underneath, a pitch is a number. <code>c4</code> is 60, and each piano key up, white or black, adds 1. That distance of 1 is a <b>semitone</b>. The black keys are written with <code>#</code> (sharp, add 1) or <code>b</code> (flat, subtract 1): <code>c#4</code> is 61, and <code>eb4</code> is 63. Add 12 and you land on the same letter in the next octave: <code>c5</code> is 72. Two notes 12 apart sound like one note at two heights.</p>`,
+      { code: `print(c4 + 7)\nprint(eb4 - c4)\nvoice numbers = [c4 (c4 + 7) (c4 + 12) 60]` },
+      `<p><code>print</code> shows a value under the example. Parentheses put any expression inside a phrase, and a bare number in a phrase is a pitch number. Change the 7 to 6 and the second note drops to a black key, <code>f#4</code>.</p>`,
+      `<p>Two things that catch programmers. Phrases have no commas: <code>[c, e, g]</code> is an error. And note names are reserved words, so <code>a</code>, <code>e</code> or <code>bb</code> can never be a variable or a parameter name.</p>`,
+      `<p>The drawing under each example is a piano roll. Time runs left to right, pitch runs bottom to top, and each vertical line is a bar.</p>`,
       { exercise: {
-        task: "Make a voice called <code>tune</code> that plays the four notes C, D, E, G in one bar.",
+        task: "Make a voice called <code>tune</code> that plays the four notes C, D, E, G in one bar, in octave 4.",
         starter: "voice tune = [c]", solution: "voice tune = [c d e g]",
-        check: (_s, n) => { const t = voiceNotes(n, "tune").filter(x => x.bar < 1); if (!t.length) return "There is no voice named tune yet."; if (t.length !== 4) return `That bar has ${t.length} notes; it should have 4.`; return JSON.stringify(t.map(x => x.semi)) === "[60,62,64,67]" ? null : "Right number of notes, but check the pitches: c d e g."; },
+        hint: "Four names inside one pair of brackets, separated by spaces.",
+        alsoRight: ["voice tune = [c4 d4 e4 g4]", "voice tune = [60 62 64 67]"],
+        wrong: ["voice tune = [c d e]", "voice tune = [c3 d3 e3 g3]", "voice song = [c d e g]", "voice tune = [c d e f]"],
+        check: (_s, n) => {
+          const t = firstBar(n, "tune");
+          if (!t.length) return "There is no voice named tune yet.";
+          if (t.length !== 4) return `That bar has ${t.length} note${t.length === 1 ? "" : "s"} (${names(t)}); it should have 4.`;
+          const got = t.map(x => x.semi);
+          if (same(got, [60, 62, 64, 67])) return null;
+          if (same(got.map(x => ((x % 12) + 12) % 12), [0, 2, 4, 7])) return `Right letters, wrong octave: I hear ${names(t)}. Octave 4 is what you get with no number.`;
+          return `Right number of notes, but I hear ${names(t)}. It should be c4 d4 e4 g4.`;
+        },
       } },
     ],
   },
+  // ------------------------------------------------------------------
   {
     id: "rhythm", title: "2. Rests, holds and lengths",
     parts: [
-      `<p>Inside a phrase, <code>.</code> is a rest and <code>_</code> holds the previous note for one more step.</p>`,
       { code: `voice riff = [c . e _ g . . c5]` },
-      `<p>To make one step longer than the others without counting holds, give it a weight with a colon. <code>c:3</code> takes three steps' worth of the bar.</p>`,
+      `<p>That phrase has eight steps but only four notes. A <code>.</code> is a <b>rest</b>: one step of silence. A <code>_</code> <b>holds</b> the note before it for one more step, so the <code>e</code> lasts twice as long as the <code>c</code>. Change the <code>_</code> to a <code>.</code> and the <code>e</code> is cut short.</p>`,
+      `<p>Musicians name step lengths by the fraction of a four-beat bar they fill, and you will meet these words everywhere. Four steps in a bar are <b>quarter notes</b>, one per beat. Eight steps are <b>eighth notes</b>. Sixteen are <b>sixteenth notes</b>. The riff above is written in eighth notes.</p>`,
+      `<p>To make one step longer without counting holds, give it a weight with a colon.</p>`,
       { code: `voice riff = [c:3 e g:2 . ]` },
-      `<p>Any step can itself be a phrase. Nested brackets subdivide just that step, which is how you write triplets, quintuplets, or anything stranger. Time in Tine is exact, so nested tuplets never drift.</p>`,
+      `<p>The weights here add up to 7 (3 + 1 + 2 + 1), so the bar is cut into sevenths and <code>c:3</code> gets three of them. Change <code>g:2</code> to <code>g:4</code>: the total becomes 9 and every step shrinks to make room.</p>`,
+      `<p>Any step can itself be a phrase. Nested brackets subdivide just that step.</p>`,
       { code: `voice riff = [c [e e e] g [a b c5 d5 e5]]` },
-      `<p>Two shortcuts: <code>x*3</code> plays x three times inside its step (a ratchet), and <code>x!3</code> repeats x as three separate steps.</p>`,
+      `<p>Three notes squeezed into the time of one step are called a <b>triplet</b>, five a <b>quintuplet</b>. Time in Tine is exact rational arithmetic, so nesting never drifts, however deep it goes.</p>`,
+      `<p>Two shortcuts. <code>x*3</code> plays x three times inside its own step. <code>x!3</code> repeats x as three separate steps.</p>`,
       { code: `voice riff = [c*2 e!3 g*4]` },
+      `<p>That is five steps: one for <code>c*2</code>, three for <code>e!3</code>, one for <code>g*4</code>. Change <code>e!3</code> to <code>e*3</code> and the phrase has only three steps, each longer.</p>`,
       { exercise: {
-        task: "Write <code>voice beat</code>: a C on the first and third quarter of the bar, rests on the second and fourth.",
+        task: "Write <code>voice beat</code> in quarter notes: a C on beats 1 and 3, silence on beats 2 and 4.",
         starter: "voice beat = [c]", solution: "voice beat = [c . c .]",
-        check: (_s, n) => { const t = voiceNotes(n, "beat").filter(x => x.bar < 1); return JSON.stringify(t.map(x => round(x.bar))) === "[0,0.5]" ? null : `Notes start at ${t.map(x => round(x.bar)).join(", ") || "nowhere"}; they should start at 0 and 0.5 of the bar.`; },
+        hint: "Four steps, one per beat. A rest is a dot.",
+        alsoRight: ["voice beat = [c4 . c4 .]", "voice beat = [c . . . c . . .]", "voice beat = [c .]*2"],
+        wrong: ["voice beat = [c _ c _]", "voice beat = [c c . .]", "voice beat = [. c . c]", "voice beat = [c . c]"],
+        check: (_s, n) => {
+          const t = firstBar(n, "beat");
+          if (!t.length) return "There is no voice named beat yet.";
+          const starts = t.map(x => round(x.bar));
+          if (!same(starts, [0, 0.5])) return `Notes start at ${t.map(x => place(x.bar, 4)).join(" and ")}. Beats 1 and 3 are steps 1 and 3 of 4.`;
+          if (t.some(x => x.bars > 0.25 + EPS)) return "The notes start in the right places, but they ring through beats 2 and 4. Use a rest (.) there, not a hold (_).";
+          return null;
+        },
       } },
     ],
   },
+  // ------------------------------------------------------------------
   {
     id: "together", title: "3. Drums, layers and voices",
     parts: [
-      `<p>Drum names are built in: <code>kick snare hat ohat clap rim crash ride tom1</code> and more (they are General MIDI drum notes, so they work with any drum machine).</p>`,
       { code: `voice drums = [kick hat snare hat]` },
-      `<p>Curly braces play things <b>at the same time</b>. Put two phrases in braces and they layer, each keeping its own subdivision.</p>`,
+      `<p>Drum names are built in. <code>kick</code> is the low thump of the bass drum, <code>snare</code> the sharp crack, and <code>hat</code> the short tick of a closed hi-hat cymbal. Others: <code>ohat</code> (the hi-hat left open, a longer hiss), <code>clap</code>, <code>rim</code> (a stick on the drum's edge, a click), <code>crash</code> and <code>ride</code> (cymbals) and <code>tom1</code>. Swap the two <code>hat</code>s for <code>ohat</code> to hear the difference.</p>`,
+      `<p>One phrase can only play one thing per step. Curly braces play things <b>at the same time</b>.</p>`,
       { code: `voice drums = {[kick . . kick . . snare .] [hat*8]}` },
-      `<p>Several <code>voice</code> lines play together. Each voice has a name so you can change it while the others keep playing.</p>`,
+      `<p>Two phrases in braces are layered, and each keeps its own subdivision. The first has eight steps with a kick on steps 1 and 4 and a snare on step 7. The second is eight hats, which are eighth notes. Change <code>hat*8</code> to <code>hat*16</code> for sixteenth notes: the hats double and the kick and snare do not move.</p>`,
+      `<p>Several <code>voice</code> lines play together too. Use separate voices for separate instruments, so you can change one while the others keep going.</p>`,
       { code: `voice drums = {[kick . snare .] [hat*8]}\nvoice bass  = [c2 . c2 eb2 . f2 g2 .]` },
+      `<p>The second voice is a <b>bass line</b>: the lowest part, which usually lives around octave 2. Delete the whole <code>drums</code> line and the bass carries on alone.</p>`,
       { exercise: {
-        task: "Make <code>voice drums</code> play a kick on every quarter note and a hat on every eighth note.",
+        task: "Make <code>voice drums</code> play a kick on every beat (four quarter notes) and a hat on every eighth note.",
         starter: "voice drums = {[kick] [hat]}", solution: "voice drums = {[kick*4] [hat*8]}",
-        check: (_s, n) => { const d = voiceNotes(n, "drums").filter(x => x.bar < 1); const k = d.filter(x => x.semi === 36).length, h = d.filter(x => x.semi === 42).length; return k === 4 && h === 8 ? null : `I hear ${k} kicks and ${h} hats in a bar; aim for 4 and 8.`; },
+        hint: "<code>x*4</code> plays x four times, evenly, in its step. Each phrase here is one step long.",
+        alsoRight: ["voice drums = {[kick kick kick kick] [hat*8]}", "voice drums = {[kick!4] [hat!8]}"],
+        wrong: ["voice drums = {[kick kick kick kick . . . .] [hat*8]}", "voice drums = {[kick*4] [hat*4]}", "voice drums = {[kick*8] [hat*8]}"],
+        check: (_s, n) => {
+          const d = firstBar(n, "drums");
+          if (!d.length) return "There is no voice named drums yet.";
+          const k = d.filter(x => x.semi === KICK).map(x => round(x.bar)), h = d.filter(x => x.semi === HAT).map(x => round(x.bar));
+          if (k.length !== 4 || h.length !== 8) return `I hear ${k.length} kick${k.length === 1 ? "" : "s"} and ${h.length} hat${h.length === 1 ? "" : "s"} in the bar; aim for 4 and 8.`;
+          if (!same(k, [0, 0.25, 0.5, 0.75])) return "Four kicks, but they are not evenly spaced. One on each beat means one at the start of each quarter of the bar.";
+          if (!same(h, [0, 1, 2, 3, 4, 5, 6, 7].map(i => i / 8))) return "Eight hats, but they are not evenly spaced across the bar.";
+          return null;
+        },
       } },
     ],
   },
+  // ------------------------------------------------------------------
   {
-    id: "keys", title: "4. Keys and scale degrees",
+    id: "transform", title: "4. Transforming patterns",
     parts: [
-      `<p>Writing melodies as note names ties them to one key. Scale degrees don't: <code>^1</code> is the first note of the current scale, <code>^3</code> the third, <code>^8</code> the octave above <code>^1</code>, <code>^0</code> the note below it.</p>`,
-      { code: `key d dorian\nvoice tune = [^1 ^3 ^5 ^4 ^3 ^2 ^1 .]` },
-      `<p>Change the key line and the same tune moves. Try <code>key a minor</code>, <code>key f lydian</code>, <code>key c major_pent</code>. Accidentals work on degrees too: <code>^b3</code>, <code>^#4</code>.</p>`,
-      `<p><code>.octave(n)</code> moves anything by octaves; <code>.step(n)</code> moves by steps of the scale; <code>.transpose(n)</code> moves by semitones.</p>`,
-      { code: `key e minor\nvoice tune = [^1 ^3 ^5 ^3]\nvoice low  = [^1 ^3 ^5 ^3].octave(-1).step(2)` },
-      `<p>A voice can have its own key with <code>.key(root, scale)</code>.</p>`,
-      { exercise: {
-        task: "In the key of G major, write <code>voice up</code>: the first five degrees going up, ^1 to ^5, in one bar.",
-        starter: "key g major\nvoice up = [^1]", solution: "key g major\nvoice up = [^1 ^2 ^3 ^4 ^5]",
-        check: (_s, n) => { const t = voiceNotes(n, "up").filter(x => x.bar < 1).map(x => x.semi); return JSON.stringify(t) === "[67,69,71,72,74]" ? null : `I hear ${t.length} notes (${t.join(" ")}); G major from G4 up is 67 69 71 72 74.`; },
-      } },
-    ],
-  },
-  {
-    id: "chords", title: "5. Chords",
-    parts: [
-      `<p>A chord is notes in braces, or a root with <code>@</code> and a quality.</p>`,
-      { code: `voice pad = <{c e g} c4@maj7 a3@m7 f3@maj7>.inst(pad)` },
-      `<p>The angle brackets <code>&lt; &gt;</code> play one item per bar, in turn, so that is a four-bar progression.</p>`,
-      `<p>On a scale degree, <code>@</code> counts chord tones the way musicians do: <code>^5@7</code> is the diatonic seventh chord on the fifth degree, <code>^2@3</code> a triad, <code>^1@9</code> a ninth chord. Named qualities work too: <code>^4@sus4</code>.</p>`,
-      { code: `key c major\nvoice comp = <^2@7 ^5@7 ^1@7 ^6@7>.strum.inst(keys)` },
-      `<p><code>.strum</code> rolls a chord from low to high. <code>.arp</code> spreads it across its length (modes: <code>"up"</code>, <code>"down"</code>, <code>"updown"</code>, <code>"out"</code>, <code>"random"</code>), and <code>.invert</code> voices it differently.</p>`,
-      { code: `key a minor\nvoice arp = <^1@9 ^6@7>.arp("updown").fast(2).inst(pluck)` },
-      { exercise: {
-        task: "Make <code>voice harmony</code> play a D minor seventh chord (on d3) for the whole bar.",
-        starter: "voice harmony = d3", solution: "voice harmony = d3@m7",
-        check: (_s, n) => { const t = voiceNotes(n, "harmony").filter(x => x.bar < 1).map(x => x.semi).sort((a, b) => a - b); return JSON.stringify(t) === "[50,53,57,60]" ? null : `That chord is ${t.join(" ") || "silent"}; D minor 7 on d3 is 50 53 57 60.`; },
-      } },
-    ],
-  },
-  {
-    id: "transform", title: "6. Transforming patterns",
-    parts: [
-      `<p>Every function can be called with a dot after its first argument: <code>p.fast(2)</code> is the same as <code>fast(p, 2)</code>. Chains read left to right like a signal path, and a line that starts with <code>.</code> continues the line above.</p>`,
-      { code: `voice tune = [c e g b]\n  .fast(2)\n  .rev\n  .every(4, x => x.transpose(5))`, bars: 4 },
-      `<p><code>every(n, f)</code> applies f on the <b>last</b> bar of each group of n, because that is where fills belong. Use <code>at: 0</code> to put it on the first bar instead.</p>`,
-      `<p>Other shapers: <code>slow</code>, <code>late</code>, <code>early</code>, <code>palindrome</code>, <code>iter</code>, <code>ply</code>, <code>echo</code>, <code>swing</code>, <code>off</code>, <code>trunc</code>.</p>`,
-      { code: `voice drums = {[kick . snare .] [hat*8].swing(0.4)}\nvoice keys  = [c e g . ].echo(times: 3, time: 3/16, decay: .5).inst(bell)`, bars: 2 },
-      `<p>Arithmetic works on whole patterns: <code>[c e g] + 12</code> is an octave up. <code>[c e g] * 2</code> plays the phrase twice per bar, just like <code>*</code> inside a phrase. On a single pitch, <code>*</code> multiplies frequency: <code>c4 * 3/2</code> is a pure fifth.</p>`,
+      { code: `voice tune = [c e g b]\n  .fast(2)\n  .rev` },
+      `<p>The phrase goes up. What you heard goes down, twice per bar. <code>fast(2)</code> plays a pattern twice as fast and <code>rev</code> reverses it. Delete the <code>.rev</code> line and it climbs again.</p>`,
+      `<p>Every function can be called with a dot after its first argument: <code>p.fast(2)</code> is the same as <code>fast(p, 2)</code>. A call with no other arguments needs no parentheses, so <code>p.rev</code> is <code>rev(p)</code>. Chains read left to right, and a line that starts with <code>.</code> continues the line above.</p>`,
+      `<p><code>transpose(n)</code> adds n semitones to every note. <code>octave(n)</code> moves by whole octaves, so it is <code>transpose(12 * n)</code>.</p>`,
+      { code: `voice tune = [c e g b].transpose(5)\nvoice low  = [c e g b].octave(-2)` },
+      `<p>Functions can take functions. <code>every(n, f)</code> applies f to one bar in each group of n.</p>`,
+      { code: `voice drums = [kick hat snare hat].every(4, x => x.ply(2))`, bars: 4 },
+      `<p>Three plain bars, then a busy one. <code>x =&gt; ...</code> is a lambda, and <code>ply(2)</code> plays each step twice. A short variation at the end of a group of bars is called a <b>fill</b>. It tells the listener the pattern is about to come round again, which is why <code>every</code> changes the <em>last</em> bar of each group. Arguments can be given by name, and <code>at: 0</code> moves the change to the first bar: <code>.every(4, x =&gt; x.ply(2), at: 0)</code>.</p>`,
+      `<p>Three more, all about timing.</p>`,
+      { code: `voice drums = {[kick . snare .] [hat*8].swing(0.4)}\nvoice keys  = [c e g . ].echo(times: 3, time: 3/16, decay: .5)`, bars: 2 },
+      `<p><code>swing(x)</code> delays every second eighth note, so the hats lope, long then short, where they used to tick evenly. Set it to 0 to hear them straight. <code>echo</code> adds quieter repeats of each note, here three of them, each 3/16 of a bar later and half as loud. <code>late(x)</code> shifts a whole pattern later by a fraction of a bar: add <code>.late(1/8)</code> to the end of the keys line and every note of it starts an eighth note later.</p>`,
+      `<p>Arithmetic works on whole patterns. <code>[c e g] + 12</code> adds 12 to every note, an octave up. The star needs care, because it means three things:</p><ul><li>Inside a phrase, <code>x*3</code> plays x three times in its step.</li><li>On a pattern, <code>p * 2</code> plays it twice per bar, the same as <code>p.fast(2)</code>.</li><li>On a single pitch it multiplies <em>frequency</em>: <code>c4 * 2</code> is <code>c5</code>, because doubling a frequency raises a note one octave.</li></ul>`,
+      `<p>A method call binds tighter than any operator. <code>[c e g]*2.rev</code> reverses the 2, which does nothing, and then multiplies by the result as if it were a frequency ratio. You get the wrong notes and no error. Write <code>([c e g]*2).rev</code>, or stay with <code>.fast(2).rev</code>.</p>`,
+      { code: `voice right = ([c e g]*2).rev\nvoice wrong = [c2 e2 g2]*2.rev` },
+      `<p>The <code>wrong</code> voice was meant to be the same shape two octaves down. It plays three notes where there should be six, not reversed, and an octave too high. Put the parentheses in and the two voices match.</p>`,
+      `<p>There are more shapers (<code>slow</code>, <code>early</code>, <code>palindrome</code>, <code>iter</code>, <code>off</code>, <code>trunc</code>). The <a href="#reference">Reference</a> has them all.</p>`,
       { exercise: {
         task: "Take <code>[c d e f]</code>, play it twice as fast, and reverse it. Name the voice <code>run</code>.",
         starter: "voice run = [c d e f]", solution: "voice run = [c d e f].fast(2).rev",
-        check: (_s, n) => { const t = voiceNotes(n, "run").filter(x => x.bar < 1).map(x => x.semi); return JSON.stringify(t) === "[65,64,62,60,65,64,62,60]" ? null : `I hear ${t.join(" ")}.`; },
+        hint: "Two calls chained with dots. The order of these two does not matter.",
+        alsoRight: ["voice run = [c d e f].rev.fast(2)", "voice run = ([c d e f]*2).rev", "voice run = rev(fast([c d e f], 2))"],
+        wrong: ["voice run = [c d e f].fast(2)", "voice run = [c d e f].rev", "voice run = [c d e f]*2.rev"],
+        check: (_s, n) => {
+          const t = firstBar(n, "run");
+          if (!t.length) return "There is no voice named run yet.";
+          const got = t.map(x => x.semi);
+          if (same(got, [65, 64, 62, 60, 65, 64, 62, 60])) return null;
+          if (same(got, [60, 62, 64, 65, 60, 62, 64, 65])) return "Twice as fast, but still going up. Reverse it too.";
+          if (same(got, [65, 64, 62, 60])) return "Reversed, but only once per bar. Make it twice as fast too.";
+          return `I hear ${names(t)}. It should be f4 e4 d4 c4, twice.`;
+        },
       } },
     ],
   },
+  // ------------------------------------------------------------------
   {
-    id: "time", title: "7. Change over time",
+    id: "code", title: "5. Functions and logic",
     parts: [
-      `<p>Music needs to move. <code>&lt;a b c&gt;</code> picks one per bar and can sit anywhere in a phrase.</p>`,
-      { code: `voice bass = [c2 <eb2 f2 g2> . <c2 bb1>]`, bars: 4 },
-      `<p><code>arrange</code> chains whole patterns for a number of bars each. <code>cat</code> takes one per bar.</p>`,
-      { code: `let up = [c e g e]\nlet turn = [d f a f]\nvoice tune = arrange(up, 2, turn, 1, up.rev, 1)`, bars: 4 },
-      `<p>For anything else, <code>per_bar</code> hands you the bar number and lets you compute the bar with ordinary logic.</p>`,
-      { code: `voice climb = per_bar(n => [c e g].transpose(n % 4 * 2).fast(1 + n % 3))`, bars: 4 },
-      `<p>Sometimes a bar should depend on the bar before, like a melody that wanders a step at a time. <code>evolve(start, step, play)</code> keeps a value from bar to bar: <code>step</code> turns this bar's value into the next one, and <code>play</code> turns it into music. It still replays exactly: Tine works the chain out from the start, so bar 9 sounds the same whether you got there by playing or by jumping.</p>`,
-      { code: `voice walk = evolve(c4, (p, bar) => p + pick([-2 -1 1 2]), (p, bar) => [p (p + 7) (p + 12) (p + 7)]).inst(pluck)`, bars: 4 },
+      `<p>This lesson is the programming language itself, so it will feel familiar. <code>let</code> names a value or defines a function. A function body is one expression, or an indented block whose last line is the result.</p>`,
+      { code: `let fill(p) = p.fast(2).vel(.6)\nlet groove(shift) =\n  let base = [kick . snare kick . kick snare .]\n  base.late(shift)\nvoice drums = groove(0).every(4, fill)`, bars: 4 },
+      `<p><code>vel</code> sets <b>velocity</b>: how hard each note is struck, from 0 to 1. The default is 0.8, so the fill at 0.6 is quieter than the bars around it. Change <code>groove(0)</code> to <code>groove(1/8)</code> and the whole pattern starts an eighth note late.</p>`,
+      `<p><code>if ... then ... else ...</code> is an expression. Lambdas are <code>x =&gt; ...</code> or <code>(x, y) =&gt; ...</code>. Remember the reserved note names: <code>(a, b) =&gt; ...</code> is an error, because <code>a</code> and <code>b</code> are notes. A phrase is also a list, so <code>map</code>, <code>filter</code>, <code>fold</code>, <code>len</code> and <code>at</code> work on it, and <code>1..8</code> is the list 1 to 8, both ends included.</p>`,
+      { code: `print(filter(1..8, k => k % 2 == 0))\nprint(if len([c e g]) > 2 then "long" else "short")\nprint(map([c e g], x => x + 12))\n\nlet harmonics = map(1..8, k => c2 * k)\nvoice series = harmonics` },
+      `<p>The voice plays <code>c2</code> with its frequency multiplied by 1, 2, 3 and so on up to 8. That ladder is the <b>harmonic series</b>, the set of pitches a single string or pipe can sound, and the gaps shrink as it climbs. Change <code>1..8</code> to <code>1..16</code> to hear it continue.</p>`,
+      `<p>Records hold named values, and a function you define chains with a dot like a built-in.</p>`,
+      { code: `let home = (root: d4, shape: [0 3 7])\nprint(home.root)\n\nlet mirror(p) = cat(p, p.rev)\nvoice tune = (home.root + home.shape).mirror`, bars: 2 },
+      `<p><code>cat(p, q)</code> plays its arguments one bar each, in turn, so <code>mirror</code> gives one bar forwards and one bar backwards. Adding a pitch to a list of numbers gives a list of pitches.</p>`,
+      { exercise: {
+        task: "Define a function <code>octaves(p)</code> that plays p together with a copy of p one octave lower. Then <code>voice thick</code> should sound like six notes: three pairs.",
+        starter: "let octaves(p) = p\nvoice thick = [c e g].octaves", solution: "let octaves(p) = {p p.octave(-1)}\nvoice thick = [c e g].octaves",
+        hint: "Braces layer patterns, and a variable can sit inside them: <code>{p q}</code>. Lesson 4 has the function that moves by octaves.",
+        alsoRight: ["let octaves(p) = {p (p - 12)}\nvoice thick = [c e g].octaves", "let octaves(p) = {p.transpose(-12) p}\nvoice thick = octaves([c e g])"],
+        wrong: ["let octaves(p) = {p p.octave(1)}\nvoice thick = [c e g].octaves", "let octaves(p) = p.octave(-1)\nvoice thick = [c e g].octaves", "voice thick = {[c e g] [c3 e3 g3]}"],
+        check: (_s, n, src) => {
+          const t = firstBar(n, "thick");
+          if (!t.length) return "There is no voice named thick yet.";
+          if (src !== undefined && !/let\s+octaves\s*\(/.test(src)) return "That sounds right, but the task is to do it with a function named octaves.";
+          const got = t.map(x => x.semi).sort((x, y) => x - y);
+          if (same(got, [48, 52, 55, 60, 64, 67])) return null;
+          if (same(got, [60, 64, 67])) return "I hear only the original three notes. The function has to return p and the lower copy together.";
+          if (same(got, [48, 52, 55])) return "I hear only the lower copy. Layer it with the original.";
+          if (same(got, [60, 64, 67, 72, 76, 79])) return "The copy is an octave higher. It should be an octave lower.";
+          return `I hear ${names(t)}. It should be c4 e4 g4 with c3 e3 g3 underneath.`;
+        },
+      } },
     ],
   },
+  // ------------------------------------------------------------------
+  {
+    id: "keys", title: "6. Keys and scale degrees",
+    parts: [
+      `<p>Play this. Then change <code>major</code> to <code>minor</code> and play it again.</p>`,
+      { code: `key c major\nvoice tune = [^1 ^3 ^5 ^4 ^3 ^2 ^1 .]` },
+      `<p>Same shape, darker mood. Now try <code>key a major</code>: the first mood again, on different notes. The tune was never written as notes. It was written as positions in a <b>scale</b>.</p>`,
+      `<p>Most music uses only some of the twelve notes in an octave at a time, usually seven. That subset is a scale, and a scale is a list of offsets in semitones from a starting note. <code>major</code> is <code>0 2 4 5 7 9 11</code>. <code>minor</code> is <code>0 2 3 5 7 8 10</code>. The starting note is the <b>root</b>, and a root plus a scale is a <b>key</b>. So <code>key c major</code> selects c, d, e, f, g, a and b: the white keys.</p>`,
+      `<p><code>^n</code> is a <b>scale degree</b>: a 1-based index into the current key. <code>^1</code> is the root and <code>^3</code> is the third note of the scale. The index wraps, so <code>^8</code> is <code>^1</code> an octave up, and <code>^0</code> is the note just below <code>^1</code>.</p>`,
+      { code: `key c major\nvoice scale = [^1 ^2 ^3 ^4 ^5 ^6 ^7 ^8]` },
+      `<p>Try <code>key d dorian</code> and <code>key c minor_pent</code> here. <code>dorian</code>, <code>lydian</code> and <code>mixolydian</code> are other seven-note scales, each with its own mood (as a group they are called <b>modes</b>). <code>major_pent</code> and <code>minor_pent</code> have five notes, and almost any two of them sound good together. In a five-note scale the octave is <code>^6</code>, so the last two notes of this example go above it. The Reference lists every scale.</p>`,
+      `<p>Degrees are not just shorter to type. They keep a transformed tune inside the key.</p>`,
+      { code: `key c major\nvoice tune  = [^1 ^3 ^5 ^3]\nvoice above = [^1 ^3 ^5 ^3].step(2)` },
+      `<p><code>step(n)</code> moves every note by n places in the scale, so <code>above</code> shadows the tune two scale notes higher, and both stay on white keys. Change <code>.step(2)</code> to <code>.transpose(2)</code>. That moves by two semitones regardless of the scale, lands one note on <code>f#</code>, which is not in C major, and the two voices clash.</p>`,
+      `<p>To step outside the scale on purpose, flatten or sharpen a degree by a semitone: <code>^b3</code>, <code>^#4</code>. Those marks are called <b>accidentals</b>. And a voice can have its own key with <code>.key(root, scale)</code>:</p>`,
+      { code: `key c major\nvoice here  = [^1 ^2 ^3 ^#4]\nvoice there = [^1 ^2 ^3 ^#4].key(g3, minor)` },
+      { exercise: {
+        task: "In the key of G major, write <code>voice up</code>: the first five degrees going up, <code>^1</code> to <code>^5</code>, in one bar.",
+        starter: "key g major\nvoice up = [^1]", solution: "key g major\nvoice up = [^1 ^2 ^3 ^4 ^5]",
+        hint: "Five steps in the phrase. The key line already does the rest.",
+        alsoRight: ["voice up = [^1 ^2 ^3 ^4 ^5].key(g, major)", "key g major\nvoice up = [g a b c5 d5]"],
+        wrong: ["key c major\nvoice up = [^1 ^2 ^3 ^4 ^5]", "key g major\nvoice up = [^1 ^2 ^3 ^4]", "key g minor\nvoice up = [^1 ^2 ^3 ^4 ^5]", "key g major\nvoice up = [^5 ^4 ^3 ^2 ^1]"],
+        check: (_s, n) => {
+          const t = firstBar(n, "up");
+          if (!t.length) return "There is no voice named up yet.";
+          const got = t.map(x => x.semi);
+          if (same(got, [67, 69, 71, 72, 74])) return null;
+          if (t.length !== 5) return `I hear ${t.length} note${t.length === 1 ? "" : "s"} (${names(t)}); there should be 5.`;
+          if (same(got, [60, 62, 64, 65, 67])) return "Those are the first five notes of C major. Check the key line.";
+          if (same(got, [67, 69, 70, 72, 74])) return "That is G minor: the third note is bb4 where G major has b4.";
+          return `I hear ${names(t)}. G major from the root up is g4 a4 b4 c5 d5.`;
+        },
+      } },
+    ],
+  },
+  // ------------------------------------------------------------------
+  {
+    id: "chords", title: "7. Chords",
+    parts: [
+      { code: `voice pad = <{c e g} {a3 c e} {f3 a3 c} {g3 b3 d}>`, bars: 4 },
+      `<p>Several notes sounded together are a <b>chord</b>, and braces around notes make one. The angle brackets <code>&lt; &gt;</code> play one item per bar, in turn, so this is four bars long. A sequence of chords is called a <b>progression</b>.</p>`,
+      `<p>Spelling out every note gets old. Chords come in standard shapes, so Tine lets you give one starting note, the chord's <b>root</b>, and the name of a shape after <code>@</code>. The shape is called the chord's <b>quality</b>, and it is a list of semitone offsets from the root:</p>
+<table class="ref"><tr><td>@maj</td><td>0 4 7, bright and settled</td></tr><tr><td>@m</td><td>0 3 7, darker (minor)</td></tr><tr><td>@7</td><td>0 4 7 10, restless, wants to move on</td></tr><tr><td>@maj7</td><td>0 4 7 11, soft and lush</td></tr><tr><td>@m7</td><td>0 3 7 10, mellow</td></tr><tr><td>@sus4</td><td>0 5 7, open and unresolved</td></tr></table>
+<p>A three-note chord is a <b>triad</b>. The four-note ones here are <b>seventh chords</b>.</p>`,
+      { code: `print(a3@m7)\nvoice pad = <c4@maj a3@m f3@maj g3@maj>`, bars: 4 },
+      `<p>The same progression as before, written by root and quality. Change <code>a3@m</code> to <code>a3@m7</code>: one more note, a richer sound.</p>`,
+      `<p>In a key you rarely need to name the quality at all.</p>`,
+      { code: `key c major\nvoice comp = <^2@7 ^5@7 ^1@7 ^6@7>.strum`, bars: 4 },
+      `<p>On a scale degree, <code>@</code> followed by a number builds the chord out of the scale: start at that degree and take every other note. <code>^5@3</code> is three of them (degrees 5, 7 and 9, a triad). <code>^5@7</code> is four (5, 7, 9 and 11, a seventh chord) and <code>@9</code> is five. The number is how many scale steps the top note sits above the root, counting the root as 1. Because the notes come from the key, each chord gets the quality that fits: in C major <code>^1@3</code> comes out major and <code>^2@3</code> minor. Chords built this way are called <b>diatonic</b>. Change the key to <code>a minor</code> and all four chords follow.</p>`,
+      `<p><code>.strum</code> rolls a chord from low to high, the way a hand crosses guitar strings. Two more ways to play one:</p>`,
+      { code: `key a minor\nvoice arp  = <^1@9 ^6@7>.arp("updown").fast(2)\nvoice roll = <c3@maj c3@maj.invert c3@maj.invert(2)>.late(1/2)`, bars: 4 },
+      `<p><code>.arp</code> plays a chord's notes one after another across its length (an <b>arpeggio</b>). Its modes are <code>"up"</code>, <code>"down"</code>, <code>"updown"</code>, <code>"out"</code> and <code>"random"</code>. <code>.invert</code> moves the chord's lowest note up an octave: the same letters in a new order, called an <b>inversion</b>. The <code>roll</code> voice plays C major three ways, and each sounds a little higher without changing chord.</p>`,
+      { exercise: {
+        task: "Make <code>voice harmony</code> play a D minor seventh chord with its root on <code>d3</code>, for the whole bar.",
+        starter: "voice harmony = d3", solution: "voice harmony = d3@m7",
+        hint: "A root, then <code>@</code>, then the quality from the table. A voice does not need brackets: one value fills the bar.",
+        alsoRight: ["voice harmony = {d3 f3 a3 c4}", "voice harmony = [d3@m7]", "key c major\nvoice harmony = (^2@7).octave(-1)"],
+        wrong: ["voice harmony = d3@m", "voice harmony = d3@7", "voice harmony = d4@m7", "voice harmony = d3@maj7", "voice harmony = [d3@m7 .]"],
+        check: (_s, n) => {
+          const all = firstBar(n, "harmony");
+          if (!all.length) return "There is no voice named harmony yet.";
+          const t = all.filter(x => x.bar < EPS);
+          const got = t.map(x => x.semi).sort((x, y) => x - y);
+          const heard = t.slice().sort((x, y) => x.semi - y.semi);
+          if (same(got, [50, 53, 57, 60])) return t.every(x => x.bars > 1 - EPS) && all.length === 4 ? null : "Right chord. Now let it last the whole bar: one chord, nothing else.";
+          if (same(got, [50])) return "I hear only the root, d3. Add @ and a quality to build a chord on it.";
+          if (same(got, [50, 53, 57])) return "That is a D minor triad (d3 f3 a3). A seventh chord has a fourth note.";
+          if (same(got, [50, 54, 57, 60])) return "That is D7: its second note is f#3. A minor seventh chord has f3 there.";
+          if (same(got, [50, 54, 57, 61])) return "That is D major seventh. The quality for a minor seventh is m7.";
+          if (same(got, [62, 65, 69, 72])) return "Right chord, one octave too high. The root should be d3.";
+          return `I hear ${names(heard)}. D minor seventh on d3 is d3 f3 a3 c4.`;
+        },
+      } },
+    ],
+  },
+  // ------------------------------------------------------------------
   {
     id: "chance", title: "8. Chance, seeds and replay",
     parts: [
-      `<p>Randomness in Tine is always <b>seeded</b>. Each run gets a seed, which is shown on screen; the same seed always produces exactly the same music. Press ▶ twice: identical. Press 🎲 to try a new seed.</p>`,
-      { code: `voice tune = [c|e|g a|b|. c5 e|d]*2`, bars: 4 },
-      `<p><code>a|b|c</code> picks one each bar. <code>x?</code> plays x half the time; <code>x?0.2</code> one time in five.</p>`,
+      `<p>Press ▶ twice, then press <b>🎲 new seed</b> in the sidebar and play again.</p>`,
+      { code: `voice tune = [c|e|g a|b|. c5 e|d]`, bars: 4 },
+      `<p><code>a|b|c</code> picks one of its options each time the phrase comes around, so the four bars differ. But the two plays were identical. Randomness in Tine is always <b>seeded</b>: each run has a seed, shown under the example, and the same seed always produces exactly the same music. A new seed gives a new tune, and that one repeats exactly too.</p>`,
+      `<p><code>x?</code> plays x half the time, and <code>x?0.2</code> one time in five. <code>degrade(amount)</code> drops that fraction of a whole pattern's notes.</p>`,
       { code: `voice drums = {[kick . . kick?0.3 . . snare kick?] [hat*16].degrade(.3)}`, bars: 4 },
-      `<p>Higher-level tools: <code>dice(list, n)</code> rolls n times per bar, <code>walk(list)</code> wanders step by step, <code>scramble</code> reshuffles a phrase every bar, <code>sometimes(f)</code>, <code>often</code>, <code>rarely</code>, <code>maybe</code> apply a change by chance, and <code>humanize</code> nudges timing and velocity.</p>`,
-      { code: `key d dorian\nvoice wander = walk(0..9, 8).degrees.inst(pluck)\nvoice bells  = dice([^5 ^8 ^9 . .], 4).inst(bell).sometimes(x => x.octave(1))`, bars: 4 },
-      `<p>To freeze a take you like, write <code>seed 1234</code> at the top of the file (the DAW's <b>★ keep take</b> button does it for you). Because every random choice is keyed to its voice and bar, editing one voice never changes the dice of another.</p>`,
+      `<p>Raise <code>.degrade(.3)</code> to <code>.degrade(.8)</code> and only a few hats survive, in different places each bar.</p>`,
+      `<p>Some higher-level tools:</p><ul><li><code>pick(list)</code> returns one item at random.</li><li><code>walk(list, n)</code> wanders through a list, n steps per bar, each step at most one place from the last. It starts somewhere new each bar.</li><li><code>sometimes(f)</code> applies a function to each note half the time.</li><li><code>humanize</code> nudges timing and velocity slightly, so a part sounds played by a hand.</li></ul>`,
+      { code: `key d dorian\nvoice wander = walk(0..9, 8).degrees\nvoice bells  = [^5 . ^8 ^9].sometimes(x => x.octave(1))`, bars: 4 },
+      `<p><code>walk</code> returns numbers, and <code>.degrees</code> turns numbers into scale degrees counting from 0, so 0 is <code>^1</code>. The line wanders, but never leaves the key. <code>scramble</code>, <code>dice</code>, <code>often</code> and <code>rarely</code> are in the Reference.</p>`,
+      `<p>To keep a result you like, write its seed at the top of the file: <code>seed 1234</code>. Every random choice is also keyed to its voice and its bar, so editing one voice never changes the dice of another.</p>`,
+      { exercise: {
+        task: "Write <code>voice hats</code>: eight hat steps per bar, where each step plays about half the time. It should come out different from bar to bar.",
+        starter: "voice hats = [hat*8]", solution: "voice hats = [hat*8].degrade(.5)", bars: 16,
+        hint: "One call on the end of the starter does it. <code>degrade</code> takes the fraction to drop.",
+        alsoRight: ["voice hats = [hat? hat? hat? hat? hat? hat? hat? hat?]", "voice hats = [hat*8].degrade", "voice hats = [hat?!8]"],
+        wrong: ["voice hats = [hat . hat . hat . hat .]", "voice hats = [hat*8].degrade(.95)", "voice hats = [hat*16].degrade(.5)", "voice hats = [hat*8].degrade(.05)"],
+        check: (_s, n) => {
+          const t = voiceNotes(n, "hats");
+          if (!t.length) return "There is no voice named hats playing yet.";
+          if (t.some(x => x.semi !== HAT)) return "Some of those are not hats.";
+          if (t.some(x => Math.abs(x.bar * 8 - Math.round(x.bar * 8)) > 0.001)) return "Some hats fall between the eight steps. Keep eight equal steps per bar.";
+          const perBar = Array.from({ length: 16 }, (_, b) => t.filter(x => Math.floor(x.bar + EPS) === b).map(x => round(x.bar - b)).join(","));
+          if (new Set(perBar).size === 1) return t.length === 128 ? "Every hat plays every time. Give each one a chance to drop out." : "Every bar is the same. Chance should make the bars differ.";
+          const share = t.length / 128;
+          if (share < 0.3) return `Only ${Math.round(share * 100)}% of the hats play over 16 bars. Aim for about half.`;
+          if (share > 0.7) return `${Math.round(share * 100)}% of the hats play over 16 bars. Aim for about half.`;
+          return null;
+        },
+      } },
     ],
   },
+  // ------------------------------------------------------------------
   {
-    id: "code", title: "9. Functions and logic",
+    id: "time", title: "9. Change over time",
     parts: [
-      `<p><code>let</code> names a value or a function. Function bodies can be a single expression or an indented block whose last line is the result.</p>`,
-      { code: `let fill(p) = p.fast(2).vel(.6)\nlet groove(shift) =\n  let base = [kick . snare kick . kick snare .]\n  base.late(shift)\nvoice drums = groove(0).every(4, fill)`, bars: 4 },
-      `<p><code>if ... then ... else ...</code> is an expression. Lambdas are <code>x =&gt; ...</code> or <code>(a, b) =&gt; ...</code>. Lists are phrases, so <code>map</code>, <code>filter</code>, <code>fold</code>, <code>len</code> and <code>at</code> work on them, and <code>0..7</code> is a range.</p>`,
-      { code: `let harmonics = map(1..8, k => c2 * k)\nvoice series = harmonics.inst(sine)`, bars: 1 },
-      `<p>Records hold named values: <code>(root: d, scale: dorian)</code>, read with <code>.root</code>. Functions you define chain with a dot like built-ins.</p>`,
-      { code: `let mirror(p) = cat(p, p.rev)\nvoice tune = [c d e g].mirror.inst(pluck)`, bars: 2 },
+      { code: `voice bass = [c2 <eb2 f2 g2> . <c2 bb1>]`, bars: 4 },
+      `<p>A loop that never changes wears out fast. Lesson 7 used <code>&lt;a b c&gt;</code> to play one chord per bar. It can sit anywhere in a phrase, and each one keeps its own count: the second step here cycles through three notes while the last step alternates between two, so the bar only repeats exactly every six bars.</p>`,
+      `<p><code>arrange</code> plays whole patterns for a number of bars each.</p>`,
+      { code: `let up = [c e g e]\nlet turn = [d f g f]\nvoice tune = arrange(up, 2, turn, 1, up.rev, 1)`, bars: 4 },
+      `<p>Two bars of <code>up</code>, one of <code>turn</code>, one of <code>up</code> reversed, then round again. Change the first <code>2</code> to <code>3</code> and the cycle becomes five bars long.</p>`,
+      `<p>For anything else, <code>per_bar</code> hands you the bar number and you compute that bar with ordinary logic.</p>`,
+      { code: `voice climb = per_bar(n => [c e g].transpose(n % 4 * 2).fast(1 + n % 3))`, bars: 4 },
+      `<p>Each bar is two semitones higher than the last, for four bars, while the speed cycles through 1, 2 and 3 times per bar.</p>`,
+      `<p>Sometimes a bar should depend on the bar <em>before</em> it, like a melody that drifts a little each time. <code>evolve(start, step, play)</code> keeps a value from bar to bar. <code>step</code> turns this bar's value into the next bar's, and <code>play</code> turns a value into music.</p>`,
+      { code: `let step(p, bar) = p + pick([-2 -1 1 2])\nlet play(p, bar) = [p (p + 7) (p + 12) (p + 7)]\nvoice walk = evolve(c4, step, play)`, bars: 4 },
+      `<p>The value here is a pitch. Each bar it moves up or down by one or two semitones, and <code>play</code> builds the same four-note figure on wherever it has got to. It still replays exactly: Tine works the chain out from the start, so bar 9 sounds the same whether you reached it by playing or by jumping there.</p>`,
+      { exercise: {
+        task: "Write <code>voice bass</code> in quarter notes. Beats 1, 2 and 3 are <code>c2</code> in every bar. Beat 4 is <code>eb2</code> in the first bar, <code>f2</code> in the second and <code>g2</code> in the third.",
+        starter: "voice bass = [c2 c2 c2 eb2]", solution: "voice bass = [c2 c2 c2 <eb2 f2 g2>]", bars: 3,
+        hint: "Angle brackets can replace a single step.",
+        alsoRight: ["voice bass = [c2!3 <eb2 f2 g2>]", "voice bass = cat([c2 c2 c2 eb2], [c2 c2 c2 f2], [c2 c2 c2 g2])", "voice bass = per_bar(n => [c2 c2 c2 at([eb2 f2 g2], n % 3)])"],
+        wrong: ["voice bass = [c2 c2 c2 <eb2 f2>]", "voice bass = [c2 c2 c2 <g2 f2 eb2>]", "voice bass = <[c2 c2 c2 eb2] [c2 c2 f2 f2] [c2 c2 c2 g2]>"],
+        check: (_s, n) => {
+          const t = voiceNotes(n, "bass");
+          if (!t.length) return "There is no voice named bass yet.";
+          const want = [39, 41, 43];
+          for (let b = 0; b < 3; b++) {
+            const bar = t.filter(x => Math.floor(x.bar + EPS) === b);
+            const starts = bar.map(x => round(x.bar - b));
+            if (!same(starts, [0, 0.25, 0.5, 0.75])) return `Bar ${b + 1} should have four quarter notes; I hear ${bar.length} note${bar.length === 1 ? "" : "s"} (${names(bar)}).`;
+            if (!same(bar.slice(0, 3).map(x => x.semi), [36, 36, 36])) return `Beats 1 to 3 of bar ${b + 1} should all be c2; I hear ${names(bar.slice(0, 3))}.`;
+            if (Math.abs(bar[3].semi - want[b]) > 0.001) return `Beat 4 of bar ${b + 1} is ${noteName(bar[3].semi)}; it should be ${noteName(want[b])}.`;
+          }
+          return null;
+        },
+      } },
     ],
   },
+  // ------------------------------------------------------------------
   {
-    id: "sound", title: "10. Sound and expression",
+    id: "sound", title: "10. Instruments and expression",
     parts: [
-      `<p>Built-in instruments: <code>keys</code> (an electric piano, the default), <code>pluck</code>, <code>bass</code>, <code>pad</code>, <code>bell</code>, <code>organ</code>, <code>lead</code>, <code>sine</code>, <code>tri</code>, <code>saw</code>, <code>square</code>, and <code>kit</code> for drums.</p>`,
-      `<p>Parameters can be patterns too. Velocity accents, filter sweeps and panning become part of the music.</p>`,
+      { code: `voice tune = [c e g c5].inst(pluck)` },
+      `<p>Until now every voice has used the default instrument, an electric piano called <code>keys</code>. <code>.inst(name)</code> picks another. Try each of these in place of <code>pluck</code>: <code>bell</code>, <code>organ</code>, <code>lead</code>, <code>pad</code> (slow and soft, made for chords), <code>bass</code>, and the four raw waveforms <code>sine</code>, <code>tri</code>, <code>saw</code> and <code>square</code>, which run from pure to buzzy. Drum names use the <code>kit</code> instrument without being asked.</p>`,
+      `<p>The rest of this lesson shapes individual notes. Lesson 5 set velocity with one number. Give it a phrase and you get <b>accents</b>, notes that stand out from their neighbours.</p>`,
+      { code: `voice hats = [hat*8].vel([1 .4]*4)\nvoice bass = [c2 c2 c2 c2].inst(bass).vel([1 .5 .7 .5])` },
+      `<p>A phrase used as a setting is stretched over the bar like any phrase, and each note reads whichever value is current when it starts. So <code>[1 .4]*4</code> is eight values, one for each hat: loud, soft, loud, soft. Change it to plain <code>[1 .4]</code> and you get four loud hats, then four soft ones.</p>`,
+      `<p>More per-note settings:</p><ul><li><code>legato(x)</code>: how much of its step a note sounds for. 1 fills the step, 0.2 is short and clipped.</li><li><code>pan(x)</code>: left to right, from -1 to 1.</li><li><code>gain(x)</code>: volume, without the change of tone that velocity brings.</li><li><code>attack(sec)</code> and <code>release(sec)</code>: how long a note takes to fade in, and to fade out after it ends. With <code>decay</code> and <code>sustain</code> these four make the note's volume <b>envelope</b>.</li><li><code>reverb(x)</code>: how much of the voice is sent to a shared room echo.</li></ul>`,
+      { code: `voice pad  = <c4@m7 f3@maj7>.inst(pad).attack(.5).release(1)\nvoice stab = [c5 . . eb5 . . g5 .].inst(pluck).legato(.3).pan([-1 1])`, bars: 2 },
+      `<p>The pad swells in over half a second. The plucks are clipped short and jump from the left speaker to the right. Set <code>.attack(.01)</code> and the chords start abruptly.</p>`,
+      `<p>Two settings matter most for synthesized sound. A saw wave is bright and buzzy because it contains many high frequencies. A <b>filter</b> removes the frequencies above its <code>cutoff</code>, given in Hz, so a low cutoff sounds dark and muffled and a high one sounds bright. <code>res</code> (resonance, 0 to 1) boosts the frequencies right at the cutoff, which gives the filter a nasal, whistling edge.</p>`,
       { code: `voice acid = ([c2 c2 c3 c2 eb2 c2 g2 bb1]*2)\n  .inst(saw)\n  .cutoff(sine(2).range(300, 3000))\n  .res(.6)\n  .vel([1 .6 .8 .6])`, bars: 2 },
-      `<p>Signals are continuous shapes: <code>sine</code>, <code>tri</code>, <code>saw</code>, <code>square</code>, <code>noise</code> and <code>drift</code> (smooth, seeded wandering). Use <code>.range(lo, hi)</code> to scale them and <code>.seg(n)</code> to turn one into notes.</p>`,
-      { code: `key c minor_pent\nvoice drifty = drift(.5).range(0, 10).seg(8).map(x => floor(x)).degrees.inst(bell).pan(sine(1).range(-1, 1))`, bars: 2 },
-      `<p>Other parameters: <code>legato</code>, <code>dur</code> (in beats), <code>gain</code>, <code>pan</code>, <code>attack</code>, <code>decay</code>, <code>sustain</code>, <code>release</code>, <code>reverb</code>.</p>`,
-      `<p>Effects work on a whole voice after its notes are mixed: <code>.hpf(hz)</code> and <code>.lpf(hz)</code> filter it, <code>.drive(x)</code> saturates it from 0 to 1, and <code>.delay(mix, time: 3/16, feedback: .4)</code> echoes it. Delay time is in bars, so the echo stays in time at any tempo.</p>`,
-      { code: `voice fuzz = [c2 . c2 eb2 . g1 bb1 .].inst(saw).drive(.7).lpf(1800)
-voice echo = [g4 . . bb4 . . . .].inst(pluck).delay(.5, feedback: .55)`, bars: 2 },
-      `<p>The <code>synth</code> instrument is a general synthesizer, and <code>tb303</code>, <code>supersaw</code>, <code>reese</code>, <code>wobble</code>, <code>fm</code>, <code>chip</code>, <code>brass</code>, <code>strings</code>, <code>marimba</code> and <code>noise</code> are ready-made settings of it. Shape any of them with <code>.wave</code>, <code>.fenv</code> (a filter that snaps shut on each note), <code>.glide</code>, <code>.wobble</code> (in time with the bar), <code>.vibrato</code>, <code>.pw</code>, <code>.unison</code> and <code>.sub</code>.</p>`,
-      { code: `voice acid = [a1 a1 a2 a1 c2 a1 g2 a1].inst(tb303).fenv([4 2 3 1]).glide([0 0 .06 0])\nvoice wub = [a0 . . . c1 . . .].inst(wobble).wobble([2 4], depth: 4)`, bars: 2 },
-      `<p>More effects: <code>.vowel("a")</code>, <code>.crush(bits)</code>, <code>.coarse(n)</code>, <code>.ring(hz)</code>, <code>.chorus()</code>, <code>.phaser()</code>, <code>.compress()</code> and <code>.room(mix, size: .5)</code>. <code>.duck("kick")</code> dips a voice every time the kick voice plays, the pumping sound of dance music.</p>`,
-      { code: `voice kick = [kick . . . kick . . .]\nvoice pad = <c3 eb3>.inst(pad).chorus(.6).room(.5, size: .8).duck("kick")\nvoice acid = ([c2 c2 c3 c2 eb2 c2 g2 bb1]*2).inst(saw).vowel(["a" "o"]).phaser(.5)`, bars: 2 },
-      `<p>Samples. Tine comes with about 200 recorded sounds, all public domain. Write a sound's name in quotes inside a phrase and it plays as recorded. A bank is the part of the name before the underscore, and <code>"hat:3"</code> is the fourth sound in the <code>hat</code> bank. <code>.sample()</code> on drum names plays the recorded kit.</p>`,
-      { code: `voice beat = ["bd_haus" . "sn_dolf" "bd_haus" . "bd_haus" "sn_dolf" .]
-voice hats = ["hat" "hat:3" "hat:5" "hat:3"]*2
-voice kit = [. . . . . . kick .].sample()`, bars: 2 },
-      `<p>A loop can follow the tempo: <code>.loopAt(2)</code> stretches it over two bars and <code>.chop(16)</code> cuts it into sixteen pieces that each start on time. Then the pieces are notes like any other, so you can reorder them.</p>`,
-      { code: `tempo 140
-voice amen = ["loop_amen"].loopAt(2).chop(16)
-voice back = ["loop_amen"].loopAt(2).chop(8).rev.speed(-1).gain(.5)`, bars: 2 },
-      `<p>Recorded acoustic instruments come from a SoundFont, a single file of instruments. Load a General MIDI one (GeneralUser GS is free) with a <code>soundfont("...")</code> line, or drop the .sf2 file on the DAW, then play its instruments by General MIDI number with <code>.gm(1)</code> (piano) to <code>.gm(128)</code>, or by name: <code>.gm("violin")</code>.</p>`,
-      `<p>More sample controls: <code>.begin</code> and <code>.end</code> (0 to 1), <code>.speed</code> (negative plays backwards), <code>.slice(n, i)</code>, <code>.cut(group)</code> to choke one sound with the next. Drop your own files on the DAW to add them.</p>`,
+      `<p>The cutoff here is not a number but a <b>signal</b>, a continuous function of time. <code>sine(2)</code> is a sine wave that goes round twice per bar, and <code>.range(300, 3000)</code> scales it to run between 300 and 3000 Hz, so the sound opens and closes twice a bar. Change <code>sine(2)</code> to <code>sine(1/2)</code> for one slow sweep over two bars. The other signals are <code>tri</code>, <code>saw</code>, <code>square</code>, <code>noise</code> and <code>drift</code> (smooth, seeded wandering).</p>`,
+      `<p>Four of those names are also instruments. Which one you get depends on where it is used: <code>.inst(saw)</code> is the instrument, <code>saw(2)</code> the signal.</p>`,
+      `<p>A signal can also become notes. <code>.seg(n)</code> samples it n times per bar.</p>`,
+      { code: `key c minor_pent\nvoice drifty = drift(.5).range(0, 10).seg(8).map(x => floor(x)).degrees\n  .inst(bell)\n  .pan(sine(1).range(-1, 1))`, bars: 2 },
+      `<p>The wandering signal is scaled to 0 to 10, sampled eight times a bar, rounded down and read as scale degrees, as in lesson 8.</p>`,
+      { exercise: {
+        task: "Give this line the <code>bass</code> instrument and accent the first note of the bar: velocity 1 on the first note and 0.5 on the other three.",
+        starter: "voice line = [c2 c2 eb2 g2]", solution: "voice line = [c2 c2 eb2 g2].inst(bass).vel([1 .5 .5 .5])",
+        hint: "Two calls chained on the phrase. The velocity phrase needs one value per note.",
+        alsoRight: ["voice line = [c2 c2 eb2 g2].vel([1 .5!3]).inst(bass)", "voice line = [c2 c2 eb2 g2]\n  .inst(bass)\n  .vel([1:1 .5:3])"],
+        wrong: ["voice line = [c2 c2 eb2 g2].inst(bass)", "voice line = [c2 c2 eb2 g2].vel([1 .5 .5 .5])", "voice line = [c2 c2 eb2 g2].inst(bass).vel([1 .5])", "voice line = [c2 c2 eb2 g2].inst(pluck).vel([1 .5 .5 .5])"],
+        check: (_s, n) => {
+          const t = firstBar(n, "line");
+          if (!t.length) return "There is no voice named line yet.";
+          if (!same(t.map(x => x.semi), [36, 36, 39, 43])) return `Keep the notes as they were (c2 c2 eb2 g2); I hear ${names(t)}.`;
+          const inst = String(t[0].params.inst ?? "keys");
+          if (t.some(x => String(x.params.inst ?? "keys") !== "bass")) return `The line is playing on ${inst}. Add .inst(bass).`;
+          const v = t.map(x => round(x.vel));
+          if (same(v, [1, 0.5, 0.5, 0.5])) return null;
+          return `The four velocities are ${v.join(" ")}; they should be 1 0.5 0.5 0.5.`;
+        },
+      } },
     ],
   },
+  // ------------------------------------------------------------------
   {
-    id: "micro", title: "11. Beyond twelve notes",
+    id: "fx", title: "11. Effects and the synth",
     parts: [
-      `<p>Every pitch in Tine is a fractional MIDI note, so the space between the piano keys is open. Add cents with <code>c</code>, steps of an equal division with a backslash, or multiply by a frequency ratio.</p>`,
-      { code: `voice micro = [c4 (c4 + 50c) (c4 + 5\\31) (c4 * 7/4) 432hz]` },
-      `<p>Whole scales: <code>edo(n, steps)</code> picks from an n-tone equal temperament, <code>just(ratios)</code> builds a just-intonation scale, <code>cents(list)</code> works in cents, and <code>scala(text)</code> reads the standard Scala .scl format.</p>`,
-      { code: `key c edo(31, [0 5 10 13 18 23 28])\nvoice meantone = [^1 ^3 ^5 ^8 ^5 ^3]\nvoice drone = {c3 g3}.inst(pad)`, bars: 2 },
-      { code: `key d just([1 9/8 5/4 4/3 3/2 5/3 15/8])\nvoice pure = <^1@3 ^4@3 ^5@3 ^1@3>.arp("up").fast(2).inst(organ)`, bars: 4 },
-      `<p>Scales need not repeat at the octave: <code>bohlen_pierce</code> repeats at the twelfth. When microtones go out over MIDI, Tine sends pitch bend; add <code>.mpe</code> for one channel per note so chords stay in tune.</p>`,
+      { code: `voice fuzz = [c2 . c2 eb2 . g1 bb1 .].inst(saw).drive(.7).lpf(1800)\nvoice echo = [g4 . . bb4 . . . .].inst(pluck).delay(.5, feedback: .55)`, bars: 2 },
+      `<p>The settings in lesson 10 shape each note. An <b>effect</b> processes the whole voice after its notes are mixed together. Three are at work here:</p><ul><li><code>.drive(x)</code> distorts, from 0 (clean) to 1 (crushed). Set it to 0 to hear the plain saw.</li><li><code>.lpf(hz)</code> is a low-pass filter on the whole voice: it removes what is above that frequency. <code>.hpf(hz)</code> is the opposite and removes what is below.</li><li><code>.delay(mix, time: 3/16, feedback: .4)</code> is an echo. <code>time</code> is the gap between repeats in bars, so it stays in rhythm at any tempo, and <code>feedback</code> is how much of each repeat goes round again. Raise it to .8 and the echoes pile up.</li></ul>`,
+      `<p>Effects that add space and movement:</p>`,
+      { code: `voice kick = [kick . . . kick . . .]\nvoice pad  = <c3@m7 eb3@maj7>.inst(pad).chorus(.6).room(.5, size: .8).duck("kick")\nvoice acid = ([c2 c2 c3 c2 eb2 c2 g2 bb1]*2).inst(saw).vowel(["a" "o"]).phaser(.5)`, bars: 2 },
+      `<ul><li><code>.room(mix, size: .5)</code> is <b>reverb</b>: the wash of reflections that makes a sound seem to be in a hall.</li><li><code>.chorus()</code> layers slightly detuned copies, which thickens a sound.</li><li><code>.phaser()</code> sweeps a narrow gap up and down through the sound.</li><li><code>.vowel("a")</code> filters the voice so it seems to say a vowel. Here it alternates a and o.</li><li><code>.duck("kick")</code> turns this voice down each time the voice named <code>kick</code> plays, then lets it recover. That is the pumping sound of dance music. Delete it and the pad stays level.</li></ul>`,
+      `<p>Also in the Reference: <code>.crush(bits)</code> and <code>.coarse(n)</code> for a rough, low-resolution sound, <code>.ring(hz)</code> for metallic tones, and <code>.compress()</code> to even out loud and quiet.</p>`,
+      `<p>The instruments so far are fixed sounds. <code>synth</code> is a general synthesizer you can shape, and ten names are ready-made settings of it: <code>tb303</code>, <code>supersaw</code>, <code>reese</code>, <code>wobble</code>, <code>fm</code>, <code>chip</code>, <code>brass</code>, <code>strings</code>, <code>marimba</code> and <code>noise</code>.</p>`,
+      { code: `voice acid = [a1 a1 a2 a1 c2 a1 g2 a1].inst(tb303).fenv([4 2 3 1]).glide([0 0 .06 0])\nvoice wub  = [a0 . . . c1 . . .].inst(wobble).wobble([2 4], depth: 4)`, bars: 2 },
+      `<p><code>.fenv(octaves)</code> is a filter envelope: on every note the cutoff jumps up by that many octaves and falls back, the squelch of the TB-303 bass machine this preset imitates. <code>.glide(sec)</code> slides into a note from the one before. Its phrase has four values spread over eight notes, so the slide applies to the fifth and sixth. <code>.wobble(rate)</code> swings the cutoff at that many swings per bar: a rate of 2 under the first note and 4 under the second. Swap <code>tb303</code> for <code>supersaw</code> or <code>chip</code> and the same notes become a different record. <code>.wave</code>, <code>.vibrato</code>, <code>.pw</code>, <code>.unison</code> and <code>.sub</code> are in the Reference.</p>`,
+      { exercise: {
+        task: "Add two effects to this voice: a delay with a mix of 0.5, and a low-pass filter at 2000 Hz.",
+        starter: "voice ping = [g4 . . bb4 . . . .].inst(pluck)", solution: "voice ping = [g4 . . bb4 . . . .].inst(pluck).delay(.5).lpf(2000)",
+        hint: "Two more calls on the chain. The order does not matter: Tine always runs effects in the same order.",
+        alsoRight: ["voice ping = [g4 . . bb4 . . . .].inst(pluck).lpf(2000).delay(.5, time: 1/8, feedback: .6)", "voice ping = [g4 . . bb4 . . . .].inst(pluck)\n  .delay(1/2)\n  .lpf(2000)"],
+        wrong: ["voice ping = [g4 . . bb4 . . . .].inst(pluck).delay(.5)", "voice ping = [g4 . . bb4 . . . .].inst(pluck).lpf(2000)", "voice ping = [g4 . . bb4 . . . .].inst(pluck).delay(.5).cutoff(2000)", "voice ping = [g4 . . bb4 . . . .].inst(pluck).delay(.2).lpf(2000)", "voice ping = [g4 . . bb4 . . . .].inst(pluck).delay(.5).hpf(2000)"],
+        check: (_s, n) => {
+          const t = firstBar(n, "ping");
+          if (!t.length) return "There is no voice named ping yet.";
+          const p = t[0].params;
+          if (p.delay === undefined) return "There is no delay on the voice yet.";
+          if (Math.abs(num(p.delay) - 0.5) > 0.001) return `The delay mix is ${round(num(p.delay))}; it should be 0.5. The mix is the first argument.`;
+          if (p.lpf === undefined) return p.cutoff !== undefined ? "cutoff filters each note inside the instrument. The effect that filters the whole voice is lpf." : p.hpf !== undefined ? "hpf removes what is below the frequency. A low-pass filter is lpf." : "The delay is there. Now add the low-pass filter.";
+          if (Math.abs(num(p.lpf) - 2000) > 0.5) return `The low-pass filter is at ${round(num(p.lpf))} Hz; it should be at 2000.`;
+          return null;
+        },
+      } },
     ],
   },
+  // ------------------------------------------------------------------
   {
-    id: "rhythm2", title: "12. Rhythmic depth",
+    id: "samples", title: "12. Samples",
     parts: [
-      `<p><code>euclid(hits, steps)</code> spreads hits as evenly as possible, which produces many traditional rhythms.</p>`,
+      { code: `voice beat = ["bd_haus" . "sn_dolf" "bd_haus" . "bd_haus" "sn_dolf" .]\nvoice hats = ["hat" "hat:3" "hat:5" "hat:3"]*2`, bars: 2 },
+      `<p>A <b>sample</b> is a recording, played back as a note. Tine comes with about 200, all public domain. Write a sample's name in quotes inside a phrase and it plays as recorded. The part of a name before the underscore is its <b>bank</b>, a family of similar sounds: <code>"bd_haus"</code> is in the <code>bd</code> (bass drum) bank. <code>"hat:3"</code> is sound number 3 in the <code>hat</code> bank, counting from 0. Change <code>"sn_dolf"</code> to <code>"sn:2"</code> to try another snare.</p>`,
+      `<p><code>.sample()</code> sends ordinary drum names or notes through samples.</p>`,
+      { code: `voice kit  = [kick hat snare hat kick kick snare hat].sample()\nvoice bass = [c2 . eb2 g2].sample("bass_voxy_c")` },
+      `<p>With no argument, drum names play the recorded kit in place of the synthesized one. With a name, the notes play that recording at their own pitch, by speeding it up or slowing it down.</p>`,
+      `<p>Longer samples are loops, such as a bar or two of a drummer. Left alone, a loop plays at the speed it was recorded. These two calls make it follow your tempo:</p>`,
+      { code: `tempo 140\nvoice amen = ["loop_amen"].loopAt(2).chop(16)`, bars: 2 },
+      `<p><code>.loopAt(2)</code> stretches the loop to last exactly two bars. <code>.chop(16)</code> cuts it into sixteen pieces, each of which starts on time. Change the tempo to 100 and the drummer slows down with you. The pieces are now notes like any others, so pattern functions work on them: add <code>.rev</code> to the end and the pieces play in reverse order.</p>`,
+      { code: `tempo 140\nvoice amen = ["loop_amen"].loopAt(2).chop(8).every(2, x => x.rev)\nvoice back = ["loop_amen"].loopAt(2).chop(8).speed(-1).gain(.4)`, bars: 4 },
+      `<p><code>.speed(x)</code> sets playback rate: 2 is twice as fast and an octave up, and a negative speed plays backwards. More controls, all in the Reference: <code>.begin</code> and <code>.end</code> play part of a sound, <code>.slice(n, i)</code> plays piece i of n, and <code>.cut(group)</code> makes each sound stop the one before it.</p>`,
+      `<p>Two ways to bring your own sounds. Drop audio files on the DAW (lesson 16) and they become samples named by file name. For recorded pianos, strings and the like, load a <b>SoundFont</b>, a single file holding a whole set of instruments, with a <code>soundfont("GeneralUser-GS.sf2")</code> line. Then <code>.gm(1)</code> to <code>.gm(128)</code> picks an instrument by its standard number, or <code>.gm("violin")</code> by name.</p>`,
+      { exercise: {
+        task: "Write <code>voice beat</code> with four steps: the sample <code>\"bd_haus\"</code> on steps 1 and 3, and <code>\"sn_dolf\"</code> on steps 2 and 4.",
+        starter: `voice beat = ["bd_haus"]`, solution: `voice beat = ["bd_haus" "sn_dolf" "bd_haus" "sn_dolf"]`,
+        hint: "Sample names go in a phrase like notes do, each in its own quotes.",
+        alsoRight: [`voice beat = ["bd_haus" "sn_dolf"]*2`, `voice beat = ["bd_haus" "sn_dolf"].fast(2)`],
+        wrong: [`voice beat = ["bd_haus" "bd_haus" "sn_dolf" "sn_dolf"]`, `voice beat = ["bd_haus" "sn_dolf"]`, `voice beat = [kick snare kick snare]`, `voice beat = ["sn_dolf" "bd_haus" "sn_dolf" "bd_haus"]`],
+        check: (_s, n) => {
+          const t = firstBar(n, "beat");
+          if (!t.length) return "There is no voice named beat yet.";
+          const got = t.map(x => String(x.params.inst ?? "").replace(/^sample:/, ""));
+          if (t.some(x => !String(x.params.inst ?? "").startsWith("sample:"))) return "Some of those are not samples. A sample is a name in quotes.";
+          if (!same(t.map(x => round(x.bar)), [0, 0.25, 0.5, 0.75])) return `I hear ${t.length} sound${t.length === 1 ? "" : "s"} (${got.join(" ")}). There should be four, one on each step.`;
+          const want = ["bd_haus", "sn_dolf", "bd_haus", "sn_dolf"];
+          const bad = got.findIndex((g, i) => g !== want[i]);
+          return bad < 0 ? null : `Step ${bad + 1} plays ${got[bad]}; it should play ${want[bad]}.`;
+        },
+      } },
+    ],
+  },
+  // ------------------------------------------------------------------
+  {
+    id: "rhythm2", title: "13. Rhythmic depth",
+    parts: [
       { code: `voice drums = {kick.euclid(3, 8) rim.euclid(5, 8, rot: 2) [hat*8]}` },
-      `<p><code>poly(steps)</code> makes polymeter: a phrase of any length stepped at a fixed rate, so it drifts against the bar line and realigns later.</p>`,
-      { code: `voice four = [kick . . .]\nvoice three = [c5 e5 g5].poly(8).inst(pluck)`, bars: 3 },
-      `<p>Odd meters are a line: <code>meter 7/8</code>. Tempo counts the beat unit of the meter. Nesting goes as deep as you like: here is a quintuplet inside a triplet.</p>`,
-      { code: `meter 7/8\ntempo 240\nvoice odd = [kick . hat kick . snare hat]\nvoice deep = [c5 [e5 [g5 a5 b5 c6 d6] e5] .].inst(bell)` },
+      `<p><code>euclid(hits, steps)</code> spreads a number of hits as evenly as it can over a number of steps. Three over eight cannot be perfectly even, so you get gaps of 3, 3 and 2 steps. That lopsided pattern is the <b>tresillo</b>, the rhythm under a great deal of Latin and pop music, and many other traditional rhythms fall out of the same function. <code>rot:</code> rotates the pattern to start on a different step. Try <code>kick.euclid(5, 16)</code>.</p>`,
+      `<p>So far every phrase has fitted its bar. <code>poly(steps)</code> breaks that.</p>`,
+      { code: `voice four  = [kick . . .]\nvoice three = [c5 e5 g5].poly(8).inst(pluck)`, bars: 3 },
+      `<p><code>poly(8)</code> steps through the phrase at eight steps per bar, however long the phrase is. Three notes do not divide into eight, so the phrase starts on a different note each bar and only lines up with the kick again after three bars. Two cycles of different lengths running against each other are called <b>polymeter</b>.</p>`,
+      `<p>A bar does not have to hold four beats. The <code>meter</code> line sets it.</p>`,
+      { code: `meter 3/4\ntempo 150\nvoice drums = [kick hat hat]\nvoice bass  = [c2 _ g2].inst(bass)` },
+      `<p>The first number is how many beats are in a bar. The second is which note length counts as the beat: 4 for a quarter note, 8 for an eighth. So <code>meter 3/4</code> is three quarter-note beats per bar, the one-two-three of a waltz. Tempo counts whatever the beat is, per minute.</p>`,
+      { code: `meter 7/8\ntempo 240\nvoice odd  = [kick . hat kick . snare hat]\nvoice deep = [c5 [e5 [g5 a5 b5 c6 d6] e5] .].inst(bell)` },
+      `<p>Seven eighth-note beats per bar, at 240 of them a minute. The kicks and the snare split the seven into 3 + 2 + 2, which is how odd meters are usually felt. The second voice shows that nesting goes as deep as you like: a quintuplet inside a triplet.</p>`,
+      { exercise: {
+        task: "Write <code>voice claps</code>: five claps spread as evenly as possible over eight steps.",
+        starter: "voice claps = [clap]", solution: "voice claps = clap.euclid(5, 8)",
+        hint: "A drum name can be the first argument of <code>euclid</code>, as <code>kick</code> is in the first example.",
+        alsoRight: ["voice claps = euclid(clap, 5, 8)", "voice claps = clap.euclid(5, 8, rot: 1)", "voice claps = [clap . clap . clap clap . clap]"],
+        wrong: ["voice claps = clap.euclid(3, 8)", "voice claps = [clap clap clap clap clap . . .]", "voice claps = clap.euclid(5, 16)", "voice claps = kick.euclid(5, 8)", "voice claps = [clap*5]"],
+        check: (_s, n) => {
+          const t = firstBar(n, "claps");
+          if (!t.length) return "There is no voice named claps yet.";
+          if (t.some(x => x.semi !== CLAP)) return "Some of those are not claps.";
+          if (t.some(x => Math.abs(x.bar * 8 - Math.round(x.bar * 8)) > 0.001)) return "Some claps fall between the eight steps.";
+          if (t.length !== 5) return `I hear ${t.length} clap${t.length === 1 ? "" : "s"} in the bar; there should be 5.`;
+          const on = t.map(x => Math.round(x.bar * 8));
+          const gaps = on.map((p, i) => ((on[(i + 1) % 5] - p + 8) % 8) || 8);
+          return gaps.every(g => g <= 2) ? null : "Five claps, but bunched together. Spread as evenly as possible, no gap is longer than two steps.";
+        },
+      } },
     ],
   },
+  // ------------------------------------------------------------------
   {
-    id: "form", title: "13. Composing whole pieces",
+    id: "micro", title: "14. Beyond twelve notes",
     parts: [
-      `<p>Top-level voices loop forever, which is what you want on stage. For a finished piece, group voices into <b>sections</b> with a length in bars, and list them in a <b>form</b>.</p>`,
+      { code: `voice micro = [c4 (c4 + 50c) c#4 (c4 + 5\\31) (c4 * 7/4) 432hz]` },
+      `<p>The second note is not on any piano: it sits halfway between <code>c4</code> and <code>c#4</code>. A pitch is a number (lesson 1), and nothing says the number must be whole. There are four ways to write the notes between the keys:</p><ul><li><b>Cents.</b> A cent is a hundredth of a semitone, written with a <code>c</code> after a number. <code>c4 + 50c</code> is pitch 60.5.</li><li><b>Equal divisions.</b> A piano divides the octave into 12 equal steps. <code>5\\31</code> is 5 steps of an octave divided into 31.</li><li><b>Frequency ratios.</b> <code>c4 * 7/4</code> multiplies the frequency by 7/4.</li><li><b>Frequencies.</b> <code>432hz</code>.</li></ul>`,
+      `<p>Why would anyone want this? Two notes sound smoothest together when their frequencies make a simple ratio such as 3/2 or 5/4. The piano's twelve equal steps only come close to those ratios, a compromise that lets it play in every key. Other tunings make other trades.</p>`,
+      { code: `key d just([1 9/8 5/4 4/3 3/2 5/3 15/8])\nvoice pure = <^1@3 ^4@3 ^5@3 ^1@3>.arp("up").fast(2).inst(organ)`, bars: 4 },
+      `<p><code>just(ratios)</code> builds a scale from exact ratios, which is called <b>just intonation</b>. Change the key line to <code>key d major</code> and listen to the chords again: a little rougher, with a slow shimmer. That is the piano's compromise.</p>`,
+      { code: `key c edo(31, [0 5 10 13 18 23 28])\nvoice tune  = [^1 ^3 ^5 ^8 ^5 ^3]\nvoice drone = {c3 g3}.inst(pad)`, bars: 2 },
+      `<p><code>edo(n, steps)</code> picks a scale out of an octave divided into n equal steps. This one takes seven of 31 and comes out close to a major scale with sweeter chords. The long held notes under it are a <b>drone</b>. Also available: <code>cents(list)</code>, <code>scala(text)</code> for the standard Scala .scl format, and scales such as <code>bohlen_pierce</code> that do not repeat at the octave at all.</p>`,
+      { exercise: {
+        task: "Write <code>voice between</code> with two steps: <code>c4</code>, then the note exactly halfway between <code>c4</code> and <code>c#4</code>.",
+        starter: "voice between = [c4 c#4]", solution: "voice between = [c4 (c4 + 50c)]",
+        hint: "A semitone is 100 cents. An expression inside a phrase needs parentheses.",
+        alsoRight: ["voice between = [c4 60.5]", "voice between = [c4 (c#4 - 50c)]", "voice between = [c4 (c4 + 1\\24)]"],
+        wrong: ["voice between = [c4 c#4]", "voice between = [c4 (c4 + 50)]", "voice between = [c4 (c4 + 25c)]", "voice between = [(c4 + 50c) c4]"],
+        check: (_s, n) => {
+          const t = firstBar(n, "between");
+          if (!t.length) return "There is no voice named between yet.";
+          if (t.length !== 2) return `I hear ${t.length} note${t.length === 1 ? "" : "s"}; there should be 2.`;
+          if (Math.abs(t[0].semi - 60) > 0.001) return `The first note is ${noteName(t[0].semi)}; it should be c4.`;
+          const d = t[1].semi - 60;
+          if (Math.abs(d - 0.5) < 0.001) return null;
+          if (Math.abs(d - 1) < 0.001) return "The second note is c#4 itself. Halfway there is 50 cents above c4.";
+          if (Math.abs(d - 50) < 0.001) return "That added 50 semitones. Cents are written with a c after the number: 50c.";
+          return `The second note is ${Math.round(d * 100)} cents above c4; it should be 50.`;
+        },
+      } },
+    ],
+  },
+  // ------------------------------------------------------------------
+  {
+    id: "form", title: "15. Composing whole pieces",
+    parts: [
       { code: `tempo 104\nkey a minor\n\nvoice drums = {[kick . snare .] [hat*8]}\n\nsection verse 4\n  voice bass = [^1 . ^1 ^5].octave(-2).inst(bass)\n\nsection chorus 4\n  tempo 112\n  voice bass = [^4 ^4 ^5 ^5].octave(-2).inst(bass)\n  voice lift = <^4@7 ^5@7>.inst(pad)\n\nform verse chorus verse`, bars: 12 },
-      `<p>Voices outside sections play throughout. Each section can change tempo and key. Inside a section, patterns start fresh, so every verse begins the same way, but random choices still differ between repeats.</p>`,
-      `<p>From the command line: <code>tine render piece.tine</code> makes a WAV, <code>tine midi piece.tine</code> a MIDI file for any other DAW, and <code>tine pack piece.tine</code> a single HTML file that plays the piece anywhere.</p>`,
+      `<p>That one has a beginning and an end (this page starts it over when it finishes). Top-level voices loop forever, which suits playing live. For a finished piece, group voices into <b>sections</b>, each an indented block with a length in bars, and list the order to play them on a <b>form</b> line. This piece is twelve bars: four of verse, four of chorus, four of verse.</p>`,
+      `<p>Voices outside any section play throughout, as the drums do here. A section can set its own tempo and key. Inside a section, patterns start from their beginning, so every verse opens the same way, though random choices still differ between repeats. <code>verse*2</code> in the form plays a section twice.</p>`,
+      `<p>From the command line, <code>tine render piece.tine</code> writes a WAV file, <code>tine midi piece.tine</code> a MIDI file that other music software can open, and <code>tine pack piece.tine</code> a single HTML file that plays the piece anywhere.</p>`,
+      { exercise: {
+        task: "Finish this piece. Add a second section with at least one voice of its own, and make the form play at least three sections in total, using both.",
+        starter: "tempo 100\nkey d minor\n\nvoice drums = {[kick . snare .] [hat*8]}\n\nsection verse 2\n  voice bass = [^1 . ^1 ^5].octave(-2).inst(bass)\n\nform verse",
+        solution: "tempo 100\nkey d minor\n\nvoice drums = {[kick . snare .] [hat*8]}\n\nsection verse 2\n  voice bass = [^1 . ^1 ^5].octave(-2).inst(bass)\n\nsection chorus 2\n  voice bass = [^4 ^4 ^5 ^5].octave(-2).inst(bass)\n  voice pad = <^4@7 ^5@7>.inst(pad)\n\nform verse chorus verse",
+        hint: "Copy the shape of the example above: <code>section name bars</code>, an indented voice, and both names on the form line.",
+        alsoRight: ["section x 1\n  voice p = [c e]\nsection y 1\n  voice q = [g e]\nform x*2 y"],
+        wrong: ["section verse 2\n  voice bass = [c2]\nform verse verse verse", "section verse 2\n  voice bass = [c2]\nsection chorus 2\n  voice bass = [f2]\nform verse chorus", "section verse 2\n  voice bass = [c2]\nsection chorus 2\n  voice bass = [f2]\nform verse*3", "voice drums = [kick]\nsection verse 2\n  voice bass = [c2]\nsection chorus 2\n  tempo 90\nform verse chorus verse"],
+        check: (s) => {
+          if (!s.form || !s.form.length) return "There is no form line, so nothing says what order to play the sections in.";
+          if (s.sections.size < 2) return `There is ${s.sections.size} section; the piece needs at least 2.`;
+          const used = new Set(s.form.map(f => f.name));
+          const missing = [...used].find(name => !s.sections.has(name));
+          if (missing) return `The form names "${missing}", but there is no section called that.`;
+          if (used.size < 2) return "The form only ever plays one section. Use at least two different ones.";
+          const total = s.form.reduce((t, f) => t + f.times, 0);
+          if (total < 3) return `The form plays ${total} section${total === 1 ? "" : "s"} in total; make it at least 3.`;
+          const empty = [...used].find(name => !(s.sections.get(name) as any)?.voices?.size);
+          return empty ? `The section "${empty}" has no voice of its own.` : null;
+        },
+      } },
     ],
   },
+  // ------------------------------------------------------------------
   {
-    id: "live", title: "14. Performing live",
+    id: "live", title: "16. Performing live",
     parts: [
-      `<p>Run <code>tine daw mypiece.tine</code>. The DAW opens in your browser, plays the file, and reloads whenever the file changes, so you can perform from the DAW's editor or from your own editor.</p>`,
-      `<p>Re-evaluate with <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>. New code takes over on the next bar line, so the groove never stumbles. If you make a mistake, the broken voice keeps its last good version and everything else carries on.</p>`,
-      `<p>Sections become scenes you can launch, and every evaluation is saved with its seed under <b>Takes</b>, so nothing you heard is ever lost.</p>`,
-      `<p>Connect MIDI gear in the MIDI tab:</p><ul><li><code>.midi(2)</code> sends a voice to channel 2 of a synth or another DAW.</li><li><code>cc(74)</code> is a knob on your controller, as a 0 to 1 signal: <code>.cutoff(cc(74).range(200, 4000))</code>.</li><li><code>held(8).arp</code> arpeggiates whatever chord you hold on the keyboard.</li><li>Write <code>active voice</code> instead of <code>voice</code> and that voice plays every edit as soon as it is valid, mid-bar, with no evaluating.</li><li>Name a block with a line <code>-- @fill</code> (end it with <code>-- @end</code>), bind it to a key or pad under <b>Tracks → toggles</b>, and switch whole groups of lines on and off as you play.</li><li><b>● capture</b> records what you play for a few bars and writes it into your code as a new voice.</li><li><code>.ctl(74, sine(4))</code> turns a synth's knob along with the music, <code>.program(5)</code> changes its sound, and <code>sine(4).as_cc(74).midi(1)</code> is a voice made only of knob moves.</li><li>Send MIDI clock and drum machines follow you; follow MIDI clock and you follow them, tempo, start and stop.</li></ul>`,
-      { code: `-- in the DAW, with a keyboard connected:\nkey c minor\nvoice hands = held(8).arp("updown").inst(pluck)\nvoice drums = {[kick . snare .] [hat*8]}`, bars: 2 },
-      `<p>That is the whole language. The <b>Reference</b> at the end lists every function.</p>`,
+      `<p>Everything so far ran in this page. For real work, run <code>tine daw mypiece.tine</code>. The <b>DAW</b> (digital audio workstation, the usual name for a music-making program) opens in your browser with a larger editor and panels for tracks, scenes, MIDI and takes. It plays the file and reloads whenever the file changes, so you can work in its editor or in your own.</p>`,
+      `<p>It is built for changing code while the music plays:</p><ul><li>Re-evaluate with <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>. New code takes over at the next bar line, so the rhythm never stumbles.</li><li>If an edit has an error, the broken voice keeps its last good version and everything else carries on.</li><li>Write <code>active voice</code> in place of <code>voice</code> and that voice plays every edit as soon as it is valid, mid-bar, with no evaluating.</li><li>Name a block of lines with <code>-- @fill</code> above it (a line starting <code>--</code> is a comment) and <code>-- @end</code> below. Bind it to a key under <b>Tracks → toggles</b> and you can switch those lines on and off as you play.</li><li>Sections (lesson 15) become scenes you can launch one at a time.</li><li>Every evaluation is saved with its seed under <b>Takes</b>, and <b>★ keep take</b> writes that seed into your code, so nothing you heard is lost.</li></ul>`,
+      `<p>The rest needs hardware. <b>MIDI</b> is the standard that lets instruments, controllers and computers send each other notes and knob movements. It has 16 channels, so one cable can address 16 devices, and each knob movement is a numbered <b>control change</b>, or CC. Connect gear in the DAW's MIDI tab, then:</p><ul><li><code>.midi(2)</code> sends a voice out on channel 2 to a synthesizer or another program.</li><li><code>cc(74)</code> reads knob 74 of your controller as a signal from 0 to 1: <code>.cutoff(cc(74).range(200, 4000))</code>.</li><li><code>held(8)</code> is whatever chord you are holding on a connected keyboard, so <code>held(8).arp</code> arpeggiates it.</li><li><b>● capture</b> records what you play for a few bars and writes it into your code as a new voice.</li><li><code>.ctl(74, sine(4))</code> turns a knob on the receiving synth in time with the music, and <code>.program(5)</code> changes its sound.</li><li>Send MIDI clock and drum machines follow your tempo. Follow MIDI clock and you follow theirs.</li></ul>`,
+      `<p>This one needs a keyboard, so it is here to read, not to play:</p><pre class="static">key c minor\nvoice hands = held(8).arp("updown").inst(pluck)\nvoice drums = {[kick . snare .] [hat*8]}</pre>`,
+      { exercise: {
+        task: "Get this ready for the stage. Make <code>lead</code> an active voice, and send <code>bass</code> out on MIDI channel 2.",
+        starter: "voice lead = [e5 . g5 a5]\nvoice bass = [a1 . a1 c2]", solution: "active voice lead = [e5 . g5 a5]\nvoice bass = [a1 . a1 c2].midi(2)",
+        hint: "One word in front of the first line, one call on the end of the second.",
+        alsoRight: ["active voice lead = [e5 . g5 a5]\nactive voice bass = [a1 . a1 c2].inst(bass).midi(2)"],
+        wrong: ["voice lead = [e5 . g5 a5]\nvoice bass = [a1 . a1 c2].midi(2)", "active voice lead = [e5 . g5 a5]\nvoice bass = [a1 . a1 c2]", "active voice lead = [e5 . g5 a5].midi(2)\nvoice bass = [a1 . a1 c2]", "active voice lead = [e5 . g5 a5]\nvoice bass = [a1 . a1 c2].midi(1)"],
+        check: (s, n, src) => {
+          const miss = noVoice(n, "lead") ?? noVoice(n, "bass");
+          if (miss) return miss;
+          const active = (s.voices.get("lead") as any)?.active ?? (src !== undefined ? /(^|\n)\s*active\s+voice\s+lead\b/.test(src) : false);
+          if (!active) return "lead is still an ordinary voice. Put the word active in front of it.";
+          const ch = voiceNotes(n, "bass")[0].params.midi;
+          if (ch === undefined) return "bass is not being sent to MIDI yet.";
+          return num(ch) === 2 ? null : `bass is going out on channel ${num(ch)}; it should be channel 2.`;
+        },
+      } },
+      `<p>That is the whole language. The <a href="#reference">Reference</a> lists every function, and <code>tine theory</code> opens a separate course that teaches music theory itself, from the keyboard up, using Tine.</p>`,
     ],
   },
 ];
