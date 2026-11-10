@@ -150,7 +150,7 @@ export const LESSONS: Lesson[] = [
     parts: [
       `<p>Built-in instruments: <code>keys</code> (an electric piano, the default), <code>pluck</code>, <code>bass</code>, <code>pad</code>, <code>bell</code>, <code>organ</code>, <code>lead</code>, <code>sine</code>, <code>tri</code>, <code>saw</code>, <code>square</code>, and <code>kit</code> for drums.</p>`,
       `<p>Parameters can be patterns too. Velocity accents, filter sweeps and panning become part of the music.</p>`,
-      { code: `voice acid = [c2 c2 c3 c2 eb2 c2 g2 bb1]*2\n  .inst(saw)\n  .cutoff(sine(2).range(300, 3000))\n  .res(.6)\n  .vel([1 .6 .8 .6])`, bars: 2 },
+      { code: `voice acid = ([c2 c2 c3 c2 eb2 c2 g2 bb1]*2)\n  .inst(saw)\n  .cutoff(sine(2).range(300, 3000))\n  .res(.6)\n  .vel([1 .6 .8 .6])`, bars: 2 },
       `<p>Signals are continuous shapes: <code>sine</code>, <code>tri</code>, <code>saw</code>, <code>square</code>, <code>noise</code> and <code>drift</code> (smooth, seeded wandering). Use <code>.range(lo, hi)</code> to scale them and <code>.seg(n)</code> to turn one into notes.</p>`,
       { code: `key c minor_pent\nvoice drifty = drift(.5).range(0, 10).seg(8).map(x => floor(x)).degrees.inst(bell).pan(sine(1).range(-1, 1))`, bars: 2 },
       `<p>Other parameters: <code>legato</code>, <code>dur</code> (in beats), <code>gain</code>, <code>pan</code>, <code>attack</code>, <code>decay</code>, <code>sustain</code>, <code>release</code>, <code>reverb</code>.</p>`,

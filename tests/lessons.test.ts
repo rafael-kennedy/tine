@@ -22,6 +22,16 @@ for (const lesson of LESSONS) {
         const s = evaluate(part.code, { seed: 1 });
         const { notes } = renderNotes(s, s.form ? undefined : part.bars ?? 1);
         expect(notes.length).toBeGreaterThan(0);
+        // a chained .inst(x) must reach the notes; a chain that binds to the
+        // wrong thing (like the 2 in "[...]*2\n  .inst(saw)") leaves it unset
+        // (checked per voice; a voice that plays nothing, like held() with no keyboard, is skipped)
+        for (const v of part.code.split(/\n(?=\s*voice )/)) {
+          const name = v.match(/(?:^|\n)\s*voice (\w+)/)?.[1];
+          const own = notes.filter(n => n.voice === name);
+          if (!own.length) continue;
+          const insts = new Set(own.map(n => String(n.params.inst ?? "")));
+          for (const m of v.matchAll(/\.inst\((\w+)\)/g)) expect([name, m[1], insts.has(m[1])]).toEqual([name, m[1], true]);
+        }
       });
     }
   });
