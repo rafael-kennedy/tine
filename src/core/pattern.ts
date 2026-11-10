@@ -365,7 +365,7 @@ export function resolveNotes(voice: string, evs: Ev[], ctx: Ctx): Note[] {
     const params = { ...ev.p };
     if (ev.v instanceof Pitch && ev.v.drum && params.inst === undefined) params.inst = "kit";
     // a drum name played through samples keeps its name, so it plays unpitched (and through the kit)
-    if (ev.v instanceof Pitch && ev.v.drum && typeof params.inst === "string" && params.inst.startsWith("sample:")) params.drum = ev.v.drum;
+    if (ev.v instanceof Pitch && ev.v.drum && typeof params.inst === "string" && (params.inst.startsWith("sample:") || params.inst === "gm")) params.drum = ev.v.drum;
     // a string in a phrase is a sample name, played as recorded: ["bd_haus" . "sn_dolf" .]
     if (typeof ev.v === "string") { if (params.inst === undefined || params.inst === "sample:") params.inst = `sample:${ev.v}`; params.hit = true; }
     delete params.key; delete params.vel; delete params.legato; delete params.dur;

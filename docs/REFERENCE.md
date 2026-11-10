@@ -214,6 +214,26 @@ voice amen = ["loop_amen"].loopAt(2).chop(16)             -- a loop that follows
 
 `tine pack` copies the sounds a piece uses into the player, so a packed piece plays offline.
 
+## SoundFonts
+
+A SoundFont (`.sf2`) is one file of recorded instruments. A General MIDI bank gives the 128 standard instruments (piano, strings, brass, guitars...) and drum kits. Tine does not ship one, because good banks are 30 MB and up; load one with a top-level line and play it with `.gm()`:
+
+```
+soundfont("GeneralUser-GS.sf2")          -- a file next to the piece
+voice piano = <c4@maj a3@m f3@maj g3@maj>.gm(1)
+voice tune  = [e5 . d5 c5 . . g4 .].gm("violin")
+voice drums = [kick hat snare hat].gm()
+```
+
+| Code | What it does |
+| --- | --- |
+| `soundfont(source)` | load a bank: a path, a URL, or `"github:user/repo/path.sf2"` |
+| `.gm(program, bank: 0)` | General MIDI program 1 (piano) to 128, as General MIDI numbers them |
+| `.gm("name")` | the first preset whose name contains this |
+| `.gm()` on drum names | the bank's drum kit (bank 128) |
+
+Two free General MIDI banks: GeneralUser GS (https://www.schristiancollins.com/generaluser, about 31 MB, free for any music; also at `github:mrbumpy409/GeneralUser-GS/GeneralUser-GS.sf2`) and FluidR3_GM (MIT license, about 140 MB). In the DAW you can also drop an `.sf2` file on the page. Only the first `soundfont(...)` line is used. Packed players do not carry SoundFonts; export a WAV instead.
+
 ## State across bars
 
 `evolve(start, (state, bar) => next, (state, bar) => pattern)` keeps a value that changes from bar to bar, like a counter, a random walk or a voice-led chord. The state at bar n is the step applied n times to `start`, so any bar can be played in any order and always sounds the same. Without the third argument, the state itself is played. Each section starts again from `start`.
@@ -365,6 +385,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `slice(p, n, i)` | Cut the sample into n equal pieces and play piece i (from 0). i may be a pattern: .slice(8, [0 3 2 7]). |
 | `splice(p, n, i)` | Like slice, but each piece is stretched to fill its note, so a sliced loop stays in tempo. |
 | `chop(p, n)` | Split each note into n notes that play successive parts of its sample. With loopAt, a loop follows the tempo: loop_amen.loopAt(2).chop(16). |
+| `gm(p, program, bank: 0)` | Play notes on an instrument of the loaded SoundFont: a General MIDI program number from 1 (piano) to 128, or a name to search for, .gm("violin"). On drum names with no program it plays the drum kit. |
 | `dirt(p, sound: "", orbit: 0)` | Send to SuperDirt (TidalCycles' sound engine) instead of the built-in sound, over OSC from tine daw or tine dirt. sound is a SuperDirt sample bank or synth; without it, sample names, drum names and instruments are translated. |
 | `midi(p, channel: 1, port: "")` | Send to an external MIDI device instead of the built-in synth. |
 | `ctl(p, number, value)` | Send a MIDI control change (value 0 to 1) just before each note. value may be a pattern or signal: .ctl(74, sine(4)). |
@@ -376,6 +397,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 
 | Function | Description |
 | --- | --- |
+| `soundfont(source)` | Load a SoundFont 2 (.sf2) bank, as a top-level line: a file next to the piece, a URL, or "github:user/repo/path.sf2". Then play its instruments with .gm(). General MIDI banks such as GeneralUser GS give all 128 standard instruments and the drum kits. |
 | `samples(source)` | Load a sample pack, as a top-level line: a folder (command line), a URL of a strudel.json sample map, or "github:user/repo" for that repository's strudel.json. Sounds load on first use. |
 | `cc(number, channel: any)` | A live signal (0 to 1) from a MIDI controller knob or fader. |
 | `held(steps: 1)` | The notes currently held on your MIDI keyboard, as a chord, sampled `steps` times per bar. Try held(4).arp. |

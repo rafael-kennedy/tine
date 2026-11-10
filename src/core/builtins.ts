@@ -493,6 +493,15 @@ def("chop", "chop(p, n)", "Split each note into n notes that play successive par
     return out;
   });
 });
+def("soundfont", "soundfont(source)", "Load a SoundFont 2 (.sf2) bank, as a top-level line: a file next to the piece, a URL, or \"github:user/repo/path.sf2\". Then play its instruments with .gm(). General MIDI banks such as GeneralUser GS give all 128 standard instruments and the drum kits.", cat.io, ([src]) => ({ __soundfont: String(src) }));
+def("gm", "gm(p, program, bank: 0)", "Play notes on an instrument of the loaded SoundFont: a General MIDI program number from 1 (piano) to 128, or a name to search for, .gm(\"violin\"). On drum names with no program it plays the drum kit.", cat.param, ([p, prog, bank], named) => {
+  let q = setParam(P(p), "inst", "gm");
+  const pr = named.program ?? prog, bk = named.bank ?? bank;
+  if (typeof pr === "string") q = setParam(q, "gmName", pr);
+  else if (pr !== undefined) q = mapEv(q, (ev, ctx) => ({ ...ev, p: { ...ev.p, gmProgram: Math.max(0, Math.min(127, Math.round(N(sampleAt(pr, ev.s, ctx))) - 1)) } }));
+  if (bk !== undefined) q = setParam(q, "gmBank", bk);
+  return q;
+});
 def("samples", "samples(source)", "Load a sample pack, as a top-level line: a folder (command line), a URL of a strudel.json sample map, or \"github:user/repo\" for that repository's strudel.json. Sounds load on first use.", cat.io, ([src]) => ({ __samples: String(src) }));
 def("dirt", "dirt(p, sound: \"\", orbit: 0)", "Send to SuperDirt (TidalCycles' sound engine) instead of the built-in sound, over OSC from tine daw or tine dirt. sound is a SuperDirt sample bank or synth; without it, sample names, drum names and instruments are translated.", cat.param, ([p, snd, orbit], named) => {
   let q = setParam(P(p), "dirt", named.sound ?? snd ?? "");

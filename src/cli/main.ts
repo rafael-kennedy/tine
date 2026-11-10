@@ -104,7 +104,7 @@ async function main() {
     case "render": {
       const { scene } = load(pos[0], flags);
       const sr = flags.sr ? parseInt(flags.sr as string, 10) : 44100;
-      const { wav, seconds, notes } = await renderToWav(scene, bars, sr, await loadSamples(scene, { dir: flags.samples as string, file: pos[0] }));
+      const { wav, seconds, notes } = await renderToWav(scene, bars, sr, await loadSamples(scene, { dir: flags.samples as string, file: pos[0] }), pos[0]);
       const out = outName(pos[0], ".wav", flags);
       writeFileSync(out, wav);
       console.log(`wrote ${out}: ${seconds.toFixed(1)}s, ${notes.length} notes, seed ${scene.seed}${scene.seedExplicit ? "" : dim("  (add 'seed " + scene.seed + "' to the file to keep this take)")}`);
@@ -128,7 +128,7 @@ async function main() {
     }
     case "play": {
       const { scene } = load(pos[0], flags);
-      const { wav, seconds } = await renderToWav(scene, bars, 44100, await loadSamples(scene, { dir: flags.samples as string, file: pos[0] }));
+      const { wav, seconds } = await renderToWav(scene, bars, 44100, await loadSamples(scene, { dir: flags.samples as string, file: pos[0] }), pos[0]);
       console.log(`playing ${pos[0]} (${seconds.toFixed(1)}s, seed ${scene.seed})`);
       if (!(await playWav(wav))) { console.error("no audio player found (afplay, paplay, aplay, pw-play or ffplay). Try 'tine render' or 'tine daw'."); process.exit(1); }
       return;
@@ -231,7 +231,7 @@ async function serve(kind: "daw" | "learn" | "theory", file: string | undefined,
       if (url.pathname.startsWith("/api/samples/")) {
         const d = dirOf();
         const rel = decodeURIComponent(url.pathname.slice(13));
-        if (d && /\.(wav|mp3|ogg|flac|aif|aiff|m4a)$/i.test(rel) && !rel.split("/").includes("..")) {
+        if (d && /\.(wav|mp3|ogg|flac|aif|aiff|m4a|sf2)$/i.test(rel) && !rel.split("/").includes("..")) {
           const f = join(d, rel);
           if (existsSync(f) && statSync(f).isFile()) return new Response(Bun.file(f));
         }

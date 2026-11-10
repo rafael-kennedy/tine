@@ -3,7 +3,7 @@ import { writeFileSync, mkdtempSync, readFileSync, existsSync, readdirSync, stat
 import { tmpdir, homedir } from "node:os";
 import { join, basename, extname, dirname, resolve } from "node:path";
 import { createHash } from "node:crypto";
-import { Scene, renderNotes, mix, encodeWav, decodeWav, SampleData, SampleLibrary, TimedNote, parseSampleMap, sampleMapUrl } from "../core";
+import { Scene, renderNotes, mix, encodeWav, decodeWav, SampleData, SampleLibrary, TimedNote, parseSampleMap, sampleMapUrl, parseSf2, SoundFont, fontUrl } from "../core";
 
 // The bundled CC0 library is embedded in the tine binary.
 import packPath from "../../assets/samples/tine-samples.tsb" with { type: "file" };
@@ -95,11 +95,31 @@ export async function fetchNeeded(lib: SampleLibrary, notes: TimedNote[], quiet 
   await Promise.all([...want].map(name => lib.fetch(name, cachedFetch, async b => decodeAny(b, name)).then(ok => { if (!ok && !quiet) console.error(`could not load sample "${name}"`); })));
 }
 
-export async function renderToWav(scene: Scene, bars?: number, sr = 44100, samples?: SampleLibrary) {
+// The SoundFont named by the piece's first soundfont(...) line, if any.
+const fonts = new Map<string, SoundFont>();
+export async function loadSoundfont(scene: Scene | null, file?: string, quiet = false): Promise<SoundFont | null> {
+  const src = scene?.soundfontSources[0];
+  if (!src) return null;
+  try {
+    const local = file ? resolve(dirname(resolve(file)), src) : resolve(src);
+    const key = /^(https?|github):/.test(src) ? src : local;
+    let sf = fonts.get(key);
+    if (!sf) {
+      const bytes = /^(https?|github):/.test(src) ? await cachedFetch(fontUrl(src)) : new Uint8Array(readFileSync(local));
+      sf = parseSf2(bytes); fonts.set(key, sf);
+    }
+    if ((scene?.soundfontSources.length ?? 0) > 1 && !quiet) console.error(`only the first soundfont(...) line is used: ${src}`);
+    return sf;
+  } catch (e) { if (!quiet) console.error(`soundfont("${src}"): ${(e as Error).message}`); return null; }
+}
+
+export async function renderToWav(scene: Scene, bars?: number, sr = 44100, samples?: SampleLibrary, file?: string) {
   const { notes, seconds } = renderNotes(scene, bars, {});
   const lib = samples ?? await loadSamples(scene);
   await fetchNeeded(lib, notes);
-  const [L, R] = mix(notes, seconds, sr, { tuningRef: scene.tuningRef, samples: lib });
+  const soundfont = await loadSoundfont(scene, file);
+  if (!soundfont && notes.some(n => n.params.inst === "gm")) console.error("gm() needs a SoundFont: add a line like soundfont(\"GeneralUser-GS.sf2\")");
+  const [L, R] = mix(notes, seconds, sr, { tuningRef: scene.tuningRef, samples: lib, soundfont });
   return { wav: encodeWav([L, R], sr), seconds, notes };
 }
 

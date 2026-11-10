@@ -1,8 +1,8 @@
 // Browser audio + MIDI engine. Notes are rendered with the same pure DSP
 // code the command line uses (src/core/synth.ts), one AudioBuffer per note,
 // so the DAW, the tutorial and exported WAVs sound alike.
-import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx, renderSample } from "../core";
-import { library, loadBundled, request, once, decodeBytes } from "./samples";
+import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx, renderSample, presetFor, renderSf } from "../core";
+import { library, loadBundled, request, once, decodeBytes, soundfont, fontPending } from "./samples";
 
 // Parameters can be exact rationals (class R). A structured clone to the
 // worker drops their prototype, and Number() of the bare object is NaN, so
@@ -176,6 +176,7 @@ export class Engine {
       if (n.params.midi !== undefined || n.params.ccOut !== undefined || n.params.dirt !== undefined) continue;
       const inst = String(n.params.inst ?? "keys");
       if (inst.startsWith("sample:")) { this.sampleName(n, inst, true); continue; }
+      if (inst === "gm") continue;
       const dur = Math.min(n.durSec, 12), key = this.keyOf(n, inst, dur);
       if (this.cache.has(key) || this.pending.has(key)) continue;
       this.pending.add(key);
@@ -186,6 +187,7 @@ export class Engine {
   bufferFor(n: PlayableNote): AudioBuffer | null {
     const inst = String(n.params.inst ?? "keys");
     if (inst.startsWith("sample:")) return this.sampleBuffer(n, inst);
+    if (inst === "gm") return this.gmBuffer(n);
     const dur = Math.min(n.durSec, 12);
     const key = this.keyOf(n, inst, dur);
     let b = this.cache.get(key);
@@ -400,6 +402,18 @@ export class Engine {
 
   async loadSample(name: string, data: ArrayBuffer, bank?: string) {
     library.add(name, await decodeBytes(new Uint8Array(data)), bank);
+  }
+
+  // A SoundFont note, rendered here like a sample (the font is not in the worker).
+  private gmBuffer(n: PlayableNote): AudioBuffer | null {
+    if (!soundfont) { if (fontPending()) return null; once("gm() needs a SoundFont: add a line like soundfont(\"GeneralUser-GS.sf2\"), or drop an .sf2 file here"); return null; }
+    const pre = presetFor(soundfont, n.params);
+    if (!pre) { once(`the SoundFont has no preset for gm(${n.params.gmName ?? (n.params.gmProgram ?? 0) + 1})`); return null; }
+    const gain = Number(n.params.gain ?? 1), dur = Math.min(n.durSec, 12);
+    const key = `GM|${library.version}|${pre.bank}:${pre.program}|${n.semi.toFixed(3)}|${n.vel.toFixed(2)}|${dur.toFixed(3)}|${gain}|${this.tuningRef}`;
+    const b = this.cache.get(key);
+    if (b) return b;
+    return this.store(key, renderSf(soundfont, pre, { semi: n.semi + 12 * Math.log2(this.tuningRef / 440), vel: n.vel, durSec: dur, gain }, this.ctx.sampleRate));
   }
 
   // Play one library sound now, for the sound browser.

@@ -214,6 +214,26 @@ voice amen = ["loop_amen"].loopAt(2).chop(16)             -- a loop that follows
 
 `tine pack` copies the sounds a piece uses into the player, so a packed piece plays offline.
 
+## SoundFonts
+
+A SoundFont (`.sf2`) is one file of recorded instruments. A General MIDI bank gives the 128 standard instruments (piano, strings, brass, guitars...) and drum kits. Tine does not ship one, because good banks are 30 MB and up; load one with a top-level line and play it with `.gm()`:
+
+```
+soundfont("GeneralUser-GS.sf2")          -- a file next to the piece
+voice piano = <c4@maj a3@m f3@maj g3@maj>.gm(1)
+voice tune  = [e5 . d5 c5 . . g4 .].gm("violin")
+voice drums = [kick hat snare hat].gm()
+```
+
+| Code | What it does |
+| --- | --- |
+| `soundfont(source)` | load a bank: a path, a URL, or `"github:user/repo/path.sf2"` |
+| `.gm(program, bank: 0)` | General MIDI program 1 (piano) to 128, as General MIDI numbers them |
+| `.gm("name")` | the first preset whose name contains this |
+| `.gm()` on drum names | the bank's drum kit (bank 128) |
+
+Two free General MIDI banks: GeneralUser GS (https://www.schristiancollins.com/generaluser, about 31 MB, free for any music; also at `github:mrbumpy409/GeneralUser-GS/GeneralUser-GS.sf2`) and FluidR3_GM (MIT license, about 140 MB). In the DAW you can also drop an `.sf2` file on the page. Only the first `soundfont(...)` line is used. Packed players do not carry SoundFonts; export a WAV instead.
+
 ## State across bars
 
 `evolve(start, (state, bar) => next, (state, bar) => pattern)` keeps a value that changes from bar to bar, like a counter, a random walk or a voice-led chord. The state at bar n is the step applied n times to `start`, so any bar can be played in any order and always sounds the same. Without the third argument, the state itself is played. Each section starts again from `start`.

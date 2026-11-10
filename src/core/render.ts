@@ -5,10 +5,11 @@ import { Scene } from "./interp";
 import { renderNote, reverb, noteLength } from "./synth";
 import { hasFx, fxOf, processBus, Fx } from "./fx";
 import { SampleData, SampleLibrary, renderSample, applyCuts } from "./samples";
+import { SoundFont, presetFor, renderSf } from "./sf2";
 
 export function freqOf(semi: number, ref = 440) { return ref * Math.pow(2, (semi - 69) / 12); }
 
-export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tuningRef?: number; samples?: SampleLibrary; tail?: number } = {}): [Float32Array, Float32Array] {
+export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tuningRef?: number; samples?: SampleLibrary; soundfont?: SoundFont | null; tail?: number } = {}): [Float32Array, Float32Array] {
   const tail = opts.tail ?? 2.5;
   const len = Math.ceil((seconds + tail) * sr);
   const L = new Float32Array(len), R = new Float32Array(len);
@@ -28,6 +29,12 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
       const sm = name ? opts.samples!.get(name) : undefined;
       if (!sm) continue;
       buf = renderSample(sm, n, sr);
+    } else if (inst === "gm") {
+      const pre = opts.soundfont ? presetFor(opts.soundfont, n.params) : undefined;
+      if (!pre) continue;
+      const gain = Number(n.params.gain ?? 1), key = `gm|${pre.bank}:${pre.program}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${gain}|${opts.tuningRef ?? 440}`;
+      buf = cache.get(key)!;
+      if (!buf) { buf = renderSf(opts.soundfont!, pre, { semi: n.semi + 12 * Math.log2((opts.tuningRef ?? 440) / 440), vel: n.vel, durSec: n.durSec, gain }, sr); if (cache.size < 2000) cache.set(key, buf); }
     } else {
       const key = `${inst}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${JSON.stringify(n.params)}`;
       buf = cache.get(key)!;

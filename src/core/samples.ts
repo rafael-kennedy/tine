@@ -169,6 +169,12 @@ export function sampleMapUrl(spec: string): string {
   return spec;
 }
 
+// "github:user/repo/path/file.sf2" is that file on the repository's main branch
+export function fontUrl(spec: string): string {
+  const m = /^github:([^/]+)\/([^/]+)\/(.+)$/.exec(spec);
+  return m ? `https://raw.githubusercontent.com/${m[1]}/${m[2]}/main/${m[3]}` : spec;
+}
+
 // General MIDI drum names played through the bundled library.
 export const KIT: Record<string, string> = {
   kick: "bd_haus", kick2: "bd_808", rim: "elec_tick", snare: "sn_dolf", clap: "perc_snap2", snare2: "sn_dub",

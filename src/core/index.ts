@@ -20,3 +20,4 @@ export * from "./samples";
 export * from "./adpcm";
 export * from "./osc";
 export * from "./dirt";
+export * from "./sf2";

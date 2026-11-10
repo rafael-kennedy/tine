@@ -27,6 +27,7 @@ export interface Scene {
   prints: string[];
   errors: TineError[];
   sampleSources: string[];                      // samples(...) lines: packs to load
+  soundfontSources: string[];                   // soundfont(...) lines
   env: Env;
 }
 
@@ -60,7 +61,7 @@ export class Interp {
     const seed = opts.seed ?? 0;
     this.scene = {
       tempo: 120, meter: [4, 4], seed, seedExplicit: false, key: DEFAULT_KEY, tuningRef: 440,
-      voices: new Map(), sections: new Map(), form: null, prints: [], errors: [], sampleSources: [], env: this.env,
+      voices: new Map(), sections: new Map(), form: null, prints: [], errors: [], sampleSources: [], soundfontSources: [], env: this.env,
     };
     this.stream = new Stream([seed, 0]);
   }
@@ -185,6 +186,10 @@ export class Interp {
       case "expr": {
         this.beginStatement(`expr:${st.span.start}`);
         const v = this.eval(st.e, env);
+        if (v && typeof v === "object" && typeof (v as any).__soundfont === "string") {
+          if (!this.scene.soundfontSources.includes((v as any).__soundfont)) this.scene.soundfontSources.push((v as any).__soundfont);
+          return null;
+        }
         if (v && typeof v === "object" && typeof (v as any).__samples === "string") {
           if (!this.scene.sampleSources.includes((v as any).__samples)) this.scene.sampleSources.push((v as any).__samples);
           return null;

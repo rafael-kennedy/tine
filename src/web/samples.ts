@@ -2,7 +2,7 @@
 // export and the sound browser. The bundled CC0 library is the file
 // tine-samples.tsb next to the page (tine serve and the published pages have
 // it), or, in a packed player, just the sounds the piece uses, embedded.
-import { SampleLibrary, SampleData, parseSampleMap, sampleMapUrl, bankOf } from "../core";
+import { SampleLibrary, SampleData, parseSampleMap, sampleMapUrl, bankOf, SoundFont, parseSf2, fontUrl } from "../core";
 
 export const library = new SampleLibrary();
 export let warn: (msg: string) => void = () => {};
@@ -86,4 +86,27 @@ export async function ensure(notes: { params: Record<string, any> }[]) {
     if (name && library.pendingUrl(name)) want.add(name);
   }
   await Promise.all([...want].map(name => library.fetch(name, fetchBytes, decodeBytes)));
+}
+
+// ---------- SoundFonts (see core/sf2.ts) ----------
+// One at a time: the piece's first soundfont(...) line, or a .sf2 file dropped on the DAW.
+export let soundfont: SoundFont | null = null;
+let fontSrc = "";
+export const fontPending = () => !!fontSrc && !soundfont;
+let fontLoading: Promise<void> | null = null;
+export function setSoundfont(sf: SoundFont, name: string) { soundfont = sf; fontSrc = name; library.version++; }
+export function loadSoundfont(list: string[]): Promise<void> | null {
+  const src = list[0];
+  if (!src || src === fontSrc) return fontLoading;
+  fontSrc = src;
+  fontLoading = (async () => {
+    try {
+      const url = /^(https?|github):/.test(src) ? fontUrl(src) : `/api/samples/${src.split("/").map(encodeURIComponent).join("/")}?dir=.`;
+      warn(`loading SoundFont ${src}…`);
+      const sf = parseSf2(await fetchBytes(url));
+      setSoundfont(sf, src);
+      warn(`SoundFont ${sf.name || src}: ${sf.presets.length} presets`);
+    } catch (e) { warn(`soundfont("${src}") could not be loaded: ${(e as Error).message}`); fontSrc = ""; }
+  })();
+  return fontLoading;
 }

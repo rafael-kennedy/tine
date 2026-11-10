@@ -4,7 +4,7 @@
 // re-evaluating never disturbs the groove.
 import { Scene, VoiceDef, liveNotes, formNotes, timeline, barSeconds, TimedNote, Inputs } from "../core";
 import { Engine } from "./engine";
-import { loadSources } from "./samples";
+import { loadSources, loadSoundfont } from "./samples";
 import { ClockFollower, CLOCK, START, CONTINUE, STOP } from "./clockin";
 
 export type Quantize = "bar" | "beat" | "now";
@@ -96,6 +96,7 @@ export class Transport {
 
   load(scene: Scene) {
     if (scene.sampleSources?.length) loadSources(scene.sampleSources);
+    if (scene.soundfontSources?.length) loadSoundfont(scene.soundfontSources);
     if (!this.playing || !this.scene) { this.scene = scene; this.pending = null; this.engine.tuningRef = scene.tuningRef; return; }
     this.pending = scene;
     this.preparedTo = this.scheduledTo; // render the new code's notes ahead too

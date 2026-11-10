@@ -169,6 +169,7 @@ voice kit = [. . . . . . kick .].sample()`, bars: 2 },
       { code: `tempo 140
 voice amen = ["loop_amen"].loopAt(2).chop(16)
 voice back = ["loop_amen"].loopAt(2).chop(8).rev.speed(-1).gain(.5)`, bars: 2 },
+      `<p>Recorded acoustic instruments come from a SoundFont, a single file of instruments. Load a General MIDI one (GeneralUser GS is free) with a <code>soundfont("...")</code> line, or drop the .sf2 file on the DAW, then play its instruments by General MIDI number with <code>.gm(1)</code> (piano) to <code>.gm(128)</code>, or by name: <code>.gm("violin")</code>.</p>`,
       `<p>More sample controls: <code>.begin</code> and <code>.end</code> (0 to 1), <code>.speed</code> (negative plays backwards), <code>.slice(n, i)</code>, <code>.cut(group)</code> to choke one sound with the next. Drop your own files on the DAW to add them.</p>`,
     ],
   },

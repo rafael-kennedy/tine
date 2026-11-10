@@ -1,10 +1,10 @@
 // Tine DAW: a live-coding workstation in the browser.
 import { EditorView } from "@codemirror/view";
 import {
-  evaluate, Scene, VoiceDef, TineError, formatError, makeCtx, R, hashStr, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, builtinList,
+  evaluate, Scene, VoiceDef, TineError, formatError, makeCtx, R, hashStr, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, builtinList, parseSf2,
 } from "../core";
 import { Engine } from "./engine";
-import { library, loadBundled, ensure as ensureSamples, onWarn, nameOf, bankOfPath } from "./samples";
+import { library, loadBundled, ensure as ensureSamples, onWarn, nameOf, bankOfPath, setSoundfont, soundfont, loadSoundfont } from "./samples";
 import { Transport, Quantize } from "./transport";
 import { makeEditor, showError, flash } from "./editor";
 import { findToggles, toggleEdits, comboOf, hasModifier, describe as describeBinding, matches as bindingMatches, Trigger, Binding } from "./toggles";
@@ -533,7 +533,8 @@ export async function startDaw() {
     const bars = s.form ? undefined : 16;
     const { notes, seconds } = renderNotes(s, bars);
     await ensureSamples(notes);
-    const [L, R] = mix(notes, seconds, 44100, { tuningRef: s.tuningRef, samples: library });
+    if (s.soundfontSources.length) await loadSoundfont(s.soundfontSources);
+    const [L, R] = mix(notes, seconds, 44100, { tuningRef: s.tuningRef, samples: library, soundfont });
     download(`tine-${s.seed}.wav`, encodeWav([L, R], 44100) as BlobPart, "audio/wav");
     log(`exported ${seconds.toFixed(1)}s (${s.form ? "the form" : "16 bars"}), seed ${s.seed}`, "i");
   };
@@ -559,6 +560,11 @@ export async function startDaw() {
     e.preventDefault(); document.body.classList.remove("dragging");
     for (const f of [...(e.dataTransfer?.files ?? [])]) {
       if (/\.tine$/i.test(f.name)) { setCode(await f.text()); run(false); continue; }
+      if (/\.sf2$/i.test(f.name)) {
+        try { const sf = parseSf2(new Uint8Array(await f.arrayBuffer())); setSoundfont(sf, f.name); log(`SoundFont ${sf.name || f.name}: ${sf.presets.length} presets. Play them with .gm(1) to .gm(128), or .gm("name")`, "i"); }
+        catch (err) { log(`${f.name}: ${(err as Error).message}`, "e"); }
+        continue;
+      }
       const name = f.name.replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9_]+/g, "_");
       try { await engine.loadSample(name, await f.arrayBuffer()); log(`loaded sample "${name}": use .sample("${name}")`, "i"); }
       catch { log(`could not decode ${f.name}`, "e"); }
