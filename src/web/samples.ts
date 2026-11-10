@@ -16,8 +16,13 @@ export function loadBundled(): Promise<boolean> {
     if (b64) { library.addPack(fromBase64(b64), { keep: true }); return true; }
     try {
       const r = await fetch("tine-samples.tsb");
+      if (r.ok) { library.addPack(new Uint8Array(await r.arrayBuffer()), { keep: true }); return true; }
+    } catch { /* try the text copy */ }
+    // hosts that serve only known file types get the same pack as base64 text
+    try {
+      const r = await fetch("tine-samples.b64.txt");
       if (!r.ok) return false;
-      library.addPack(new Uint8Array(await r.arrayBuffer()), { keep: true });
+      library.addPack(fromBase64((await r.text()).trim()), { keep: true });
       return true;
     } catch { return false; }
   })();
