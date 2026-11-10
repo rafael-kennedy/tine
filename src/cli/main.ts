@@ -2,11 +2,11 @@
 // tine: the command-line front door. One binary holds the REPL, the
 // renderer, MIDI export, the DAW and tutorial servers, the packager and the
 // language server, so a performer installs exactly one thing.
-import { readFileSync, writeFileSync, existsSync, watch, statSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, watch, statSync, readdirSync } from "node:fs";
 import { resolve, dirname, basename, extname, join } from "node:path";
 import { evaluate, formatError, renderNotes, toMidiFile, toMusicXml, randomSeed, VERSION, timeline, pitchName, keySpelling, Scene, TineError, lineCol } from "../core";
 import { repl } from "./repl";
-import { renderToWav, playWav, openBrowser, loadSamples } from "./audio";
+import { renderToWav, playWav, openBrowser, loadSamples, bundledPack, fetchNeeded } from "./audio";
 import { roll } from "./roll";
 import * as assets from "./assets.gen";
 
@@ -100,7 +100,7 @@ async function main() {
     case "render": {
       const { scene } = load(pos[0], flags);
       const sr = flags.sr ? parseInt(flags.sr as string, 10) : 44100;
-      const { wav, seconds, notes } = renderToWav(scene, bars, sr, loadSamples(flags.samples as string));
+      const { wav, seconds, notes } = await renderToWav(scene, bars, sr, await loadSamples(scene, { dir: flags.samples as string, file: pos[0] }));
       const out = outName(pos[0], ".wav", flags);
       writeFileSync(out, wav);
       console.log(`wrote ${out}: ${seconds.toFixed(1)}s, ${notes.length} notes, seed ${scene.seed}${scene.seedExplicit ? "" : dim("  (add 'seed " + scene.seed + "' to the file to keep this take)")}`);
@@ -124,7 +124,7 @@ async function main() {
     }
     case "play": {
       const { scene } = load(pos[0], flags);
-      const { wav, seconds } = renderToWav(scene, bars, 44100, loadSamples(flags.samples as string));
+      const { wav, seconds } = await renderToWav(scene, bars, 44100, await loadSamples(scene, { dir: flags.samples as string, file: pos[0] }));
       console.log(`playing ${pos[0]} (${seconds.toFixed(1)}s, seed ${scene.seed})`);
       if (!(await playWav(wav))) { console.error("no audio player found (afplay, paplay, aplay, pw-play or ffplay). Try 'tine render' or 'tine daw'."); process.exit(1); }
       return;
@@ -200,14 +200,20 @@ async function serve(kind: "daw" | "learn" | "theory", file: string | undefined,
         const stream = new ReadableStream({ start(c) { ctl = c; listeners.add(c); c.enqueue(": hi\n\n"); }, cancel() { listeners.delete(ctl); } });
         return new Response(stream, { headers: { "content-type": "text/event-stream", "cache-control": "no-cache" } });
       }
+      if (url.pathname === "/tine-samples.tsb") return new Response(bundledPack(), { headers: { "content-type": "application/octet-stream", "cache-control": "max-age=86400" } });
+      // the samples folder next to the piece, or a folder named by a samples("...") line
+      const dirOf = () => { const d = url.searchParams.get("dir"); return d ? resolve(path ? dirname(path) : process.cwd(), d) : sampleDir; };
       if (url.pathname === "/api/samples") {
-        const { readdirSync } = await import("node:fs");
-        const list = sampleDir && existsSync(sampleDir) ? readdirSync(sampleDir).filter(f => /\.(wav|mp3|ogg|flac|aif|aiff)$/i.test(f)) : [];
-        return Response.json(list);
+        const d = dirOf();
+        return Response.json(d && existsSync(d) ? listAudio(d) : []);
       }
-      if (url.pathname.startsWith("/api/samples/") && sampleDir) {
-        const f = join(sampleDir, basename(decodeURIComponent(url.pathname.slice(13))));
-        if (existsSync(f) && statSync(f).isFile()) return new Response(Bun.file(f));
+      if (url.pathname.startsWith("/api/samples/")) {
+        const d = dirOf();
+        const rel = decodeURIComponent(url.pathname.slice(13));
+        if (d && /\.(wav|mp3|ogg|flac|aif|aiff|m4a)$/i.test(rel) && !rel.split("/").includes("..")) {
+          const f = join(d, rel);
+          if (existsSync(f) && statSync(f).isFile()) return new Response(Bun.file(f));
+        }
       }
       return new Response("not found", { status: 404 });
     },
@@ -219,18 +225,35 @@ async function serve(kind: "daw" | "learn" | "theory", file: string | undefined,
   await new Promise(() => {});
 }
 
+// audio files in a folder and its subfolders (one level: a subfolder is a bank)
+function listAudio(dir: string): string[] {
+  const out: string[] = [];
+  for (const f of readdirSync(dir).sort()) {
+    const full = join(dir, f);
+    if (statSync(full).isDirectory()) { for (const g of readdirSync(full).sort()) if (/\.(wav|mp3|ogg|flac|aif|aiff|m4a)$/i.test(g)) out.push(`${f}/${g}`); }
+    else if (/\.(wav|mp3|ogg|flac|aif|aiff|m4a)$/i.test(f)) out.push(f);
+  }
+  return out;
+}
+
 async function pack(file: string, flags: Record<string, any>) {
   const { scene, src } = load(file, { ...flags, seed: flags.seed ?? undefined });
   // The packaged piece is frozen to the seed it was packed with.
   const frozen = scene.seedExplicit ? src : `seed ${scene.seed}\n${src}`;
   const title = basename(file, extname(file));
+  // the sounds the piece plays travel with it
+  const lib = await loadSamples(scene, { dir: flags.samples as string, file });
+  const { notes } = renderNotes(scene, scene.form ? undefined : 16);
+  await fetchNeeded(lib, notes);
+  const used = lib.used(notes);
+  const soundPack = used.length ? Buffer.from(lib.subset(used)).toString("base64") : "";
   if (flags.exe) {
     const out = (flags.o as string) ?? title + (process.platform === "win32" ? ".exe" : "");
     // the runtime is this executable, or another platform's tine binary via --runtime
     const runtime = (flags.runtime as string) ?? process.execPath;
     if (!flags.runtime && /\bbun(\.exe)?$/.test(process.execPath)) { console.error("pack --exe needs a compiled tine binary: run it from one, or pass --runtime path/to/tine-<platform>"); process.exit(2); }
     const self = readFileSync(runtime);
-    const payload = Buffer.from(JSON.stringify({ title, src: frozen }), "utf8");
+    const payload = Buffer.from(JSON.stringify({ title, src: frozen, samples: soundPack }), "utf8");
     const marker = Buffer.from("\n#TINE-PIECE#");
     const len = Buffer.alloc(8); len.writeBigUInt64LE(BigInt(payload.length));
     writeFileSync(out, Buffer.concat([self, marker, payload, len, Buffer.from("TINEPACK")]), { mode: 0o755 });
@@ -245,15 +268,15 @@ async function pack(file: string, flags: Record<string, any>) {
   const out = outName(file, ".html", flags);
   const html = assets.PLAYER_HTML
     .replace("<title>Tine Player</title>", `<title>${escapeHtml(title)}</title>`)
-    .replace('<script type="text/tine" id="piece"></script>', `<script type="text/tine" id="piece" data-title="${escapeHtml(title)}">${frozen.replace(/<\//g, "<\\/")}</script>`);
+    .replace('<script type="text/tine" id="piece"></script>', `<script type="text/tine" id="piece" data-title="${escapeHtml(title)}">${frozen.replace(/<\//g, "<\\/")}</script>` + (soundPack ? `<script type="application/octet-stream" id="tine-samples">${soundPack}</script>` : ""));
   writeFileSync(out, html);
-  console.log(`wrote ${out}: a single-file player that runs in any modern browser, offline (seed ${scene.seed}).`);
+  console.log(`wrote ${out}: a single-file player that runs in any modern browser, offline (seed ${scene.seed})${used.length ? `, with its ${used.length} sample${used.length > 1 ? "s" : ""}` : ""}.`);
 }
 
 function escapeHtml(s: string) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" } as any)[c]); }
 
 // A packed executable carries its piece after the binary itself.
-function embeddedPiece(): { title: string; src: string } | null {
+function embeddedPiece(): { title: string; src: string; samples?: string } | null {
   try {
     const exe = process.execPath;
     if (/\bbun(\.exe)?$/.test(exe)) return null;
@@ -274,6 +297,7 @@ if (piece) {
   const { mkdtempSync } = require("node:fs"); const { tmpdir } = require("node:os");
   const tmp = join(mkdtempSync(join(tmpdir(), "tine-piece-")), `${piece.title}.tine`);
   writeFileSync(tmp, piece.src);
+  if (piece.samples) writeFileSync(join(dirname(tmp), "piece-samples.tsb"), Buffer.from(piece.samples, "base64"));
   const sub = process.argv[2];
   if (sub === "render" || sub === "midi" || sub === "xml" || sub === "roll" || sub === "daw") {
     process.argv.splice(3, 0, tmp);

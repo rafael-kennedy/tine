@@ -4,6 +4,7 @@ import {
   evaluate, Scene, VoiceDef, TineError, formatError, makeCtx, R, hashStr, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, builtinList,
 } from "../core";
 import { Engine } from "./engine";
+import { library, loadBundled, ensure as ensureSamples, onWarn, nameOf, bankOfPath } from "./samples";
 import { Transport, Quantize } from "./transport";
 import { makeEditor, showError, flash } from "./editor";
 import { findToggles, toggleEdits, comboOf, hasModifier, describe as describeBinding, matches as bindingMatches, Trigger, Binding } from "./toggles";
@@ -86,6 +87,8 @@ label.chk{display:flex;align-items:center;gap:6px;margin:6px 0}
 .take .t{flex:1;font-family:var(--mono);font-size:12px}
 .drop{border:1.5px dashed var(--line);border-radius:10px;padding:10px;text-align:center;color:var(--mute);margin-top:8px}
 body.dragging .drop{border-color:var(--brass);color:var(--text)}
+.banks details{margin:2px 0}.banks summary{cursor:pointer;font-family:var(--mono);font-size:12.5px}
+.banks .chip{margin:2px 3px 2px 0;font-family:var(--mono);font-size:11px}
 .kb td{padding:2px 8px 2px 0;vertical-align:top}
 .ccbox{font-family:var(--mono);background:var(--ink2);border-radius:8px;padding:8px;margin:6px 0}
 @media (max-width: 860px){
@@ -303,7 +306,11 @@ export async function startDaw() {
       try {
         const ns = renderNotes({ ...s, form: null } as Scene, 1).notes.filter(n => n.voice === v.name);
         const p = ns[0]?.params; if (!p) return "";
-        return p.midi !== undefined ? `MIDI ch ${p.midi}${p.port ? ` · ${p.port}` : ""}${p.mpe ? " · mpe" : ""}` : String(p.inst ?? "keys");
+        if (p.midi !== undefined) return `MIDI ch ${p.midi}${p.port ? ` · ${p.port}` : ""}${p.mpe ? " · mpe" : ""}`;
+        const inst = String(p.inst ?? "keys");
+        if (!inst.startsWith("sample:")) return inst;
+        const names = [...new Set(ns.map(n => String(n.params.inst).slice(7) || "kit"))];
+        return `samples: ${names.slice(0, 2).join(", ")}${names.length > 2 ? "…" : ""}`;
       } catch { return ""; }
     };
     for (const v of s.voices.values()) out.push({ name: v.name, dest: destOf(v), active: v.active });
@@ -328,8 +335,20 @@ export async function startDaw() {
     p.append(h("h4", {}, "sounds"));
     const sl = h("div", {});
     for (const [k, d] of Object.entries(INSTRUMENT_DOCS)) sl.append(h("div", { class: "dest" }, `${k}: ${d}`));
-    for (const k of engine.samples.keys()) sl.append(h("div", { class: "dest" }, `sample("${k}")  loaded sample`));
-    p.append(sl, h("div", { class: "drop" }, "Drop audio files anywhere to load them as samples. Use them with .sample(\"name\") or .sample(\"name\", fit: true) for loops."));
+    p.append(sl, h("h4", {}, `samples (${library.size})`));
+    // the sample library by bank; click a name to hear it
+    const banks = library.bankList();
+    if (!banks.length) p.append(h("div", { class: "dest" }, "loading the bundled samples…"));
+    const bl = h("div", { class: "banks" });
+    for (const b of banks) {
+      const d = h("details", {}, h("summary", {}, `${b.bank} `, h("span", { class: "dest" }, String(b.names.length))));
+      d.addEventListener("toggle", () => {
+        if (!d.open || d.childElementCount > 1) return;
+        b.names.forEach((nm, i) => d.append(h("button", { class: "small chip", title: `"${b.bank}:${i}" also plays it`, onclick: () => { engine.resume(); engine.audition(nm); } }, nm)));
+      }, { once: false });
+      bl.append(d);
+    }
+    p.append(bl, h("div", { class: "drop" }, "Click a name to hear it. Play one in a phrase: [\"bd_haus\" . \"sn_dolf\" .], or [kick . snare .].sample() for the kit. Drop audio files anywhere to add your own."));
   }
 
   // ---------- performance toggles (see toggles.ts) ----------
@@ -512,9 +531,9 @@ export async function startDaw() {
     log("rendering…", "i");
     await new Promise(r => setTimeout(r, 30));
     const bars = s.form ? undefined : 16;
-    const samples = new Map([...engine.samples].map(([k, b]) => [k, { channels: [b.getChannelData(0)], sr: b.sampleRate }]));
     const { notes, seconds } = renderNotes(s, bars);
-    const [L, R] = mix(notes, seconds, 44100, { tuningRef: s.tuningRef, samples });
+    await ensureSamples(notes);
+    const [L, R] = mix(notes, seconds, 44100, { tuningRef: s.tuningRef, samples: library });
     download(`tine-${s.seed}.wav`, encodeWav([L, R], 44100) as BlobPart, "audio/wav");
     log(`exported ${seconds.toFixed(1)}s (${s.form ? "the form" : "16 bars"}), seed ${s.seed}`, "i");
   };
@@ -531,7 +550,9 @@ export async function startDaw() {
   };
   const th = store.get("tine.theme"); if (th) document.documentElement.dataset.theme = th;
 
-  // samples: drag and drop
+  // samples: the bundled library, messages about packs, drag and drop
+  onWarn(msg => log(msg, "i"));
+  loadBundled().then(() => renderTracks());
   document.addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("dragging"); });
   document.addEventListener("dragleave", () => document.body.classList.remove("dragging"));
   document.addEventListener("drop", async e => {
@@ -548,8 +569,7 @@ export async function startDaw() {
     try {
       const list: string[] = await (await fetch("/api/samples")).json();
       for (const f of list) {
-        const name = f.replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9_]+/g, "_");
-        try { await engine.loadSample(name, await (await fetch(`/api/samples/${encodeURIComponent(f)}`)).arrayBuffer()); } catch { /* skip */ }
+        try { await engine.loadSample(nameOf(f), await (await fetch(`/api/samples/${f.split("/").map(encodeURIComponent).join("/")}`)).arrayBuffer(), bankOfPath(f)); } catch { /* skip */ }
       }
       if (list.length) log(`loaded ${list.length} sample${list.length > 1 ? "s" : ""} from the samples folder`, "i");
     } catch { /* none */ }

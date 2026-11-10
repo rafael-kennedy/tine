@@ -347,6 +347,7 @@ export function valueToSemis(v: any, key: Key): number[] {
   if (typeof v === "number") return [v];
   if (v instanceof Chord) return v.notes.flatMap(n => valueToSemis(n, key));
   if (v === true) return [60];
+  if (typeof v === "string") return [60]; // a sample name: see resolveNotes
   if (typeof v === "object" && !(v instanceof Pat) && "note" in v) return valueToSemis(v.note, key);
   return [];
 }
@@ -363,6 +364,10 @@ export function resolveNotes(voice: string, evs: Ev[], ctx: Ctx): Note[] {
     if (typeof ev.v === "object" && ev.v && "vel" in ev.v) vel = Number(ev.v.vel);
     const params = { ...ev.p };
     if (ev.v instanceof Pitch && ev.v.drum && params.inst === undefined) params.inst = "kit";
+    // a drum name played through samples keeps its name, so it plays unpitched (and through the kit)
+    if (ev.v instanceof Pitch && ev.v.drum && typeof params.inst === "string" && params.inst.startsWith("sample:")) params.drum = ev.v.drum;
+    // a string in a phrase is a sample name, played as recorded: ["bd_haus" . "sn_dolf" .]
+    if (typeof ev.v === "string") { if (params.inst === undefined || params.inst === "sample:") params.inst = `sample:${ev.v}`; params.hit = true; }
     delete params.key; delete params.vel; delete params.legato; delete params.dur;
     // a chord symbol's root travels with its notes, so exports can name the chord (MusicXML harmony)
     if (ev.v instanceof Chord && ev.v.root !== undefined) { const r = valueToSemis(ev.v.root, key)[0]; if (r !== undefined) params.chordRoot = r; }

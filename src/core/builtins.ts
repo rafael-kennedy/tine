@@ -417,11 +417,51 @@ def("inst", "inst(p, name, ...options)", "Choose a built-in instrument: keys, si
   for (const [k, v] of Object.entries(named)) q = setParam(q, k, v);
   return q;
 });
-def("sample", "sample(p, name, fit: false)", "Play a loaded audio sample (drop files into the DAW). With fit: true it is stretched to the event length, for loops.", cat.param, ([p, name, fit], named) => {
-  let q = setParam(P(p), "inst", `sample:${String(name)}`);
+def("sample", "sample(p, name, n: 0, fit: false)", "Play a sound from the sample library: a full name (\"bd_haus\"), a bank (\"bd\", with n choosing among its sounds), or \"bank:n\". On a drum phrase with no name it plays the bundled kit. name and n may be patterns. With fit: true the sound is stretched to the note's length.", cat.param, ([p, name, fit], named) => {
+  const nm = name ?? named.name ?? "", n = named.n;
+  let q = mapEv(P(p), (ev, ctx) => {
+    const v = sampleAt(nm, ev.s, ctx);
+    const out = { ...ev.p, inst: `sample:${v instanceof Pitch && v.drum ? v.drum : v === undefined ? "" : String(v)}` };
+    if (n !== undefined) out.sampleN = N(sampleAt(n, ev.s, ctx), 0);
+    return { ...ev, p: out };
+  });
   if (truthy(named.fit ?? fit ?? false)) q = setParam(q, "fit", true);
   return q;
 });
+param("begin", "begin(p, x)", "Start playing a sample from this point, 0 (its start) to 1 (its end).");
+param("end", "end(p, x)", "Stop playing a sample at this point, 0 to 1.");
+param("speed", "speed(p, x)", "Sample playback rate: 2 is an octave up and twice as fast, -1 plays it backwards.");
+param("accel", "accel(p, x)", "Change a sample's speed by x every second while it plays: speed(1).accel(-1) is a tape stop.");
+param("cut", "cut(p, group)", "Cut group: a sample in this group stops the one before it, in any voice. Choke an open hat with a closed one.");
+def("loopAt", "loopAt(p, bars)", "Make a sample last this many bars, whatever the tempo: the phrase is slowed to that length and the sample stretched to fit. Add chop to keep a long loop in time: [\"loop_amen\"].loopAt(2).chop(16).", cat.param, ([p, n]) => setParam(fast(ONE.div(RR(n)), P(p)), "loopAt", n));
+const sliceOf = (p: any, n: any, i: any, fit: boolean) => mapEv(P(p), (ev, ctx) => {
+  const k = Math.max(1, Math.round(N(sampleAt(n, ev.s, ctx), 1)));
+  const j = ((Math.floor(N(sampleAt(i, ev.s, ctx), 0)) % k) + k) % k;
+  const out: Record<string, any> = { ...ev.p, begin: j / k, end: (j + 1) / k };
+  if (fit) out.fit = true;
+  return { ...ev, p: out };
+});
+def("slice", "slice(p, n, i)", "Cut the sample into n equal pieces and play piece i (from 0). i may be a pattern: .slice(8, [0 3 2 7]).", cat.param, ([p, n, i]) => sliceOf(p, n, i, false));
+def("splice", "splice(p, n, i)", "Like slice, but each piece is stretched to fill its note, so a sliced loop stays in tempo.", cat.param, ([p, n, i]) => sliceOf(p, n, i, true));
+def("chop", "chop(p, n)", "Split each note into n notes that play successive parts of its sample. With loopAt, a loop follows the tempo: loop_amen.loopAt(2).chop(16).", cat.param, ([p, n]) => {
+  const q = P(p);
+  return new Pat((a, b, ctx) => {
+    const out: Ev[] = [];
+    // a looped sample can last several bars, so look further back than ply does
+    for (const ev of q.query(new R(a.floor() - 8), b.add(ONE), ctx)) {
+      if (ev.e.le(a)) continue;
+      const k = Math.max(1, Math.round(N(sampleAt(n, ev.s, ctx), 1)));
+      const step = ev.e.sub(ev.s).div(new R(k));
+      const b0 = ev.p.begin !== undefined ? N(ev.p.begin) : 0, b1 = ev.p.end !== undefined ? N(ev.p.end) : 1;
+      for (let i = 0; i < k; i++) {
+        const s = ev.s.add(step.mul(new R(i)));
+        if (s.ge(a) && s.lt(b)) out.push({ s, e: s.add(step), v: ev.v, p: { ...ev.p, begin: b0 + (b1 - b0) * i / k, end: b0 + (b1 - b0) * (i + 1) / k } });
+      }
+    }
+    return out;
+  });
+});
+def("samples", "samples(source)", "Load a sample pack, as a top-level line: a folder (command line), a URL of a strudel.json sample map, or \"github:user/repo\" for that repository's strudel.json. Sounds load on first use.", cat.io, ([src]) => ({ __samples: String(src) }));
 def("midi", "midi(p, channel: 1, port: \"\")", "Send to an external MIDI device instead of the built-in synth.", cat.param, ([p, ch, port], named) => {
   let q = setParam(P(p), "midi", Math.round(N(named.channel ?? ch, 1)));
   const pt = named.port ?? port; if (pt !== undefined) q = setParam(q, "port", String(pt));

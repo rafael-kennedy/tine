@@ -4,12 +4,11 @@ import { TimedNote, timeline, barSeconds } from "./scene";
 import { Scene } from "./interp";
 import { renderNote, reverb, noteLength } from "./synth";
 import { hasFx, fxOf, processBus, Fx } from "./fx";
-
-export interface SampleData { channels: Float32Array[]; sr: number }
+import { SampleData, SampleLibrary, renderSample, applyCuts } from "./samples";
 
 export function freqOf(semi: number, ref = 440) { return ref * Math.pow(2, (semi - 69) / 12); }
 
-export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tuningRef?: number; samples?: Map<string, SampleData>; tail?: number } = {}): [Float32Array, Float32Array] {
+export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tuningRef?: number; samples?: SampleLibrary; tail?: number } = {}): [Float32Array, Float32Array] {
   const tail = opts.tail ?? 2.5;
   const len = Math.ceil((seconds + tail) * sr);
   const L = new Float32Array(len), R = new Float32Array(len);
@@ -19,14 +18,16 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
   const fxVoices = new Set(notes.filter(n => hasFx(n.params)).map(n => n.voice));
   const buses = new Map<string, { L: Float32Array; R: Float32Array; changes: { time: number; fx: Fx }[] }>();
   for (const v of fxVoices) buses.set(v, { L: new Float32Array(len), R: new Float32Array(len), changes: [] });
+  if (notes.some(n => n.params.cut !== undefined)) notes = applyCuts(notes);
   for (const n of notes) {
     if (n.params.midi !== undefined || n.params.ccOut !== undefined) continue; // routed to external gear
     const inst = String(n.params.inst ?? "keys");
     let buf: Float32Array;
     if (inst.startsWith("sample:")) {
-      const sm = opts.samples?.get(inst.slice(7));
+      const name = opts.samples?.resolve(inst.slice(7), n.params.sampleN, n.params.drum);
+      const sm = name ? opts.samples!.get(name) : undefined;
       if (!sm) continue;
-      buf = playSample(sm, n, sr);
+      buf = renderSample(sm, n, sr);
     } else {
       const key = `${inst}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${JSON.stringify(n.params)}`;
       buf = cache.get(key)!;
@@ -67,20 +68,6 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
   let last = len - 1;
   while (last > seconds * sr && Math.abs(L[last]) < 1e-4 && Math.abs(R[last]) < 1e-4) last--;
   return [L.slice(0, last + 1), R.slice(0, last + 1)];
-}
-
-function playSample(sm: SampleData, n: TimedNote, sr: number): Float32Array {
-  const src = sm.channels[0];
-  const srcDur = src.length / sm.sr;
-  let rate = (sm.sr / sr) * (n.params.fit ? srcDur / Math.max(0.01, n.durSec) : Math.pow(2, (n.semi - 60) / 12));
-  const outLen = Math.min(Math.floor(src.length / rate), sr * 30);
-  const out = new Float32Array(outLen);
-  const g = Math.pow(n.vel, 1.2) * Number(n.params.gain ?? 1);
-  for (let i = 0; i < outLen; i++) {
-    const x = i * rate, k = Math.floor(x), f = x - k;
-    out[i] = ((src[k] ?? 0) * (1 - f) + (src[k + 1] ?? 0) * f) * g;
-  }
-  return out;
 }
 
 export function encodeWav(channels: Float32Array[], sr: number): Uint8Array {

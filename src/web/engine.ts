@@ -1,7 +1,8 @@
 // Browser audio + MIDI engine. Notes are rendered with the same pure DSP
 // code the command line uses (src/core/synth.ts), one AudioBuffer per note,
 // so the DAW, the tutorial and exported WAVs sound alike.
-import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx } from "../core";
+import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx, renderSample } from "../core";
+import { library, loadBundled, request, once, decodeBytes } from "./samples";
 
 // Parameters can be exact rationals (class R). A structured clone to the
 // worker drops their prototype, and Number() of the bare object is NaN, so
@@ -25,7 +26,6 @@ export class Engine {
   master: GainNode;
   verbSend: GainNode;
   analyser: AnalyserNode;
-  samples = new Map<string, AudioBuffer>();
   cache = new Map<string, AudioBuffer>();
   midi: MIDIAccess | null = null;
   midiOutId: string | null = null;
@@ -55,6 +55,7 @@ export class Engine {
     this.verbSend.gain.value = 1;
     this.verbSend.connect(verb).connect(this.master);
     this.startWorker();
+    loadBundled();
   }
 
   get now() { return this.ctx.currentTime; }
@@ -110,13 +111,36 @@ export class Engine {
     return b;
   }
 
+  // ---------- samples (see samples.ts) ----------
+  // A sample note is rendered by the same routine as WAV export (core/samples.ts),
+  // on this thread: it is interpolation, not synthesis, and fast.
+  private cuts = new Map<number, { src: AudioBufferSourceNode; g: GainNode }>();
+
+  private sampleName(n: PlayableNote, inst: string, fetch: boolean): string | null {
+    const spec = inst.slice(7);
+    const name = library.resolve(spec, n.params.sampleN, n.params.drum);
+    if (!name) { loadBundled().then(ok => once(ok || library.size ? `no sample named "${spec || n.params.drum}"` : "the bundled samples are not available here: run tine daw, or put tine-samples.tsb next to this page")); return null; }
+    if (fetch) request(name);
+    return name;
+  }
+
+  private sampleBuffer(n: PlayableNote, inst: string): AudioBuffer | null {
+    const name = this.sampleName(n, inst, false);
+    if (!name || !request(name)) return null;
+    const p = plainParams(n.params);
+    const key = `S|${name}|${library.version}|${n.semi.toFixed(3)}|${n.vel.toFixed(2)}|${p.fit ? n.durSec.toFixed(3) : ""}|${p.begin ?? ""}|${p.end ?? ""}|${p.speed ?? ""}|${p.accel ?? ""}|${p.loopSec ?? ""}|${p.hit ?? ""}|${p.drum ?? ""}|${p.gain ?? ""}`;
+    const b = this.cache.get(key);
+    if (b) return b;
+    return this.store(key, renderSample(library.get(name)!, { semi: n.semi, vel: n.vel, durSec: n.durSec, params: p }, this.ctx.sampleRate));
+  }
+
   // Ask the worker for notes that will play soon. Cheap to call repeatedly.
   prepare(notes: PlayableNote[]) {
     if (!this.worker) return;
     for (const n of notes) {
       if (n.params.midi !== undefined || n.params.ccOut !== undefined) continue;
       const inst = String(n.params.inst ?? "keys");
-      if (inst.startsWith("sample:")) continue;
+      if (inst.startsWith("sample:")) { this.sampleName(n, inst, true); continue; }
       const dur = Math.min(n.durSec, 12), key = this.keyOf(n, inst, dur);
       if (this.cache.has(key) || this.pending.has(key)) continue;
       this.pending.add(key);
@@ -126,7 +150,7 @@ export class Engine {
 
   bufferFor(n: PlayableNote): AudioBuffer | null {
     const inst = String(n.params.inst ?? "keys");
-    if (inst.startsWith("sample:")) return this.samples.get(inst.slice(7)) ?? null;
+    if (inst.startsWith("sample:")) return this.sampleBuffer(n, inst);
     const dur = Math.min(n.durSec, 12);
     const key = this.keyOf(n, inst, dur);
     let b = this.cache.get(key);
@@ -143,10 +167,11 @@ export class Engine {
     src.buffer = buf;
     const inst = String(n.params.inst ?? "keys");
     const g = this.ctx.createGain();
-    if (inst.startsWith("sample:")) {
-      g.gain.value = Math.pow(n.vel, 1.2) * Number(n.params.gain ?? 1);
-      if (n.params.fit) src.playbackRate.value = buf.duration / Math.max(0.01, n.durSec);
-      else src.playbackRate.value = Math.pow(2, (n.semi - 60) / 12);
+    if (n.params.cut !== undefined) {
+      // cut group: this sound stops the one before it in the group
+      const grp = Number(n.params.cut), prev = this.cuts.get(grp), t = Math.max(when, this.ctx.currentTime);
+      if (prev) { prev.g.gain.setTargetAtTime(0, t, 0.0015); try { prev.src.stop(t + 0.015); } catch { /* already stopped */ } }
+      this.cuts.set(grp, { src, g });
     }
     const pan = this.ctx.createStereoPanner();
     pan.pan.value = Math.max(-1, Math.min(1, Number(n.params.pan ?? 0)));
@@ -297,8 +322,15 @@ export class Engine {
   sendStartStop(start: boolean) { const out = this.output(); out?.send([start ? 0xfa : 0xfc]); }
   panic() { this.chans.clear(); for (const o of this.outputs()) for (let c = 0; c < 16; c++) o.send([0xb0 | c, 123, 0]); }
 
-  async loadSample(name: string, data: ArrayBuffer) {
-    const buf = await this.ctx.decodeAudioData(data);
-    this.samples.set(name, buf);
+  async loadSample(name: string, data: ArrayBuffer, bank?: string) {
+    library.add(name, await decodeBytes(new Uint8Array(data)), bank);
+  }
+
+  // Play one library sound now, for the sound browser.
+  audition(name: string) {
+    const sm = library.get(name); if (!sm) { request(name); return; }
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.store(`A|${name}|${library.version}`, renderSample(sm, { semi: 60, vel: 0.9, durSec: 1, params: { hit: true } }, this.ctx.sampleRate));
+    src.connect(this.master); src.start();
   }
 }

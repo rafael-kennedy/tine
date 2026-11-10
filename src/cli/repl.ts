@@ -102,7 +102,7 @@ export async function repl(preload?: string) {
       case "play": {
         const bars = arg ? parseInt(arg, 10) : 4;
         if (!interp.scene.voices.size && !interp.scene.form) { out(`${c.dim}nothing to play yet: define a voice first${c.reset}`); break; }
-        const { wav, seconds } = renderToWav(interp.scene, interp.scene.form ? undefined : bars);
+        const { wav, seconds } = await renderToWav(interp.scene, interp.scene.form ? undefined : bars);
         out(`${c.dim}playing ${seconds.toFixed(1)}s (seed ${interp.scene.seed})...${c.reset}`);
         const ok = await playWav(wav);
         if (!ok) out(`${c.dim}no audio player found; use :render file.wav instead${c.reset}`);
@@ -110,7 +110,7 @@ export async function repl(preload?: string) {
       }
       case "render": {
         const file = arg || "tine-session.wav";
-        const { wav, seconds } = renderToWav(interp.scene, interp.scene.form ? undefined : 8);
+        const { wav, seconds } = await renderToWav(interp.scene, interp.scene.form ? undefined : 8);
         writeFileSync(file, wav); out(`wrote ${file} (${seconds.toFixed(1)}s)`); break;
       }
       case "midi": {

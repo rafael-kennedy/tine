@@ -26,6 +26,7 @@ export interface Scene {
   form: { name: string; times: number }[] | null;
   prints: string[];
   errors: TineError[];
+  sampleSources: string[];                      // samples(...) lines: packs to load
   env: Env;
 }
 
@@ -58,7 +59,7 @@ export class Interp {
     const seed = opts.seed ?? 0;
     this.scene = {
       tempo: 120, meter: [4, 4], seed, seedExplicit: false, key: DEFAULT_KEY, tuningRef: 440,
-      voices: new Map(), sections: new Map(), form: null, prints: [], errors: [], env: this.env,
+      voices: new Map(), sections: new Map(), form: null, prints: [], errors: [], sampleSources: [], env: this.env,
     };
     this.stream = new Stream([seed, 0]);
   }
@@ -182,7 +183,12 @@ export class Interp {
       }
       case "expr": {
         this.beginStatement(`expr:${st.span.start}`);
-        return this.eval(st.e, env);
+        const v = this.eval(st.e, env);
+        if (v && typeof v === "object" && typeof (v as any).__samples === "string") {
+          if (!this.scene.sampleSources.includes((v as any).__samples)) this.scene.sampleSources.push((v as any).__samples);
+          return null;
+        }
+        return v;
       }
     }
   }

@@ -5,6 +5,7 @@ import { StreamLanguage, HighlightStyle, syntaxHighlighting, indentUnit, bracket
 import { tags as t } from "@lezer/highlight";
 import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment } from "@codemirror/commands";
 import { autocompletion, CompletionContext, closeBrackets } from "@codemirror/autocomplete";
+import { library } from "./samples";
 import { builtinList, KEYWORDS, NOTE_RE, SCALES, DRUMS, INSTRUMENTS, describeWord } from "../core";
 
 const builtins = new Map(builtinList().map(b => [b.name, b]));
@@ -60,6 +61,19 @@ export const tineHighlight = HighlightStyle.define([
 ]);
 
 function complete(ctx: CompletionContext) {
+  // inside quotes: sample names and banks
+  const q = ctx.matchBefore(/"[A-Za-z0-9_/:.-]*/);
+  if (q && (ctx.state.sliceDoc(0, q.from).split('"').length % 2 === 1)) {
+    const banks = library.bankList();
+    return {
+      from: q.from + 1,
+      options: [
+        ...banks.filter(b => b.names.length > 1).map(b => ({ label: b.bank, type: "namespace", detail: `bank, ${b.names.length} sounds` })),
+        ...library.names().map(n => ({ label: n, type: "text", detail: "sample" })),
+      ],
+      validFor: /^[A-Za-z0-9_/:.-]*$/,
+    };
+  }
   const w = ctx.matchBefore(/[A-Za-z_][A-Za-z0-9_]*/);
   if (!w || (w.from === w.to && !ctx.explicit)) return null;
   const doc = ctx.state.doc.toString();

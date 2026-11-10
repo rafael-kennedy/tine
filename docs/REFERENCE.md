@@ -127,6 +127,37 @@ Each voice has a bus with four effects, always in this order: high-pass, low-pas
 
 Settings can be patterns or signals (`.lpf(sine(8).range(400, 3400))`), and the latest note sets the bus. Remove an effect from the code and it turns off at the next bar line.
 
+## Samples
+
+Tine ships with about 200 CC0 (public domain) sounds: drums, hats, loops, bass hits, ambient beds, tabla, glitches. The Tracks panel in the DAW lists them by bank; click a name to hear it. A sound has a full name (`bd_haus`) and a bank (`bd`, everything named `bd_...`).
+
+```tine
+voice beat = ["bd_haus" . "sn_dolf" "bd_haus"]          -- names in a phrase play as recorded
+voice hats = ["hat" "hat:3" "hat:5" "hat:7"]              -- a bank, and bank:n for its nth sound
+voice kit  = [kick . snare . kick kick snare .].sample()  -- drum names through the bundled kit
+voice bass = [c2 . eb2 g2].sample("bass_voxy_c")          -- pitched: c4 plays it as recorded
+voice amen = ["loop_amen"].loopAt(2).chop(16)             -- a loop that follows the tempo
+```
+
+| Code | What it does |
+| --- | --- |
+| `.sample(name, n: 0)` | play notes on a sound or bank; name and n may be patterns |
+| `.begin(x)`, `.end(x)` | play part of the sound, 0 to 1 |
+| `.speed(x)` | rate: 2 is an octave up, -1 plays it backwards |
+| `.accel(x)` | change the speed by x every second (`speed(1).accel(-1)` is a tape stop) |
+| `.loopAt(bars)` | the sound lasts this many bars, whatever the tempo |
+| `.chop(n)` | split each note into n notes that play successive parts of the sound |
+| `.slice(n, i)` | play piece i of n equal pieces; i may be a pattern |
+| `.splice(n, i)` | like slice, stretched to fill each note |
+| `.cut(group)` | a sound in the group stops the one before it, in any voice |
+| `.fit` | `sample(name, fit: true)` stretches the sound to the note |
+
+**Your own sounds.** Drop audio files on the DAW. Or put them in a `samples` folder next to the piece: files are named by file name, and each subfolder is a bank (`samples/perc/rim.wav` is `"perc/rim"`, and `"perc:0"`). `tine render --samples dir` points elsewhere.
+
+**Packs.** A top-level line `samples("github:tidalcycles/dirt-samples")` loads that repository's `strudel.json`, the sample map most published packs use; `samples("https://.../strudel.json")` loads any map, and `samples("./folder")` a folder. A pack's banks replace bundled banks of the same name, so `"bd"` then means the pack's bd; bundled sounds stay reachable by full name. Sounds download on first use: live, the first hit of a new sound can be silent while it arrives; renders wait for every sound. The command line keeps downloads in `~/.cache/tine`, and reads WAV directly and other formats through ffmpeg if it is installed.
+
+`tine pack` copies the sounds a piece uses into the player, so a packed piece plays offline.
+
 ## State across bars
 
 `evolve(start, (state, bar) => next, (state, bar) => pattern)` keeps a value that changes from bar to bar, like a counter, a random walk or a voice-led chord. The state at bar n is the step applied n times to `start`, so any bar can be played in any order and always sounds the same. Without the third argument, the state itself is played. Each section starts again from `start`.
@@ -248,7 +279,16 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `dur(p, beats)` | Fixed note length in beats, independent of the step length. |
 | `set(p, name, value)` | Attach any named parameter to events (it is passed through to MIDI CC maps and exports). |
 | `inst(p, name, ...options)` | Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name. |
-| `sample(p, name, fit: false)` | Play a loaded audio sample (drop files into the DAW). With fit: true it is stretched to the event length, for loops. |
+| `sample(p, name, n: 0, fit: false)` | Play a sound from the sample library: a full name ("bd_haus"), a bank ("bd", with n choosing among its sounds), or "bank:n". On a drum phrase with no name it plays the bundled kit. name and n may be patterns. With fit: true the sound is stretched to the note's length. |
+| `begin(p, x)` | Start playing a sample from this point, 0 (its start) to 1 (its end). |
+| `end(p, x)` | Stop playing a sample at this point, 0 to 1. |
+| `speed(p, x)` | Sample playback rate: 2 is an octave up and twice as fast, -1 plays it backwards. |
+| `accel(p, x)` | Change a sample's speed by x every second while it plays: speed(1).accel(-1) is a tape stop. |
+| `cut(p, group)` | Cut group: a sample in this group stops the one before it, in any voice. Choke an open hat with a closed one. |
+| `loopAt(p, bars)` | Make a sample last this many bars, whatever the tempo: the phrase is slowed to that length and the sample stretched to fit. Add chop to keep a long loop in time: ["loop_amen"].loopAt(2).chop(16). |
+| `slice(p, n, i)` | Cut the sample into n equal pieces and play piece i (from 0). i may be a pattern: .slice(8, [0 3 2 7]). |
+| `splice(p, n, i)` | Like slice, but each piece is stretched to fill its note, so a sliced loop stays in tempo. |
+| `chop(p, n)` | Split each note into n notes that play successive parts of its sample. With loopAt, a loop follows the tempo: loop_amen.loopAt(2).chop(16). |
 | `midi(p, channel: 1, port: "")` | Send to an external MIDI device instead of the built-in synth. |
 | `ctl(p, number, value)` | Send a MIDI control change (value 0 to 1) just before each note. value may be a pattern or signal: .ctl(74, sine(4)). |
 | `program(p, n)` | Choose an instrument on external gear with a MIDI program change (1 to 128, as printed in General MIDI lists). It is sent only when it changes. |
@@ -259,6 +299,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 
 | Function | Description |
 | --- | --- |
+| `samples(source)` | Load a sample pack, as a top-level line: a folder (command line), a URL of a strudel.json sample map, or "github:user/repo" for that repository's strudel.json. Sounds load on first use. |
 | `cc(number, channel: any)` | A live signal (0 to 1) from a MIDI controller knob or fader. |
 | `held(steps: 1)` | The notes currently held on your MIDI keyboard, as a chord, sampled `steps` times per bar. Try held(4).arp. |
 

@@ -157,6 +157,15 @@ export const LESSONS: Lesson[] = [
       `<p>Effects work on a whole voice after its notes are mixed: <code>.hpf(hz)</code> and <code>.lpf(hz)</code> filter it, <code>.drive(x)</code> saturates it from 0 to 1, and <code>.delay(mix, time: 3/16, feedback: .4)</code> echoes it. Delay time is in bars, so the echo stays in time at any tempo.</p>`,
       { code: `voice fuzz = [c2 . c2 eb2 . g1 bb1 .].inst(saw).drive(.7).lpf(1800)
 voice echo = [g4 . . bb4 . . . .].inst(pluck).delay(.5, feedback: .55)`, bars: 2 },
+      `<p>Samples. Tine comes with about 200 recorded sounds, all public domain. Write a sound's name in quotes inside a phrase and it plays as recorded. A bank is the part of the name before the underscore, and <code>"hat:3"</code> is the fourth sound in the <code>hat</code> bank. <code>.sample()</code> on drum names plays the recorded kit.</p>`,
+      { code: `voice beat = ["bd_haus" . "sn_dolf" "bd_haus" . "bd_haus" "sn_dolf" .]
+voice hats = ["hat" "hat:3" "hat:5" "hat:3"]*2
+voice kit = [. . . . . . kick .].sample()`, bars: 2 },
+      `<p>A loop can follow the tempo: <code>.loopAt(2)</code> stretches it over two bars and <code>.chop(16)</code> cuts it into sixteen pieces that each start on time. Then the pieces are notes like any other, so you can reorder them.</p>`,
+      { code: `tempo 140
+voice amen = ["loop_amen"].loopAt(2).chop(16)
+voice back = ["loop_amen"].loopAt(2).chop(8).rev.speed(-1).gain(.5)`, bars: 2 },
+      `<p>More sample controls: <code>.begin</code> and <code>.end</code> (0 to 1), <code>.speed</code> (negative plays backwards), <code>.slice(n, i)</code>, <code>.cut(group)</code> to choke one sound with the next. Drop your own files on the DAW to add them.</p>`,
     ],
   },
   {

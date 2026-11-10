@@ -127,6 +127,37 @@ Each voice has a bus with four effects, always in this order: high-pass, low-pas
 
 Settings can be patterns or signals (`.lpf(sine(8).range(400, 3400))`), and the latest note sets the bus. Remove an effect from the code and it turns off at the next bar line.
 
+## Samples
+
+Tine ships with about 200 CC0 (public domain) sounds: drums, hats, loops, bass hits, ambient beds, tabla, glitches. The Tracks panel in the DAW lists them by bank; click a name to hear it. A sound has a full name (`bd_haus`) and a bank (`bd`, everything named `bd_...`).
+
+```tine
+voice beat = ["bd_haus" . "sn_dolf" "bd_haus"]          -- names in a phrase play as recorded
+voice hats = ["hat" "hat:3" "hat:5" "hat:7"]              -- a bank, and bank:n for its nth sound
+voice kit  = [kick . snare . kick kick snare .].sample()  -- drum names through the bundled kit
+voice bass = [c2 . eb2 g2].sample("bass_voxy_c")          -- pitched: c4 plays it as recorded
+voice amen = ["loop_amen"].loopAt(2).chop(16)             -- a loop that follows the tempo
+```
+
+| Code | What it does |
+| --- | --- |
+| `.sample(name, n: 0)` | play notes on a sound or bank; name and n may be patterns |
+| `.begin(x)`, `.end(x)` | play part of the sound, 0 to 1 |
+| `.speed(x)` | rate: 2 is an octave up, -1 plays it backwards |
+| `.accel(x)` | change the speed by x every second (`speed(1).accel(-1)` is a tape stop) |
+| `.loopAt(bars)` | the sound lasts this many bars, whatever the tempo |
+| `.chop(n)` | split each note into n notes that play successive parts of the sound |
+| `.slice(n, i)` | play piece i of n equal pieces; i may be a pattern |
+| `.splice(n, i)` | like slice, stretched to fill each note |
+| `.cut(group)` | a sound in the group stops the one before it, in any voice |
+| `.fit` | `sample(name, fit: true)` stretches the sound to the note |
+
+**Your own sounds.** Drop audio files on the DAW. Or put them in a `samples` folder next to the piece: files are named by file name, and each subfolder is a bank (`samples/perc/rim.wav` is `"perc/rim"`, and `"perc:0"`). `tine render --samples dir` points elsewhere.
+
+**Packs.** A top-level line `samples("github:tidalcycles/dirt-samples")` loads that repository's `strudel.json`, the sample map most published packs use; `samples("https://.../strudel.json")` loads any map, and `samples("./folder")` a folder. A pack's banks replace bundled banks of the same name, so `"bd"` then means the pack's bd; bundled sounds stay reachable by full name. Sounds download on first use: live, the first hit of a new sound can be silent while it arrives; renders wait for every sound. The command line keeps downloads in `~/.cache/tine`, and reads WAV directly and other formats through ffmpeg if it is installed.
+
+`tine pack` copies the sounds a piece uses into the player, so a packed piece plays offline.
+
 ## State across bars
 
 `evolve(start, (state, bar) => next, (state, bar) => pattern)` keeps a value that changes from bar to bar, like a counter, a random walk or a voice-led chord. The state at bar n is the step applied n times to `start`, so any bar can be played in any order and always sounds the same. Without the third argument, the state itself is played. Each section starts again from `start`.

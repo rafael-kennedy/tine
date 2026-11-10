@@ -1,6 +1,7 @@
 // Standalone player for a packed piece (tine pack). One HTML file, no install.
 import { evaluate, renderNotes, mix, encodeWav, toMidiFile, timeline, Scene } from "../core";
 import { Engine } from "./engine";
+import { library, ensure as ensureSamples } from "./samples";
 import { Transport } from "./transport";
 import { Roll } from "./roll";
 import { CSS, LOGO_SVG } from "./theme";
@@ -51,7 +52,7 @@ function main() {
     requestAnimationFrame(tick);
   };
   (card.querySelector("#stop") as HTMLButtonElement).onclick = () => tr?.stop();
-  (card.querySelector("#wav") as HTMLButtonElement).onclick = () => { const r = renderNotes(scene, scene.form ? undefined : 16); const [L, R] = mix(r.notes, r.seconds, 44100, { tuningRef: scene.tuningRef }); dl(`${title}.wav`, encodeWav([L, R], 44100) as BlobPart, "audio/wav"); };
+  (card.querySelector("#wav") as HTMLButtonElement).onclick = async () => { const r = renderNotes(scene, scene.form ? undefined : 16); await ensureSamples(r.notes); const [L, R] = mix(r.notes, r.seconds, 44100, { tuningRef: scene.tuningRef, samples: library }); dl(`${title}.wav`, encodeWav([L, R], 44100) as BlobPart, "audio/wav"); };
   (card.querySelector("#mid") as HTMLButtonElement).onclick = () => dl(`${title}.mid`, toMidiFile(scene, notes) as BlobPart, "audio/midi");
   (card.querySelector("#tine") as HTMLButtonElement).onclick = () => dl(`${title}.tine`, src, "text/plain");
 }
