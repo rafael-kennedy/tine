@@ -409,6 +409,27 @@ def("delay", "delay(p, mix, time: 3/16, feedback: .4)", "An echo on the whole vo
   q = setParam(q, "delayTime", named.time ?? time ?? 3 / 16);
   return setParam(q, "feedback", named.feedback ?? fb ?? 0.4);
 });
+param("vowel", "vowel(p, v)", "Formant filter: makes the voice say a vowel, \"a\" \"e\" \"i\" \"o\" or \"u\". v may be a pattern: .vowel([\"a\" \"o\"]).");
+param("crush", "crush(p, bits)", "Bit crusher: fewer bits (1 to 16) is rougher. .crush(4) is very lo-fi.");
+param("coarse", "coarse(p, n)", "Sample-rate reduction: holds every nth sample, for aliasing and grit. 1 is off.");
+const fxdef = (name: string, sig: string, doc: string, keys: [string, string, any][]) =>
+  def(name, sig, doc, cat.param, ([p, ...pos], named) => {
+    let q = P(p);
+    keys.forEach(([arg, key, d], i) => { const v = named[arg] ?? pos[i] ?? d; if (v !== undefined) q = setParam(q, key, v); });
+    return q;
+  });
+fxdef("ring", "ring(p, hz, mix: 1)", "Ring modulation: multiplies the voice by a sine at hz, for metallic and bell-like tones.", [["hz", "ring", 440], ["mix", "ringMix", 1]]);
+fxdef("chorus", "chorus(p, mix: .5, rate: .8, depth: .5)", "Chorus: thickens the voice with slightly detuned, moving copies. rate in Hz.", [["mix", "chorus", 0.5], ["rate", "chorusHz", undefined], ["depth", "chorusDepth", undefined]]);
+fxdef("phaser", "phaser(p, mix: .5, rate: .5, depth: .7)", "Phaser: a sweeping notch, the classic swirl. rate in Hz.", [["mix", "phaser", 0.5], ["rate", "phaserHz", undefined], ["depth", "phaserDepth", undefined]]);
+fxdef("compress", "compress(p, threshold: -18, ratio: 4)", "Compressor on the whole voice: levels above threshold (dB) are reduced by ratio, then made up. Evens out a part.", [["threshold", "comp", -18], ["ratio", "compRatio", undefined]]);
+fxdef("room", "room(p, mix: .3, size: .5)", "A reverb on this voice alone, unlike reverb(), which sends to the shared room. size 0 to 1.", [["mix", "room", 0.3], ["size", "roomSize", undefined]]);
+def("duck", "duck(p, voice, depth: .8, release: 1/8)", "Sidechain-style ducking: this voice dips each time the named voice plays a note, then recovers over release bars. .duck(\"kick\") pumps a pad against the kick.", cat.param, ([p, v, depth, rel], named) => {
+  const nm = v instanceof Pitch && v.drum ? v.drum : String(named.voice ?? v ?? "");
+  let q = setParam(P(p), "duck", nm);
+  const d = named.depth ?? depth, r = named.release ?? rel;
+  if (d !== undefined) q = setParam(q, "duckDepth", d);
+  return setParam(q, "duckRelease", r ?? new R(1, 8));
+});
 def("dur", "dur(p, beats)", "Fixed note length in beats, independent of the step length.", cat.param, ([p, v]) => setParam(P(p), "durBeats", v));
 def("set", "set(p, name, value)", "Attach any named parameter to events (it is passed through to MIDI CC maps and exports).", cat.param, ([p, n, v]) => setParam(P(p), String(n), v));
 def("inst", "inst(p, name, ...options)", "Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name.", cat.param, ([p, name], named) => {

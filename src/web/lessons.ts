@@ -157,6 +157,8 @@ export const LESSONS: Lesson[] = [
       `<p>Effects work on a whole voice after its notes are mixed: <code>.hpf(hz)</code> and <code>.lpf(hz)</code> filter it, <code>.drive(x)</code> saturates it from 0 to 1, and <code>.delay(mix, time: 3/16, feedback: .4)</code> echoes it. Delay time is in bars, so the echo stays in time at any tempo.</p>`,
       { code: `voice fuzz = [c2 . c2 eb2 . g1 bb1 .].inst(saw).drive(.7).lpf(1800)
 voice echo = [g4 . . bb4 . . . .].inst(pluck).delay(.5, feedback: .55)`, bars: 2 },
+      `<p>More effects: <code>.vowel("a")</code>, <code>.crush(bits)</code>, <code>.coarse(n)</code>, <code>.ring(hz)</code>, <code>.chorus()</code>, <code>.phaser()</code>, <code>.compress()</code> and <code>.room(mix, size: .5)</code>. <code>.duck("kick")</code> dips a voice every time the kick voice plays, the pumping sound of dance music.</p>`,
+      { code: `voice kick = [kick . . . kick . . .]\nvoice pad = <c3 eb3>.inst(pad).chorus(.6).room(.5, size: .8).duck("kick")\nvoice acid = ([c2 c2 c3 c2 eb2 c2 g2 bb1]*2).inst(saw).vowel(["a" "o"]).phaser(.5)`, bars: 2 },
       `<p>Samples. Tine comes with about 200 recorded sounds, all public domain. Write a sound's name in quotes inside a phrase and it plays as recorded. A bank is the part of the name before the underscore, and <code>"hat:3"</code> is the fourth sound in the <code>hat</code> bank. <code>.sample()</code> on drum names plays the recorded kit.</p>`,
       { code: `voice beat = ["bd_haus" . "sn_dolf" "bd_haus" . "bd_haus" "sn_dolf" .]
 voice hats = ["hat" "hat:3" "hat:5" "hat:3"]*2

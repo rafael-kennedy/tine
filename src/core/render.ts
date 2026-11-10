@@ -51,9 +51,18 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
       if (send > 0) { sendL[i] += v * gl * send; sendR[i] += v * gr * send; }
     }
   }
+  // ducking: the onsets of the voice each bus ducks on, while it is set to
+  const onsets = new Map<string, number[]>();
+  for (const n of notes) { if (!onsets.has(n.voice)) onsets.set(n.voice, []); onsets.get(n.voice)!.push(n.time); }
   for (const bus of buses.values()) {
     bus.changes.sort((a, b) => a.time - b.time);
-    processBus(bus.L, bus.R, sr, bus.changes);
+    const ducks: number[] = [];
+    bus.changes.forEach((c, i) => {
+      if (!c.fx.duck) return;
+      const end = bus.changes[i + 1]?.time ?? Infinity;
+      for (const t of onsets.get(c.fx.duck) ?? []) if (t >= c.time && t < end) ducks.push(t);
+    });
+    processBus(bus.L, bus.R, sr, bus.changes, [...new Set(ducks)].sort((a, b) => a - b));
     for (let i = 0; i < len; i++) { L[i] += bus.L[i]; R[i] += bus.R[i]; }
   }
   const [wl, wr] = reverb(sendL, sendR, sr);

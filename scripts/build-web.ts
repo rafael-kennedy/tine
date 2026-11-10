@@ -20,7 +20,11 @@ const apps = [
 // The synthesis worker travels inside each page as text and starts from a Blob URL.
 const wres = await Bun.build({ entrypoints: [join(root, "src/web/synth-worker.ts")], target: "browser", minify: true, format: "esm" });
 if (!wres.success) { for (const l of wres.logs) console.error(l); process.exit(1); }
-const WORKER = `<script type="text/js-worker" id="tine-synth-worker">${(await wres.outputs[0].text()).replace(/<\/script/gi, "<\\/script")}</script>`;
+const bres = await Bun.build({ entrypoints: [join(root, "src/web/bus-worklet.ts")], target: "browser", minify: true, format: "esm" });
+if (!bres.success) throw new Error(bres.logs.join("\n"));
+// the effects worklet travels the same way (see bus-worklet.ts)
+const WORKER = `<script type="text/js-worker" id="tine-synth-worker">${(await wres.outputs[0].text()).replace(/<\/script/gi, "<\\/script")}</script>` +
+  `<script type="text/js-worklet" id="tine-bus-worklet">${(await bres.outputs[0].text()).replace(/<\/script/gi, "<\\/script")}</script>`;
 
 const out: Record<string, string> = {};
 for (const app of apps) {

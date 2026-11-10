@@ -65,6 +65,7 @@ function finish(scene: Scene, n: Note, offsetBar: number, offsetSec: number, tem
   if (n.params.durBeats !== undefined) bars = Number(n.params.durBeats) / scene.meter[0];
   const params = { ...n.params }; delete params.durBeats;
   if (params.loopAt !== undefined) { params.loopSec = Number(params.loopAt instanceof R ? params.loopAt.toNumber() : params.loopAt) * bs; delete params.loopAt; }
+  if (params.duckRelease !== undefined) { params.duckSec = Number(params.duckRelease instanceof R ? params.duckRelease.toNumber() : params.duckRelease) * bs; delete params.duckRelease; }
   if (params.delayTime !== undefined) { params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs; delete params.delayTime; }
   return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section };
 }

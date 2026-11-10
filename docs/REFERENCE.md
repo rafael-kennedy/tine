@@ -116,16 +116,34 @@ Named blocks appear under *toggles* in the DAW's Tracks panel. Bind each to a ke
 
 ## Effects
 
-Each voice has a bus with four effects, always in this order: high-pass, low-pass, drive, delay. They act on the voice's mix, so a delay repeats the whole voice and drive distorts a chord as one sound.
+Each voice has a bus. Its effects act on the voice's mix, so a delay repeats the whole voice and drive distorts a chord as one sound. They always run in this order: high-pass, low-pass, vowel, drive, crush, coarse, ring, chorus, phaser, compressor, delay, room, duck.
 
 | Code | Effect |
 | --- | --- |
 | `.hpf(hz)` | high-pass filter: removes everything below hz |
 | `.lpf(hz)` | low-pass filter: removes everything above hz (`cutoff` instead filters each note inside the synth) |
+| `.vowel(v)` | formant filter: `"a"`, `"e"`, `"i"`, `"o"` or `"u"` |
 | `.drive(x)` | saturation from 0 (clean) to 1 (crushed) |
+| `.crush(bits)` | bit crusher, 1 to 16 bits; fewer is rougher |
+| `.coarse(n)` | sample-rate reduction: holds every nth sample |
+| `.ring(hz, mix: 1)` | ring modulation by a sine at hz |
+| `.chorus(mix: .5, rate: .8, depth: .5)` | detuned, moving copies; rate in Hz |
+| `.phaser(mix: .5, rate: .5, depth: .7)` | a sweeping notch; rate in Hz |
+| `.compress(threshold: -18, ratio: 4)` | compressor with automatic make-up gain; threshold in dB |
 | `.delay(mix, time: 3/16, feedback: .4)` | echo. time is in bars, so it follows the tempo; feedback sets how many repeats |
+| `.room(mix: .3, size: .5)` | a reverb on this voice alone |
+| `.duck(voice, depth: .8, release: 1/8)` | dips each time the named voice plays a note, and recovers over release bars |
+| `.reverb(x)` | how much of the voice goes to the shared room (all voices send to one reverb) |
 
-Settings can be patterns or signals (`.lpf(sine(8).range(400, 3400))`), and the latest note sets the bus. Remove an effect from the code and it turns off at the next bar line.
+Settings can be patterns or signals (`.lpf(sine(8).range(400, 3400))`, `.vowel(["a" "o"])`), and the latest note sets the bus. Remove an effect from the code and it turns off at the next bar line.
+
+```tine
+voice kick = [kick . . . kick . . .].sample()
+voice pad  = <c3 eb3>.inst(pad).chorus(.6).room(.5, size: .8).duck("kick")
+voice acid = ([c2 c2 c3 c2 eb2 c2 g2 bb1]*2).inst(saw).vowel(["a" "o"]).phaser(.5)
+```
+
+The DAW runs these effects with the same code as WAV export, on the audio thread. A page that cannot start that code (very old browsers) plays only hpf, lpf, drive and delay, and says so.
 
 ## Samples
 
@@ -276,6 +294,15 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `lpf(p, hz)` | Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep. |
 | `drive(p, amount)` | Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp. |
 | `delay(p, mix, time: 3/16, feedback: .4)` | An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats. |
+| `vowel(p, v)` | Formant filter: makes the voice say a vowel, "a" "e" "i" "o" or "u". v may be a pattern: .vowel(["a" "o"]). |
+| `crush(p, bits)` | Bit crusher: fewer bits (1 to 16) is rougher. .crush(4) is very lo-fi. |
+| `coarse(p, n)` | Sample-rate reduction: holds every nth sample, for aliasing and grit. 1 is off. |
+| `ring(p, hz, mix: 1)` | Ring modulation: multiplies the voice by a sine at hz, for metallic and bell-like tones. |
+| `chorus(p, mix: .5, rate: .8, depth: .5)` | Chorus: thickens the voice with slightly detuned, moving copies. rate in Hz. |
+| `phaser(p, mix: .5, rate: .5, depth: .7)` | Phaser: a sweeping notch, the classic swirl. rate in Hz. |
+| `compress(p, threshold: -18, ratio: 4)` | Compressor on the whole voice: levels above threshold (dB) are reduced by ratio, then made up. Evens out a part. |
+| `room(p, mix: .3, size: .5)` | A reverb on this voice alone, unlike reverb(), which sends to the shared room. size 0 to 1. |
+| `duck(p, voice, depth: .8, release: 1/8)` | Sidechain-style ducking: this voice dips each time the named voice plays a note, then recovers over release bars. .duck("kick") pumps a pad against the kick. |
 | `dur(p, beats)` | Fixed note length in beats, independent of the step length. |
 | `set(p, name, value)` | Attach any named parameter to events (it is passed through to MIDI CC maps and exports). |
 | `inst(p, name, ...options)` | Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name. |

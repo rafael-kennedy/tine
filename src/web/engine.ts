@@ -17,6 +17,9 @@ export function plainParams(p: Record<string, any>): Record<string, any> {
   return out;
 }
 
+// effects that need the worklet; the Web Audio fallback has only hpf, lpf, drive and delay
+const NEW_FX = ["vowel", "crush", "coarse", "ring", "chorus", "phaser", "comp", "room", "duck"];
+
 interface Chain { input: GainNode; hp: BiquadFilterNode; lp: BiquadFilterNode; pre: GainNode; shaper: WaveShaperNode; post: GainNode; dly: DelayNode; fb: GainNode; wet: GainNode; drive: number; hpSet: number; lpSet: number }
 
 export interface PlayableNote { semi: number; vel: number; durSec: number; params: Record<string, any>; voice: string }
@@ -48,18 +51,42 @@ export class Engine {
     comp.threshold.value = -8; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.15;
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 1024;
-    this.master.connect(comp).connect(this.analyser).connect(this.ctx.destination);
+    // a fast limiter after the glue compressor, so dense parts do not clip
+    const lim = this.ctx.createDynamicsCompressor();
+    lim.threshold.value = -1; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.08;
+    this.master.connect(comp).connect(lim).connect(this.analyser).connect(this.ctx.destination);
     const verb = this.ctx.createConvolver();
     verb.buffer = this.impulse(2.4);
     this.verbSend = this.ctx.createGain();
     this.verbSend.gain.value = 1;
     this.verbSend.connect(verb).connect(this.master);
     this.startWorker();
+    this.ready = this.startWorklet(verb);
     loadBundled();
   }
 
   get now() { return this.ctx.currentTime; }
-  async resume() { if (this.ctx.state !== "running") await this.ctx.resume(); }
+  async resume() { await this.ready; if (this.ctx.state !== "running") await this.ctx.resume(); }
+
+  // ---------- effects worklet (see bus-worklet.ts) ----------
+  // When it loads, every voice's effects and the shared reverb run on the
+  // audio thread with the same code as WAV export. Without it (an old browser,
+  // or a page that forbids it) the Web Audio chain below plays the 1.1 effects.
+  ready: Promise<void>;
+  private worklet = false;
+  private async startWorklet(convolver: ConvolverNode) {
+    const src = typeof document !== "undefined" ? document.getElementById("tine-bus-worklet")?.textContent : null;
+    if (!src || !this.ctx.audioWorklet) return;
+    try {
+      // a file:// page cannot load a worklet from a Blob URL, but can from a data URL
+      try { await this.ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([src], { type: "text/javascript" }))); }
+      catch { await this.ctx.audioWorklet.addModule("data:text/javascript;base64," + btoa(String.fromCharCode(...new TextEncoder().encode(src)))); }
+      const verb = new AudioWorkletNode(this.ctx, "tine-verb", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: "explicit" });
+      this.verbSend.disconnect(convolver);
+      this.verbSend.connect(verb).connect(this.master);
+      this.worklet = true;
+    } catch { this.worklet = false; }
+  }
 
   private impulse(sec: number): AudioBuffer {
     const sr = this.ctx.sampleRate, len = Math.floor(sec * sr);
@@ -175,7 +202,10 @@ export class Engine {
     }
     const pan = this.ctx.createStereoPanner();
     pan.pan.value = Math.max(-1, Math.min(1, Number(n.params.pan ?? 0)));
-    const dest = hasFx(n.params) || this.chains.has(n.voice) ? this.chainFor(n.voice, fxOf(n.params), when).input : this.master;
+    const wantFx = hasFx(n.params) || this.chains.has(n.voice) || this.buses.has(n.voice);
+    const dest = !wantFx ? this.master : this.worklet ? this.busFor(n.voice, fxOf(plainParams(n.params)), when) : this.chainFor(n.voice, fxOf(n.params), when).input;
+    if (this.worklet) this.duckOn(n.voice, when);
+    else if (wantFx && NEW_FX.some(k => n.params[k] !== undefined)) once("this page cannot run the effects worklet (open it through tine daw or https), so only hpf, lpf, drive and delay play here; WAV export has them all");
     src.connect(g).connect(pan).connect(dest);
     const send = Number(n.params.reverb ?? (inst === "pad" || inst === "bell" ? 0.35 : 0.12));
     if (send > 0) { const sg = this.ctx.createGain(); sg.gain.value = send; pan.connect(sg).connect(this.verbSend); }
@@ -186,6 +216,26 @@ export class Engine {
   // The same chain as core/fx.ts: high-pass, low-pass, drive, feedback delay.
   // Built the first time a voice uses an effect and kept, so echoes ring on
   // across code swaps; each note sets the chain at its own start time.
+  private buses = new Map<string, { node: AudioWorkletNode; sent: string; duck: string }>();
+
+  private busFor(voice: string, fx: Fx, when: number): AudioNode {
+    let b = this.buses.get(voice);
+    if (!b) {
+      const node = new AudioWorkletNode(this.ctx, "tine-bus", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: "explicit" });
+      node.connect(this.master);
+      b = { node, sent: "", duck: "" };
+      this.buses.set(voice, b);
+    }
+    const key = JSON.stringify(fx);
+    if (key !== b.sent) { b.node.port.postMessage({ time: Math.max(when, this.ctx.currentTime), fx }); b.sent = key; b.duck = fx.duck; }
+    return b.node;
+  }
+
+  // a note of `voice` dips every bus that ducks on it
+  private duckOn(voice: string, when: number) {
+    for (const b of this.buses.values()) if (b.duck === voice) b.node.port.postMessage({ time: Math.max(when, this.ctx.currentTime), duck: true });
+  }
+
   private chains = new Map<string, Chain>();
   private driveCurve: Float32Array<ArrayBuffer> | null = null;
 

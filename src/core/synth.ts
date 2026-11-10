@@ -1,3 +1,4 @@
+import { Freeverb } from "./fx";
 // The built-in instruments, as pure sample-generating functions.
 // The same code renders offline WAV files on the command line and renders
 // each note into an AudioBuffer in the browser, so a piece sounds the same
@@ -300,18 +301,9 @@ function renderDrum(n: number, vel: number, sr: number, out: Float32Array): Floa
 
 // Simple Schroeder/Freeverb-style reverb used for the offline mix.
 export function reverb(L: Float32Array, R: Float32Array, sr: number) {
-  const combs = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617].map(x => Math.round(x * sr / 44100));
-  const aps = [556, 441, 341, 225].map(x => Math.round(x * sr / 44100));
   const run = (inp: Float32Array, spread: number) => {
-    const out = new Float32Array(inp.length);
-    const cbs = combs.map(c => ({ buf: new Float32Array(c + spread), i: 0, f: 0 }));
-    const abs = aps.map(c => ({ buf: new Float32Array(c + spread), i: 0 }));
-    for (let n = 0; n < inp.length; n++) {
-      let s = 0;
-      for (const c of cbs) { const y = c.buf[c.i]; c.f = y * 0.8 + c.f * 0.2; c.buf[c.i] = inp[n] * 0.015 + c.f * 0.84; c.i = (c.i + 1) % c.buf.length; s += y; }
-      for (const a of abs) { const b = a.buf[a.i]; const y = -s + b; a.buf[a.i] = s + b * 0.5; a.i = (a.i + 1) % a.buf.length; s = y; }
-      out[n] = s;
-    }
+    const v = new Freeverb(sr, spread), out = new Float32Array(inp.length);
+    for (let n = 0; n < inp.length; n++) out[n] = v.run(inp[n]);
     return out;
   };
   return [run(L, 0), run(R, 23)];
