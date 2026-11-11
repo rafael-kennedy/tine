@@ -5,17 +5,30 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Every example in the tutorial must run, and every exercise's answer must pass.
+test("every lesson ends with practice: one checked exercise each", () => {
+  for (const l of LESSONS) expect([l.id, l.parts.filter(p => typeof p === "object" && "exercise" in p).length]).toEqual([l.id, 1]);
+});
 for (const lesson of LESSONS) {
   lesson.parts.forEach((part, i) => {
     if (typeof part === "string") return;
     if ("exercise" in part) {
-      test(`${lesson.id} exercise ${i}`, () => {
-        const s = evaluate(part.exercise.solution, { seed: 1 });
-        const { notes } = renderNotes(s, part.exercise.bars ?? 1);
-        expect(part.exercise.check(s, notes)).toBeNull();
-        // and the starter should not already pass
-        const s0 = evaluate(part.exercise.starter, { seed: 1 });
-        expect(part.exercise.check(s0, renderNotes(s0, part.exercise.bars ?? 1).notes)).not.toBeNull();
+      const ex = part.exercise;
+      const verdict = (src: string) => {
+        const s = evaluate(src, { seed: 1 });
+        return ex.check(s, renderNotes(s, ex.bars ?? 1).notes, src);
+      };
+      test(`${lesson.id} exercise ${i}: the answer passes and the starter does not`, () => {
+        expect(verdict(ex.solution)).toBeNull();
+        expect(verdict(ex.starter)).not.toBeNull();
+      });
+      // other correct answers must pass too, and each listed mistake must be caught
+      // (on 40 seeds each, so an exercise about chance cannot pass or fail by luck)
+      const seeded = (src: string, seed: number) => { const s = evaluate(src, { seed }); return ex.check(s, renderNotes(s, ex.bars ?? 1).notes, src); };
+      for (const src of [ex.solution, ...(ex.alsoRight ?? [])]) test(`${lesson.id} exercise ${i} accepts: ${src.replace(/\n/g, " / ")}`, () => {
+        for (let seed = 1; seed <= 40; seed++) expect([seed, seeded(src, seed)]).toEqual([seed, null]);
+      });
+      for (const src of ex.wrong ?? []) test(`${lesson.id} exercise ${i} rejects: ${src.replace(/\n/g, " / ")}`, () => {
+        for (let seed = 1; seed <= 40; seed++) expect([seed, seeded(src, seed) === null]).toEqual([seed, false]);
       });
     } else {
       test(`${lesson.id} example ${i}`, () => {

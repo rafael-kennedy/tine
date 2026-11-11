@@ -49,3 +49,13 @@ A reviewer who did not write the lesson scores each category from 0 to 10. A les
 1. The author's pass: a script renders each lesson as a learner meets it (each paragraph; each example with the exact notes it plays; each challenge with what its starter and solution produce and what the check says; each quiz with its listen notes). It flags what a machine can find: runs of prose with no sound, too few examples or suggested edits, no ear question, too few quiz questions. The author fixes those and every accuracy problem found by running the code.
 2. Five reviewer agents, one per unit, read the same rendered output plus the source. They run any code they doubt, score the ten categories, and list every point below 10 with the exact fix.
 3. The author applies the fixes, runs the tests, and sends the changed lessons back for another review. This repeats until every category is 10.
+
+## The language tutorial (`tine learn`)
+
+The tutorial in `src/web/lessons.ts` teaches the language, not theory, to a different reader: someone who already programs and knows no music vocabulary. The research above still applies, and so does the rubric, with categories 6 and 7 (ear training, jazz authenticity) left out. Five rules follow from that reader:
+
+- **Every music term is defined in the sentence that first uses it**, in one sentence, and where possible in programming terms: a pitch is a number, a scale is a list of offsets, a degree is a 1-based index, a chord quality is a named list of offsets.
+- **Every Tine feature is taught before an example relies on it.** That fixes the lesson order: syntax and the dot-call first, functions next, then keys and chords, then chance.
+- **The example plays before the paragraph that names what it did.**
+- **Examples suggest one specific edit and say what it will do.** Lists of function names belong in the Reference.
+- **Every lesson ends with one checked exercise.** Its `alsoRight` and `wrong` lists are run by `tests/lessons.test.ts`: every other correct answer must pass, every listed mistake must be caught, and the answer must pass on 40 seeds. Feedback speaks in note names, not pitch numbers.

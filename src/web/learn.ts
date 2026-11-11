@@ -24,6 +24,8 @@ article p,article li{font-size:16px;line-height:1.65}
 .ref td{padding:4px 12px 4px 0;vertical-align:top;font-size:14px}
 .ref td:first-child{font-family:var(--mono);white-space:nowrap;color:var(--c-fn)}
 .ref h3{margin-top:22px;text-transform:capitalize}
+article pre.static{font-family:var(--mono);font-size:14px;line-height:1.5;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;overflow:auto;color:var(--mute)}
+article table.ref{margin:8px 0 14px}
 @media (max-width: 800px){ .wrap{grid-template-columns:1fr} nav{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)} article{padding:20px 16px 80px} }
 `;
 
@@ -62,7 +64,7 @@ async function renderReference(article: HTMLElement) {
   }
   article.append(h("h3", {}, "Phrase notation"));
   const t = h("table", { class: "ref" });
-  for (const [a, b] of [["[a b c]", "steps dividing a bar equally"], [".", "rest"], ["_", "hold the previous step"], ["x:3", "x takes 3 steps of time"], ["[a [b c]]", "subdivide a step"], ["x*3", "x three times within its step"], ["x!3", "x as three steps"], ["{a b c}", "simultaneous (chord or layers)"], ["<a b c>", "one per bar, in turn"], ["a|b|c", "seeded random choice per bar"], ["x? / x?0.3", "seeded chance to play"], ["x@maj7 / ^5@7", "chord on x"]]) t.append(h("tr", {}, h("td", {}, a), h("td", {}, b)));
+  for (const [a, b] of [["[a b c]", "steps dividing a bar equally"], [".", "rest"], ["_", "hold the previous step"], ["x:3", "x takes 3 steps of time"], ["[a [b c]]", "subdivide a step"], ["x*3", "x three times within its step"], ["x!3", "x as three steps"], ["{a b c}", "simultaneous (chord or layers)"], ["<a b c>", "one per bar, in turn"], ["a|b|c", "seeded random choice, made each time the phrase comes around"], ["x? / x?0.3", "seeded chance to play"], ["x@maj7 / ^5@7", "chord on x"]]) t.append(h("tr", {}, h("td", {}, a), h("td", {}, b)));
   article.append(t);
 }
 
@@ -78,10 +80,10 @@ function renderPage() {
     article.append(
       h("h1", {}, "Learn Tine"),
       h("div", { class: "hero" },
-        h("p", { html: "<b>Tine</b> is a programming language for music: for writing grooves and melodies quickly, performing them live, and composing finished pieces. It handles microtonal tunings and arbitrarily complex rhythm, and every random choice is seeded, so anything you hear can be played again exactly." }),
-        h("p", { html: `This tutorial has ${LESSONS.length} short lessons. Every example is live: edit it and press <b>▶ play</b> or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>.` })),
-      cellOf({ code: `tempo 96\nkey d dorian\n\nvoice drums = {[kick . . kick . . snare .] [hat*8].vel([.9 .5])}\nvoice bass  = [^1 . ^1 ^5 . ^4 _ ^b3].octave(-2).inst(bass)\nvoice keys  = <^1@7 ^4@7 ^5@7 ^1@9>.strum.vel(.55)\nvoice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .].inst(pluck)`, bars: 4 }),
-      h("p", { html: `Start with <a href="#${LESSONS[0].id}">${LESSONS[0].title}</a>. Sound needs one click on the page first (browsers require it).` }),
+        h("p", { html: "<b>Tine</b> is a programming language for music. You write short patterns of notes and drum hits, change them while they play, and build them into finished pieces. Every random choice comes from a numbered seed, so anything you hear can be played again exactly." }),
+        h("p", { html: `This tutorial has ${LESSONS.length} short lessons. It assumes you can program and that you know no music theory: every musical term is explained where it first appears. Every example is live: edit it and press <b>▶ play</b> or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>. Sound needs one click on the page first (browsers require it).` })),
+      cellOf({ code: `tempo 96\nkey d dorian\n\nvoice drums = {[kick . . kick . . snare .] [hat*8].vel([.9 .5]*4)}\nvoice bass  = [^1 . ^1 ^5 . ^4 _ ^b3].octave(-2).inst(bass)\nvoice keys  = <^1@7 ^4@7 ^5@7 ^1@9>.strum.vel(.55)\nvoice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .].inst(pluck)`, bars: 4 }),
+      h("p", { html: `That is the kind of program this tutorial builds up to. By the end of lesson 10 you will be able to read every line of it. Start with <a href="#${LESSONS[0].id}">${LESSONS[0].title}</a>.` }),
     );
     return;
   }
@@ -103,7 +105,7 @@ function renderPage() {
 function main() {
   const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + LEARN_CSS; document.head.append(style);
   const logo = h("a", { class: "logo", href: "#intro" }); logo.innerHTML = LOGO_SVG + "tine";
-  const reroll = h("button", { class: "small", onclick: () => { seed = randomSeed(); seedLabel.textContent = String(seed); store.set("learn.seed", String(seed)); renderPage(); } }, "🎲 new seed");
+  const reroll = h("button", { class: "small", onclick: () => { seed = randomSeed(); seedLabel.textContent = String(seed); store.set("learn.seed", String(seed)); stopAll(); document.querySelectorAll(".cell").forEach(c => c.dispatchEvent(new Event("tine:recompile"))); } }, "🎲 new seed");
   const nav = h("nav", {}, logo, navEl, h("div", { class: "seedbox" }, "seed ", seedLabel, " ", reroll, h("p", {}, `Tine ${VERSION}`)));
   document.body.append(h("div", { class: "wrap" }, nav, h("article")));
   window.addEventListener("hashchange", renderPage);
