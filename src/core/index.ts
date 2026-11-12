@@ -21,3 +21,6 @@ export * from "./adpcm";
 export * from "./osc";
 export * from "./dirt";
 export * from "./sf2";
+export * from "./chart";
+export * from "./page";
+export * from "./chartsvg";

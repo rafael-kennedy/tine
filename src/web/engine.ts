@@ -17,7 +17,7 @@ export function plainParams(p: Record<string, any>): Record<string, any> {
   return out;
 }
 
-const NOT_SOUND = new Set(["inst", "pan", "reverb", "chordRoot", "hpf", "lpf", "drive", "delay", "delaySec", "feedback", "vowel", "crush", "coarse", "ring", "ringMix",
+const NOT_SOUND = new Set(["inst", "pan", "reverb", "chordRoot", "chordBass", "hpf", "lpf", "drive", "delay", "delaySec", "feedback", "vowel", "crush", "coarse", "ring", "ringMix",
   "chorus", "chorusHz", "chorusDepth", "phaser", "phaserHz", "phaserDepth", "comp", "compRatio", "room", "roomSize", "duck", "duckDepth", "duckSec", "midi", "port", "mpe", "cut", "ctl"]);
 
 // effects that need the worklet; the Web Audio fallback has only hpf, lpf, drive and delay

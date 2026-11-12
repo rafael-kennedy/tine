@@ -4,7 +4,7 @@
 // language server, so a performer installs exactly one thing.
 import { readFileSync, writeFileSync, existsSync, watch, statSync, readdirSync } from "node:fs";
 import { resolve, dirname, basename, extname, join } from "node:path";
-import { evaluate, formatError, renderNotes, toMidiFile, toMusicXml, randomSeed, VERSION, timeline, pitchName, keySpelling, Scene, TineError, lineCol } from "../core";
+import { evaluate, formatError, renderNotes, toMidiFile, toMusicXml, buildChart, chartHtml, chartPages, Paper, randomSeed, VERSION, timeline, pitchName, keySpelling, Scene, TineError, lineCol } from "../core";
 import { repl } from "./repl";
 import { renderToWav, playWav, openBrowser, loadSamples, bundledPack, fetchNeeded } from "./audio";
 import { dirtSender, dirtMode } from "./dirt";
@@ -25,6 +25,7 @@ usage:
   tine render <file> [-o out.wav]   render to a WAV file
   tine midi <file> [-o out.mid]     export a Standard MIDI File
   tine xml <file> [-o out.musicxml] export a score for MuseScore, Dorico, Sibelius
+  tine chart <file> [-o out.html]   a chord chart to view and print (.svg also works)
   tine check <file>            report problems (exit code 1 if any)
   tine roll <file> [--bars N]  draw the piece as a piano roll in the terminal
   tine daw [file]              open the live-coding DAW in your browser
@@ -45,6 +46,12 @@ options:
   --port N     port for daw/learn/theory (default 7357)
   --samples D  folder of sounds: files are sample names, subfolders are banks
   --dirt H:P   where SuperDirt listens (default 127.0.0.1:57120)
+
+chart and score options:
+  --jazz       jazz chord symbols: C-7, CΔ7, Cø7, C°7
+  --a4         A4 paper (default US letter)
+  --voices a,b read the chords from these voices only
+  --per-line N bars to a line (default 4)
 `;
 
 function args() {
@@ -52,7 +59,7 @@ function args() {
   const flags: Record<string, string | boolean> = {};
   const pos: string[] = [];
   for (let i = 0; i < a.length; i++) {
-    if (a[i].startsWith("--")) { const k = a[i].slice(2); const nxt = a[i + 1]; if (nxt !== undefined && !nxt.startsWith("-") && !["exe", "help", "version", "no-open"].includes(k)) { flags[k] = nxt; i++; } else flags[k] = true; }
+    if (a[i].startsWith("--")) { const k = a[i].slice(2); const nxt = a[i + 1]; if (nxt !== undefined && !nxt.startsWith("-") && !["exe", "help", "version", "no-open", "jazz", "a4"].includes(k)) { flags[k] = nxt; i++; } else flags[k] = true; }
     else if (a[i] === "-o") { flags.o = a[++i]; }
     else if (a[i] === "-h") flags.help = true;
     else pos.push(a[i]);
@@ -124,6 +131,25 @@ async function main() {
       const out = outName(pos[0], ".musicxml", flags);
       writeFileSync(out, toMusicXml(scene, r.notes, Math.ceil(r.bars), basename(pos[0] ?? "piece", ".tine")));
       console.log(`wrote ${out}: ${Math.ceil(r.bars)} bars, ${new Set(r.notes.filter(n => n.params.ccOut === undefined).map(n => n.voice)).size} parts, seed ${scene.seed}`);
+      return;
+    }
+    case "chart": {
+      const { scene } = load(pos[0], flags);
+      const title = basename(pos[0], ".tine");
+      const chart = buildChart(scene, title, { bars, voices: typeof flags.voices === "string" ? flags.voices.split(",").map(s => s.trim()) : undefined });
+      const draw = { paper: (flags.a4 ? "a4" : "letter") as Paper, style: flags.jazz ? "jazz" as const : "plain" as const, perLine: flags["per-line"] ? parseInt(flags["per-line"] as string, 10) : undefined };
+      const out = outName(pos[0], ".chart.html", flags);
+      const n = chart.sections.reduce((a, s) => a + s.bars.length, 0);
+      if (extname(out) === ".svg") {
+        const pages = chartPages(chart, draw);
+        const names = pages.length === 1 ? [out] : pages.map((_, i) => out.replace(/\.svg$/, `-${i + 1}.svg`));
+        pages.forEach((p, i) => writeFileSync(names[i], p));
+        console.log(`wrote ${names.join(", ")}: ${n} bars`);
+      } else {
+        writeFileSync(out, chartHtml(chart, draw));
+        console.log(`wrote ${out}: ${n} bars${chart.voices.length ? `, chords from ${chart.voices.join(", ")}` : ""}  ${dim("(open it in a browser to view or print)")}`);
+      }
+      if (!chart.voices.length) console.error(yellow("warning: no chords found. Chords come from chord symbols (changes(), ^1@7, c@maj7) or voices that play three notes at once; --voices picks them."));
       return;
     }
     case "play": {
