@@ -5,6 +5,7 @@ import { library, ensure as ensureSamples } from "./samples";
 import { Transport } from "./transport";
 import { Roll } from "./roll";
 import { CSS, LOGO_SVG } from "./theme";
+import { TOUCH_CSS, setupMobile } from "./mobile";
 
 const PCSS = `
 body{min-height:100vh;display:grid;place-items:center;padding:16px}
@@ -19,7 +20,8 @@ details{margin-top:16px} pre{white-space:pre-wrap;font-family:var(--mono);font-s
 `;
 
 function main() {
-  const style = document.createElement("style"); style.textContent = CSS + PCSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + PCSS + TOUCH_CSS; document.head.append(style);
+  setupMobile();
   const el = document.getElementById("piece");
   const src = el?.textContent?.trim() || `tempo 100\nkey c major\nvoice demo = [^1 ^3 ^5 ^8].inst(bell)`;
   const title = el?.getAttribute("data-title") || "Untitled";

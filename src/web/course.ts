@@ -3,6 +3,7 @@
 import { randomSeed, VERSION, builtinList, SCALES, parseQuality } from "../core";
 import { CSS, LOGO_SVG } from "./theme";
 import { h, store, makeCell, makeExercise, makeQuiz, stopAll, CELL_CSS } from "./cells";
+import { TOUCH_CSS, setupMobile, keyBar, focusedEditor } from "./mobile";
 import { UNITS, COURSE_LESSONS } from "./course/index";
 import { makeAsk, ASK_CSS } from "./ask";
 
@@ -169,13 +170,15 @@ function renderPage() {
 }
 
 function main() {
-  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + COURSE_CSS + ASK_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + COURSE_CSS + ASK_CSS + TOUCH_CSS; document.head.append(style);
+  setupMobile();
   const logo = h("a", { class: "logo", href: "#home" }); logo.innerHTML = LOGO_SVG + "tine";
   const toggle = h("button", { class: "small toggle", onclick: () => nav.classList.toggle("open") }, "lessons");
   const reroll = h("button", { class: "small", onclick: () => { seed = randomSeed(); seedLabel.textContent = String(seed); store.set("theory.seed", String(seed)); renderPage(); } }, "🎲 new seed");
   const nav = h("nav", {}, h("div", {}, logo, toggle), h("div", { class: "sub" }, "THEORY 100 TO 202, JAZZ FIRST"), navEl, h("div", { class: "seedbox" }, "seed ", seedLabel, " ", reroll, h("p", {}, `Tine ${VERSION}`)));
   document.body.append(h("div", { class: "wrap" }, nav, h("article")));
-  window.addEventListener("hashchange", renderPage);
+  window.addEventListener("hashchange", () => { nav.classList.remove("open"); renderPage(); });
+  keyBar({ view: focusedEditor, onlyWhenFocused: true, runLabel: "▶ play", onRun: v => (v.dom.closest(".cell")?.querySelector("button.primary") as HTMLButtonElement | null)?.click(), onStop: () => stopAll() });
   renderPage();
 }
 main();
