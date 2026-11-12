@@ -16254,7 +16254,7 @@ ${error.message}`, undefined, handlerResult.handled === true ? false : "force");
 
 // node_modules/vscode-languageclient/lib/node/processes.js
 var require_processes = __commonJS(function(exports2) {
-  var __dirname = "/home/user/tine/editors/vscode/node_modules/vscode-languageclient/lib/node";
+  var __dirname = "/home/user/work/tine/editors/vscode/node_modules/vscode-languageclient/lib/node";
   Object.defineProperty(exports2, "__esModule", { value: true });
   exports2.terminate = undefined;
   var cp = require("child_process");

@@ -36,7 +36,7 @@ export interface Chart {
   meter: [number, number];
   tempo: number;
   key: Key;
-  flats: boolean;
+  flats: boolean | undefined;  // chord spelling: see rootName
   sections: ChartSection[];
   roadmap: string[] | null;  // section labels in play order, when the chart prints a section once for several plays
   loop: boolean;             // a piece without form: the chart is its loop
@@ -172,7 +172,7 @@ const barKey = (b: ChartBar) => b.nc ? "NC" : b.chords.map(c => `${c.beat}:${c.r
 
 export function buildChart(scene: Scene, title: string, opts: ChartOptions = {}): Chart {
   const beats = scene.meter[0];
-  const flats = keyFifths(scene.key).fifths < 0;
+  const flats = chordSpelling(keyFifths(scene.key).fifths);
   if (scene.form && scene.form.length) {
     const tl = timeline(scene);
     const { notes } = renderNotes(scene);
@@ -213,7 +213,7 @@ export function buildChart(scene: Scene, title: string, opts: ChartOptions = {})
       i += times - 1;
     }
     const once = order.length === sections.reduce((a, s) => a + s.times, 0);
-    return { title, meter: scene.meter, tempo: tempo0, key: key0, flats: keyFifths(key0).fifths < 0, sections, roadmap: once ? null : order, loop: false, voices };
+    return { title, meter: scene.meter, tempo: tempo0, key: key0, flats: chordSpelling(keyFifths(key0).fifths), sections, roadmap: once ? null : order, loop: false, voices };
   }
   // a loop: find its period unless told how many bars
   const probe = opts.bars ?? 32;
@@ -240,8 +240,12 @@ export function buildChart(scene: Scene, title: string, opts: ChartOptions = {})
 export type SymbolStyle = "plain" | "jazz";
 const ACC: Record<number, string> = { [-2]: "𝄫", [-1]: "♭", 0: "", 1: "♯", 2: "𝄪" };
 
-export function rootName(pc: number, flats: boolean): string {
-  const s = spell(60 + pc, flats);
+// flats: true in flat keys, false in sharp keys, undefined (C major, modes
+// without a signature) for the mix chord charts use: D♭ E♭ F♯ A♭ B♭
+export const chordSpelling = (fifths: number) => (fifths < 0 ? true : fifths > 0 ? false : undefined);
+const MIX = [false, true, false, true, false, false, false, false, true, false, true, false];
+export function rootName(pc: number, flats: boolean | undefined): string {
+  const s = spell(60 + pc, flats ?? MIX[((pc % 12) + 12) % 12]);
   return s.step + (ACC[Math.round(s.alter)] ?? "");
 }
 
@@ -256,7 +260,7 @@ export function qualityText(sym: string, style: SymbolStyle = "plain"): string {
   return q.replace(/b(\d)/g, "♭$1").replace(/#(\d)/g, "♯$1");
 }
 
-export function chordText(c: ChartChord, flats: boolean, style: SymbolStyle = "plain") {
+export function chordText(c: ChartChord, flats: boolean | undefined, style: SymbolStyle = "plain") {
   return { root: rootName(c.root, flats), quality: qualityText(c.sym, style), bass: c.bass !== undefined ? rootName(c.bass, flats) : undefined };
 }
 

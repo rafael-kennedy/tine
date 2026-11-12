@@ -570,7 +570,7 @@ class Parser {
       this.next();
       const nameTok = this.tok;
       if (nameTok.type !== "ident" && nameTok.type !== "note")
-        this.err("expected a voice name", nameTok);
+        this.err(nameTok.type === "kw" ? `'${nameTok.text}' is a keyword and cannot name a voice` : "expected a voice name", nameTok);
       this.next();
       this.expectOp("=");
       const value = this.valueOrBlock();
@@ -606,7 +606,7 @@ class Parser {
       this.next();
       const nameTok = this.tok;
       if (nameTok.type !== "ident")
-        this.err("expected a section name", nameTok);
+        this.err(nameTok.type === "note" ? `'${nameTok.text}' is a note name and cannot name a section` : nameTok.type === "kw" ? `'${nameTok.text}' is a keyword and cannot name a section` : "expected a section name", nameTok, nameTok.type === "note" ? renameHint(nameTok.text) : undefined);
       this.next();
       const bars = this.unary();
       if (this.tok.type === "ident" && (this.tok.text === "bars" || this.tok.text === "bar"))
@@ -896,6 +896,8 @@ class Parser {
         this.err(`unclosed '${open}'`, s, `add a matching '${close}'`);
       if (this.tok.type === "kw" && STATEMENT_KW.has(this.tok.text))
         this.err(`unclosed '${open}': the next line starts with '${this.tok.text}' before it was closed`, s, `add a matching '${close}' at the end of this line`);
+      if (this.isOp(","))
+        this.err("unexpected ',' in a phrase", this.tok, "steps in a phrase are separated by spaces, like [c e g]; a chord is c4@maj or {c e g}");
       if (this.isOp("_")) {
         const h = this.next();
         if (!items.length)
@@ -1667,6 +1669,21 @@ function resolveNotes(voice, evs, ctx) {
       if (r !== undefined)
         params.chordRoot = r;
     }
+    if (params.chordRel !== undefined) {
+      if (semis.length === 1)
+        params.chordRoot = semis[0] + Number(params.chordRel);
+      delete params.chordRel;
+    }
+    if (params.chordBassRel !== undefined) {
+      if (semis.length === 1)
+        params.chordBass = semis[0] + Number(params.chordBassRel);
+      delete params.chordBassRel;
+    }
+    if (ev.v instanceof Chord && ev.v.bass !== undefined) {
+      const b = valueToSemis(ev.v.bass, key)[0];
+      if (b !== undefined)
+        params.chordBass = b;
+    }
     for (const semi of semis)
       out.push({ voice, start: ev.s, dur, semi, vel: Math.max(0, Math.min(1, vel)), params });
   }
@@ -2383,7 +2400,7 @@ def("echo", "echo(p, times: 3, time: 1/8, decay: 0.6)", "Repeat each event, quie
   const q = P(p);
   const layers = [q];
   for (let i = 1;i <= k; i++)
-    layers.push(mapEv(shift(dt.mul(new R(i)), q), (ev) => ({ ...ev, p: { ...ev.p, vel: (ev.p.vel ?? 0.8) * Math.pow(dc, i) } })));
+    layers.push(mapEv(shift(dt.mul(new R(i)), q), (ev) => ({ ...ev, p: { ...ev.p, vel: (ev.p.vel ?? 0.8) * Math.pow(dc, i), echo: i } })));
   return stack(layers);
 });
 def("ply", "ply(p, n)", "Repeat each event n times within its own length. n may be a pattern.", cat.time, ([p, n]) => {
@@ -2633,6 +2650,20 @@ def("invert", "invert(p, n: 1)", "Chord inversion: move the lowest n notes up an
     return inv(p, new Key(new Pitch(60), SCALES.major));
   return mapEv(P(p), (ev, ctx) => ({ ...ev, v: inv(ev.v, ev.p.key ?? ctx.key) }));
 });
+function chordRel(c, nt, key, p) {
+  if (c.root === undefined)
+    return p;
+  const at = semisOf(nt, key)[0], r = semisOf(c.root, key)[0];
+  if (at === undefined || r === undefined)
+    return p;
+  const out = { ...p, chordRel: r - at };
+  if (c.bass !== undefined) {
+    const b = semisOf(c.bass, key)[0];
+    if (b !== undefined)
+      out.chordBassRel = b - at;
+  }
+  return out;
+}
 def("arp", 'arp(p, mode: "up")', "Spread each chord's notes across its length. Modes: up, down, updown, downup, out, random.", cat.pitch, ([p, mode], named, call) => {
   const m = String(named.mode ?? mode ?? "up"), salt = call.interp.salt(), q = P(p);
   return new Pat((a, b, ctx) => {
@@ -2670,7 +2701,7 @@ def("arp", 'arp(p, mode: "up")', "Spread each chord's notes across its length. M
       notes.forEach((nt, i) => {
         const s = ev.s.add(step.mul(new R(i)));
         if (s.ge(a) && s.lt(b))
-          out.push({ s, e: s.add(step), v: nt, p: ev.p });
+          out.push({ s, e: s.add(step), v: nt, p: chordRel(ev.v, nt, key, ev.p) });
       });
     }
     return out;
@@ -2685,7 +2716,8 @@ def("strum", "strum(p, spread: 1/48)", "Roll each chord's notes, low to high, `s
     const notes = [...ev.v.notes].sort((x, y) => semisOf(x, key)[0] - semisOf(y, key)[0]);
     return notes.map((nt, i) => {
       const s = ev.s.add(d.mul(new R(i)));
-      return { s, e: ev.e, v: nt, p: ev.p };
+      const p = chordRel(ev.v, nt, key, ev.p);
+      return { s, e: ev.e, v: nt, p: i ? { ...p, strum: d.mul(new R(i)) } : p };
     }).filter((e) => e.s.ge(a) && e.s.lt(b));
   }));
 });
@@ -2753,7 +2785,7 @@ param("hpf", "hpf(p, hz)", "High-pass filter on the whole voice: removes rumble 
 param("lpf", "lpf(p, hz)", "Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep.");
 param("drive", "drive(p, amount)", "Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp.");
 def("delay", "delay(p, mix, time: 3/16, feedback: .4)", "An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats.", cat.param, ([p, mix, time, fb], named) => {
-  let q = setParam(P(p), "delay", mix ?? 0.3);
+  let q = setParam(P(p), "delay", named.mix ?? mix ?? 0.3);
   q = setParam(q, "delayTime", named.time ?? time ?? 3 / 16);
   return setParam(q, "feedback", named.feedback ?? fb ?? 0.4);
 });
@@ -3979,9 +4011,12 @@ Frequency of A4 in Hz.`
 }
 // ../../src/core/dirt.ts
 var DRUM_NAME = new Map(Object.entries(DRUMS).map(([k, v]) => [v, k]).reverse());
+// ../../src/core/page.ts
+var NARROW = new Set([..."ijlI.,:;'|!()[]/ "]);
+var WIDE = new Set([..."MWmw"]);
 
 // ../../src/core/index.ts
-var VERSION = "1.2.0";
+var VERSION = "1.3.0";
 
 // ../../src/lsp/server.ts
 var import_node_fs = require("node:fs");

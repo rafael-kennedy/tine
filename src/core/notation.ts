@@ -14,7 +14,7 @@ import { TimedNote, renderNotes, timeline } from "./scene";
 import { keyFifths, Key } from "./pitch";
 import { spell, noteValues } from "./musicxml";
 import { GLYPHS } from "./glyphs.gen";
-import { chordBars, harmonyVoices, ChartBar, keyLabel, SymbolStyle } from "./chart";
+import { chordBars, harmonyVoices, ChartBar, keyLabel, SymbolStyle, chordSpelling } from "./chart";
 import { symbol as chordSymbol, symbolWidth, crotchet } from "./chartsvg";
 import { Paper, PAPER, esc, fmt, svgPage, textWidth, htmlDocument } from "./page";
 
@@ -378,7 +378,7 @@ export function scorePages(score: Score, opts: ScoreDrawOptions = {}): string[] 
     const lead = 1.2 * sp, tail = (info.repeatEnd ? 1.4 : 0.6) * sp;
     let min = pre + lead + tail + cols.reduce((a, c) => a + c.left + c.need, 0);
     if (info.chords && info.chords.chords.length) {
-      const sym = info.chords.chords.reduce((a, c) => a + symbolWidth(c, info.fifths < 0, style, chordScale) + sp, 0);
+      const sym = info.chords.chords.reduce((a, c) => a + symbolWidth(c, chordSpelling(info.fifths), style, chordScale) + sp, 0);
       min = Math.max(min, pre + lead + sym + tail);
     }
     const anyRest = score.parts.some(p => p.measures[i].evs.every(e => e.whole));
@@ -713,7 +713,7 @@ export function scorePages(score: Score, opts: ScoreDrawOptions = {}): string[] 
       sys.forEach((i, k) => {
         const cb = meas[i].chords!;
         if (!cb) return;
-        const flats = meas[i].fifths < 0;
+        const flats = chordSpelling(meas[i].fifths);
         if (cb.nc) { above += `<text x="${fmt(mx[k].start + 1.2 * sp)}" y="${fmt(chordY)}" font-size="${fmt(1.9 * sp)}" font-style="italic" fill="${INK}">N.C.</text>`; return; }
         const prevBar = k > 0 ? meas[sys[k - 1]].chords : i > 0 ? meas[i - 1].chords : undefined;
         cb.chords.forEach((c, ci) => {

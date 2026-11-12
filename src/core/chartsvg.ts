@@ -10,7 +10,7 @@ export interface ChartDrawOptions { paper?: Paper; perLine?: number; style?: Sym
 const ROOT = 21, QUAL = 13.5, BASS = 17, H = 40, ROW = 62, MARK = 24;
 const INK = "#111", SOFT = "#666";
 
-export function symbol(c: ChartChord, x: number, y: number, flats: boolean, style: SymbolStyle, scale: number) {
+export function symbol(c: ChartChord, x: number, y: number, flats: boolean | undefined, style: SymbolStyle, scale: number) {
   const t = chordText(c, flats, style);
   const r = ROOT * scale, q = QUAL * scale, b = BASS * scale, up = 7.5 * scale;
   let s = `<text x="${fmt(x)}" y="${fmt(y)}" font-size="${fmt(r)}" font-weight="600" fill="${INK}">${esc(t.root)}`;
@@ -18,7 +18,7 @@ export function symbol(c: ChartChord, x: number, y: number, flats: boolean, styl
   if (t.bass) s += `<tspan font-size="${fmt(b)}" dy="${fmt(t.quality ? up : 0)}">/${esc(t.bass)}</tspan>`;
   return s + `</text>`;
 }
-export function symbolWidth(c: ChartChord, flats: boolean, style: SymbolStyle, scale: number) {
+export function symbolWidth(c: ChartChord, flats: boolean | undefined, style: SymbolStyle, scale: number) {
   const t = chordText(c, flats, style);
   return (textWidth(t.root, ROOT, true) + textWidth(t.quality, QUAL) + (t.bass ? textWidth("/" + t.bass, BASS) : 0)) * scale;
 }
