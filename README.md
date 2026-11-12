@@ -20,11 +20,11 @@ voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .]
 
 | | |
 | --- | --- |
-| **Language** | `src/core`: parser, interpreter, exact-time patterns, seeded randomness, pitch and tuning model, chord symbols, lead-sheet changes and jazz voicings, WAV, MIDI and MusicXML writers |
+| **Language** | `src/core`: parser, interpreter, exact-time patterns, seeded randomness, pitch and tuning model, chord symbols, lead-sheet changes and jazz voicings, WAV, MIDI and MusicXML writers, and its own engraver for chord charts, lead sheets and scores |
 | **Sound** | built-in instruments, a general synth with ten presets (`tb303`, `supersaw`, `reese`, `wobble`, `fm`...), about 200 bundled CC0 samples with chop, slice, loopAt and cut groups, sample packs by URL (`strudel.json`, `github:`), thirteen per-voice effects, SoundFont 2 playback, and SuperDirt output over OSC (`.dirt()`, `tine dirt`) |
 | **REPL** | `tine`: multi-line input, tab completion, piano-roll drawings in the terminal, `:play`, `:seed`, `:save` |
-| **DAW** | `tine daw piece.tine`: live coding in the browser with bar-quantized hot swap, mute/solo, sections as launchable scenes, MIDI in/out with control and program changes, MIDI clock in and out, controller mapping, performance toggles, per-voice effects on the audio thread, synthesis in a background thread, a sample browser, capture of played notes into code, sample loading, a history of every take with its seed, WAV/MIDI export |
-| **Tutorial** | `tine learn`: 16 interactive lessons for programmers new to music, with live examples and a checked exercise in each |
+| **DAW** | `tine daw piece.tine`: live coding in the browser with bar-quantized hot swap, mute/solo, sections as launchable scenes, MIDI in/out with control and program changes, MIDI clock in and out, controller mapping, performance toggles, per-voice effects on the audio thread, synthesis in a background thread, a sample browser, a live chord chart, lead sheet and score of the code, capture of played notes into code, sample loading, a history of every take with its seed, WAV/MIDI export |
+| **Tutorial** | `tine learn`: 17 interactive lessons for programmers new to music, with live examples and a checked exercise in each |
 | **Theory course** | `tine theory`: a jazz-first college theory sequence, 101 through 202, in 35 lessons with live examples, challenges checked by what your code plays, and quizzes with ear training |
 | **Packaging** | standalone `tine` binaries for Linux, macOS and Windows; `tine pack` turns one piece into a single-file HTML player or its own executable |
 | **Editors** | a language server (`tine lsp`), a VS Code extension, and support files for Neovim, Vim, Helix, Emacs, Sublime, JetBrains and Zed (`editors/`) |
@@ -57,6 +57,9 @@ tine theory                # the music theory course
 tine render groove.tine    # groove.wav
 tine midi groove.tine      # groove.mid, one track per voice, for any other DAW
 tine xml groove.tine       # groove.musicxml, a score for MuseScore, Dorico, Sibelius
+tine chart groove.tine     # groove.chart.html, a chord chart to print
+tine lead groove.tine      # groove.lead.html, a lead sheet: melody and chords
+tine score groove.tine     # groove.score.html, sheet music for every voice
 tine pack groove.tine      # groove.html, plays anywhere
 tine pack groove.tine --exe   # ./groove, its own executable
 ```

@@ -1,14 +1,16 @@
 // Live, editable code cells, checked exercises and quizzes: the building
 // blocks shared by the tutorial (learn.ts) and the theory course (course.ts).
 import { EditorView } from "@codemirror/view";
-import { evaluate, renderNotes, TineError, formatError, Scene, TimedNote } from "../core";
+import { evaluate, renderNotes, TineError, formatError, Scene, TimedNote, buildChart, chartPages, buildScore, scorePages } from "../core";
 import { Engine } from "./engine";
 import { Transport } from "./transport";
 import { makeEditor, showError, flash } from "./editor";
 import { Roll } from "./roll";
 
-export interface Cell { code: string; bars?: number; broken?: boolean } // broken: an example that shows an error on purpose
-export interface Exercise { task: string; starter: string; solution: string; bars?: number; hint?: string; check: (s: Scene, n: TimedNote[], src?: string) => string | null }
+export type SheetKind = "chart" | "lead" | "score";
+// broken: an example that shows an error on purpose; sheet: show it as a chord chart, lead sheet or score under the code
+export interface Cell { code: string; bars?: number; broken?: boolean; sheet?: SheetKind }
+export interface Exercise { task: string; starter: string; solution: string; bars?: number; hint?: string; sheet?: SheetKind; check: (s: Scene, n: TimedNote[], src?: string) => string | null }
 export interface Question { q: string; options: string[]; answer: number; explain?: string; listen?: string; bars?: number }
 
 export const store = {
@@ -42,6 +44,9 @@ export const CELL_CSS = `
 .qopts button.wrong{border-color:var(--coral);background:color-mix(in srgb,var(--coral) 14%,var(--ink2))}
 .qexp{font-size:14px;margin-top:6px;color:var(--mute)}
 .listen{display:flex;gap:8px;align-items:center;margin:4px 0 10px}
+.cell .sheet{background:#fff;border-top:1px solid var(--line);padding:6px 0}
+.cell .sheet svg{display:block;width:100%;height:auto}
+.cell .sheet:empty{display:none}
 `;
 
 export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, any> = {}, ...kids: (Node | string | null | undefined)[]): HTMLElementTagNameMap[K] {
@@ -87,6 +92,45 @@ async function playScene(s: Scene, owner: unknown, onStop: () => void, onTick?: 
 
 const autoBars = (code: string) => (/<|every|cat\(|per_bar|arrange|slow|walk|dice|changes|\|/.test(code) ? 4 : 1);
 
+// ---------- sheet music under a cell ----------
+
+// The page the command line prints, cropped to what is drawn on it.
+function drawSheet(el: HTMLElement, s: Scene, kind: SheetKind, bars: number) {
+  el.innerHTML = "";
+  try {
+    const opts = { bars: s.form ? undefined : bars };
+    const pages = kind === "chart" ? chartPages(buildChart(s, "", opts)) : scorePages(buildScore(s, "", kind, opts));
+    for (const pg of pages) {
+      const d = h("div", { html: pg });
+      el.append(d);
+      const svg = d.querySelector("svg");
+      if (!svg) continue;
+      // after layout, so getBBox can measure
+      requestAnimationFrame(() => {
+        try {
+          // measured on screen, so every transform is applied, then turned back into page units
+          const vb = svg.viewBox.baseVal, r = svg.getBoundingClientRect(), k = vb.width / (r.width || 1);
+          let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+          for (const c of Array.from(svg.children)) {
+            if (c.tagName === "rect" || c.tagName === "defs") continue;
+            const b = c.getBoundingClientRect();
+            if (!b.width && !b.height) continue;
+            x0 = Math.min(x0, (b.left - r.left) * k); y0 = Math.min(y0, (b.top - r.top) * k);
+            x1 = Math.max(x1, (b.right - r.left) * k); y1 = Math.max(y1, (b.bottom - r.top) * k);
+          }
+          if (isFinite(y0)) {
+            const pad = 10;
+            svg.setAttribute("viewBox", `${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`);
+            svg.removeAttribute("width"); svg.removeAttribute("height");
+            // keep the printed size: a narrow crop is not blown up to the cell's width
+            svg.style.width = `${Math.min(100, ((x1 - x0 + 20) / (vb.width - 108)) * 100)}%`;
+          }
+        } catch { /* keep the whole page */ }
+      });
+    }
+  } catch (e) { el.append(h("div", { class: "dim", style: "padding:8px 12px" }, `could not draw this: ${(e as Error).message}`)); }
+}
+
 // ---------- code cells ----------
 
 export interface CellOptions { seed: () => number; onScene?: (s: Scene, src: string) => void; extra?: HTMLElement[]; initial?: string }
@@ -101,7 +145,8 @@ export function makeCell(cell: Cell, o: CellOptions): HTMLElement & { view: () =
   const info = h("span", { class: "dim" }, "");
   const canvas = h("canvas");
   const msg = h("div", { class: "msg" });
-  box.append(edHost, h("div", { class: "bar" }, playBtn, stopBtn, info, h("span", { class: "sp" }), ...(o.extra ?? []), resetBtn), canvas, msg);
+  const sheet = h("div", { class: "sheet" });
+  box.append(edHost, h("div", { class: "bar" }, playBtn, stopBtn, info, h("span", { class: "sp" }), ...(o.extra ?? []), resetBtn), canvas, sheet, msg);
   const roll = new Roll(canvas);
   roll.window = Math.max(1, bars);
   roll.follow = false;
@@ -117,6 +162,7 @@ export function makeCell(cell: Cell, o: CellOptions): HTMLElement & { view: () =
       roll.set(notes); roll.head = -1; roll.draw();
       info.textContent = `${notes.length} notes · seed ${s.seed}`;
       for (const p of s.prints) msg.append(h("div", { class: "dim" }, p));
+      if (cell.sheet) drawSheet(sheet, s, cell.sheet, bars);
       showError(view, undefined, "");
       o.onScene?.(s, src);
       return s;
@@ -153,7 +199,7 @@ export function makeExercise(ex: Exercise, key: string, o: { seed: () => number;
   const checkBtn = h("button", { class: "small" }, "check");
   const showBtn = h("button", { class: "small" }, "show answer");
   const saved = o.saveAs ?? `ex.${key}`;
-  const cellEl = makeCell({ code: ex.starter, bars: ex.bars }, { seed: o.seed, initial: store.get(saved) ?? ex.starter, onScene: (_s, src) => store.set(saved, src), extra: [checkBtn, showBtn] });
+  const cellEl = makeCell({ code: ex.starter, bars: ex.bars, sheet: ex.sheet }, { seed: o.seed, initial: store.get(saved) ?? ex.starter, onScene: (_s, src) => store.set(saved, src), extra: [checkBtn, showBtn] });
   const hint = ex.hint ? h("details", { class: "hint" }, h("summary", {}, "hint"), h("span", { html: ex.hint })) : null;
   checkBtn.onclick = () => {
     const src = cellEl.view().state.doc.toString();

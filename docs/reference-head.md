@@ -242,12 +242,38 @@ Two free General MIDI banks: GeneralUser GS (https://www.schristiancollins.com/g
 voice walk = evolve(c4, (p, bar) => p + pick([-2 -1 1 2]), (p, bar) => [p (p + 7) (p + 12) (p + 7)])
 ```
 
+## Sheet music and charts
+
+Three printable views of a piece, drawn by Tine itself, with nothing else installed. Each writes an HTML page (open it, print it or save it as PDF) or, with `-o name.svg`, one SVG per page. The DAW shows the same three live in its Sheet tab.
+
+- `tine chart`: a chord chart. Four bars to a line, a boxed mark per section, repeat signs for a section played twice in a row, `%` for a bar that repeats the one before, `N.C.` for silence, and a road map when sections come back later in the form. A piece without `form` is charted for its loop.
+- `tine lead`: a lead sheet. The melody on one staff with the chords above it, sections printed once as in the chart.
+- `tine score`: every voice on its own staff, bar for bar, chord symbols above the top staff. Drums go on a percussion staff with cross noteheads for cymbals.
+
+Where chords come from: voices whose notes came from chord symbols (`changes(...)`, `^1@7`, `c@maj7`) are read first, and keep their names through `arp`, `strum` and transposition. Without symbols, a voice that plays three or more notes at once is read, and named the simplest way that fits the bar, then the half bar, then the beat.
+
+How notes are written: notes split and tie where they cross a beat they did not start on, rests show every beat, eighths and shorter are beamed by the beat. A strummed chord is written as the chord, and `echo` copies are left out. Spelling follows the key. A microtone is written with its nearest quarter-tone accidental and its offset in cents above the note.
+
+| Option | |
+| --- | --- |
+| `--jazz` | jazz chord symbols: C–7, CΔ7, Cø7, C°7 |
+| `--a4` | A4 paper (default US letter) |
+| `--voices a,b` | read the chords from these voices |
+| `--melody v` | lead sheet: the melody voice (default: guessed from its name, range and how often it plays one note at a time) |
+| `--parts a,b` | score: which voices, in this order |
+| `--no-chords` | score: no chord symbols |
+| `--per-line N` | bars to a line |
+| `--bars N` | how many bars, for a piece without `form` |
+
 ## Command line
 
 ```
 tine                      REPL
 tine play | render | midi | roll | check  <file>
 tine xml <file>           MusicXML score for MuseScore, Dorico, Sibelius, Finale
+tine chart <file>         chord chart, as a printable page (or -o chart.svg)
+tine lead <file>          lead sheet: melody, chord symbols, sections
+tine score <file>         sheet music: every voice on its own staff
 tine daw [file]           live-coding DAW in the browser
 tine learn                interactive tutorial
 tine pack <file>          single-file HTML player

@@ -1,7 +1,7 @@
 // Tine DAW: a live-coding workstation in the browser.
 import { EditorView } from "@codemirror/view";
 import {
-  evaluate, Scene, VoiceDef, TineError, formatError, makeCtx, R, hashStr, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, builtinList, parseSf2,
+  evaluate, Scene, VoiceDef, TineError, formatError, makeCtx, R, hashStr, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, builtinList, parseSf2, buildChart, chartPages, buildScore, scorePages, htmlDocument,
 } from "../core";
 import { Engine } from "./engine";
 import { library, loadBundled, ensure as ensureSamples, onWarn, nameOf, bankOfPath, setSoundfont, soundfont, loadSoundfont } from "./samples";
@@ -46,6 +46,16 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, 
 }
 
 const DAW_CSS = `
+
+.sheetbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.sheetbar button.on{box-shadow:inset 0 0 0 1px var(--brass);color:var(--text)}
+.sheets .pg{background:#fff;margin:0 0 10px;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.sheets .pg svg{display:block;width:100%;height:auto}
+#sheetview{position:fixed;inset:0;z-index:50;background:var(--ink2,#222);display:none;flex-direction:column}
+#sheetview.open{display:flex}
+#sheetview .sheetbar{padding:8px 14px;margin:0;border-bottom:1px solid var(--line)}
+#sheetview .sheets{overflow:auto;flex:1;padding:20px}
+#sheetview .sheets .pg{max-width:820px;margin:0 auto 20px}
 body{height:100vh;overflow:hidden}
 #app{display:grid;grid-template-rows:auto 1fr 150px;height:100vh}
 header{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -135,7 +145,7 @@ export async function startDaw() {
   );
 
   const edWrap = h("section", { id: "ed" });
-  const tabs = ["Tracks", "Scenes", "MIDI", "Takes", "Help"];
+  const tabs = ["Tracks", "Scenes", "Sheet", "MIDI", "Takes", "Help"];
   const tabBar = h("div", { class: "tabs" });
   const panels: Record<string, HTMLElement> = {};
   for (const t of tabs) {
@@ -146,6 +156,7 @@ export async function startDaw() {
     for (const b of tabBar.querySelectorAll("button")) b.classList.toggle("act", (b as HTMLElement).dataset.tab === t);
     for (const [k, p] of Object.entries(panels)) p.classList.toggle("act", k === t);
     store.set("tine.tab", t);
+    if (t === "Sheet") setTimeout(() => { try { renderSheet(); } catch { /* not set up yet: drawn after the first evaluation */ } }, 0);
   };
   const aside = h("aside", {}, tabBar, ...Object.values(panels));
   const canvas = h("canvas");
@@ -238,12 +249,12 @@ export async function startDaw() {
     transport.load(scene);
     bpmEl.textContent = `${Math.round(scene.tempo * 10) / 10} bpm · ${scene.meter[0]}/${scene.meter[1]}`;
     recordTake(scene);
-    renderTracks(); renderScenes();
+    renderTracks(); renderScenes(); renderSheet();
     if (startIfStopped && !transport.playing) await play();
   }
 
   async function play() {
-    if (!lastScene) { const s = compile(); if (!s) return; lastScene = s; transport.load(s); renderTracks(); renderScenes(); }
+    if (!lastScene) { const s = compile(); if (!s) return; lastScene = s; transport.load(s); renderTracks(); renderScenes(); renderSheet(); }
     await engine.resume();
     transport.mode = modeSel.value as any;
     if (!transport.playing) { roll.notes = []; await transport.start(0); log(`playing, seed ${lastScene!.seed}`, "i"); }
@@ -586,6 +597,62 @@ export async function startDaw() {
     } catch { /* no SSE */ }
   }
 
+  // ---------- sheet music ----------
+  // A chord chart, lead sheet or score of the code as it stands, redrawn on
+  // every evaluation. The engraver is the one 'tine chart/lead/score' uses.
+  let sheetKind = store.get("tine.sheet") ?? "chart";
+  let sheetJazz = store.get("tine.sheetJazz") === "1";
+  const sheetView = h("div", { id: "sheetview" });
+  document.body.append(sheetView);
+  function sheetPagesFor(s: Scene): { pages: string[]; title: string } {
+    const title = fileInfo?.name?.replace(/\.tine$/, "") ?? "piece";
+    const style = sheetJazz ? "jazz" as const : "plain" as const;
+    if (sheetKind === "chart") return { pages: chartPages(buildChart(s, title), { style }), title: `${title}: chord chart` };
+    const kind = sheetKind === "lead" ? "lead" : "score";
+    return { pages: scorePages(buildScore(s, title, kind), { style }), title: `${title}: ${kind === "lead" ? "lead sheet" : "score"}` };
+  }
+  function sheetBar(full: boolean) {
+    const kinds: [string, string][] = [["chart", "Chart"], ["lead", "Lead sheet"], ["score", "Score"]];
+    const bar = h("div", { class: "sheetbar" });
+    for (const [k, label] of kinds) bar.append(h("button", { class: `small${sheetKind === k ? " on" : ""}`, onclick: () => { sheetKind = k; store.set("tine.sheet", k); renderSheet(); } }, label));
+    bar.append(h("button", { class: `small${sheetJazz ? " on" : ""}`, title: "Jazz chord symbols: C-7, CΔ7, Cø7", onclick: () => { sheetJazz = !sheetJazz; store.set("tine.sheetJazz", sheetJazz ? "1" : "0"); renderSheet(); } }, "C–7"));
+    bar.append(h("span", { style: "flex:1" }));
+    if (!full) bar.append(h("button", { class: "small", onclick: () => { sheetView.classList.add("open"); renderSheet(); } }, "⤢ full view"));
+    bar.append(h("button", { class: "small", title: "Print or save as PDF", onclick: printSheet }, "print"));
+    bar.append(h("button", { class: "small", onclick: () => { const s = lastScene ?? compile(); if (!s) return; const { pages, title } = sheetPagesFor(s); download(`${title.replace(/[^\w.-]+/g, "-")}.html`, htmlDocument(title, pages, "letter"), "text/html"); } }, "download"));
+    if (full) bar.append(h("button", { class: "small", onclick: () => sheetView.classList.remove("open") }, "✕ close"));
+    return bar;
+  }
+  function printSheet() {
+    const s = lastScene ?? compile(); if (!s) return;
+    const { pages, title } = sheetPagesFor(s);
+    const w = window.open("", "_blank");
+    if (!w) { log("the browser blocked the print window; use download and print that page", "e"); return; }
+    w.document.write(htmlDocument(title, pages, "letter")); w.document.close();
+    setTimeout(() => w.print(), 300);
+  }
+  let sheetTimer: any = null;
+  function renderSheet() {
+    const p = panels.Sheet, full = sheetView.classList.contains("open");
+    if (!full && !p.classList.contains("act")) return;
+    clearTimeout(sheetTimer);
+    sheetTimer = setTimeout(() => {
+      const s = lastScene;
+      const draw = (el: HTMLElement, isFull: boolean) => {
+        el.innerHTML = "";
+        el.append(sheetBar(isFull));
+        if (!s) { el.append(h("p", { class: "dim" }, "Evaluate the code to see it as sheet music.")); return; }
+        const box = h("div", { class: "sheets" });
+        try { for (const pg of sheetPagesFor(s).pages) { const d = h("div", { class: "pg" }); d.innerHTML = pg; box.append(d); } }
+        catch (e) { box.append(h("p", { class: "dim" }, `could not draw this: ${(e as Error).message}`)); }
+        el.append(box);
+      };
+      if (p.classList.contains("act")) draw(p, false);
+      if (full) draw(sheetView, true);
+    }, 150);
+  }
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && sheetView.classList.contains("open")) sheetView.classList.remove("open"); });
+
   // ---------- help ----------
   panels.Help.append(
     h("h4", {}, "keys"),
@@ -637,7 +704,7 @@ export async function startDaw() {
   renderTakes(); renderMidi(); renderTracks(); renderScenes();
   log(`Tine ${VERSION}. Ctrl/Cmd+Enter to evaluate and play.${fileInfo ? ` Editing ${fileInfo.path}; edits made in other editors reload here.` : ""}`, "i");
   // evaluate once so tracks show up, without making sound
-  const s = compile(); if (s) { lastScene = s; transport.load(s); seedEl.textContent = String(s.seed) + (s.seedExplicit ? " 🔒" : ""); bpmEl.textContent = `${s.tempo} bpm · ${s.meter[0]}/${s.meter[1]}`; renderTracks(); renderScenes(); }
+  const s = compile(); if (s) { lastScene = s; transport.load(s); seedEl.textContent = String(s.seed) + (s.seedExplicit ? " 🔒" : ""); bpmEl.textContent = `${s.tempo} bpm · ${s.meter[0]}/${s.meter[1]}`; renderTracks(); renderScenes(); renderSheet(); }
 }
 
 startDaw();

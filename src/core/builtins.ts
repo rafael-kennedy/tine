@@ -113,7 +113,7 @@ def("off", "off(p, t, f)", "Layer p with a copy shifted by t bars and transforme
 def("echo", "echo(p, times: 3, time: 1/8, decay: 0.6)", "Repeat each event, quieter each time.", cat.time, ([p, times, time, decay], named) => {
   const k = Math.round(N(named.times ?? times, 3)), dt = RR(named.time ?? time ?? new R(1, 8)), dc = N(named.decay ?? decay, 0.6);
   const q = P(p); const layers = [q];
-  for (let i = 1; i <= k; i++) layers.push(mapEv(shift(dt.mul(new R(i)), q), ev => ({ ...ev, p: { ...ev.p, vel: (ev.p.vel ?? 0.8) * Math.pow(dc, i) } })));
+  for (let i = 1; i <= k; i++) layers.push(mapEv(shift(dt.mul(new R(i)), q), ev => ({ ...ev, p: { ...ev.p, vel: (ev.p.vel ?? 0.8) * Math.pow(dc, i), echo: i } })));
   return stack(layers);
 });
 def("ply", "ply(p, n)", "Repeat each event n times within its own length. n may be a pattern.", cat.time, ([p, n]) => {
@@ -315,6 +315,17 @@ def("invert", "invert(p, n: 1)", "Chord inversion: move the lowest n notes up an
   if (p instanceof Chord) return inv(p, new Key(new Pitch(60), SCALES.major));
   return mapEv(P(p), (ev, ctx) => ({ ...ev, v: inv(ev.v, ev.p.key ?? ctx.key) }));
 });
+// A note split out of a chord symbol (arp, strum) keeps where its root and
+// bass sit, as intervals from the note, so scores can still name the chord
+// after the notes are transposed.
+function chordRel(c: Chord, nt: any, key: any, p: Record<string, any>): Record<string, any> {
+  if (c.root === undefined) return p;
+  const at = semisOf(nt, key)[0], r = semisOf(c.root, key)[0];
+  if (at === undefined || r === undefined) return p;
+  const out: Record<string, any> = { ...p, chordRel: r - at };
+  if (c.bass !== undefined) { const b = semisOf(c.bass, key)[0]; if (b !== undefined) out.chordBassRel = b - at; }
+  return out;
+}
 def("arp", "arp(p, mode: \"up\")", "Spread each chord's notes across its length. Modes: up, down, updown, downup, out, random.", cat.pitch, ([p, mode], named, call) => {
   const m = String(named.mode ?? mode ?? "up"), salt = call.interp.salt(), q = P(p);
   return new Pat((a, b, ctx) => {
@@ -330,7 +341,7 @@ def("arp", "arp(p, mode: \"up\")", "Spread each chord's notes across its length.
       else if (m === "random") { notes = notes.map((x, i) => [x, evRand(ctx, salt, ev.s, i)] as const).sort((x, y) => x[1] - y[1]).map(x => x[0]); }
       if (!notes.length) continue;
       const step = ev.e.sub(ev.s).div(new R(notes.length));
-      notes.forEach((nt, i) => { const s = ev.s.add(step.mul(new R(i))); if (s.ge(a) && s.lt(b)) out.push({ s, e: s.add(step), v: nt, p: ev.p }); });
+      notes.forEach((nt, i) => { const s = ev.s.add(step.mul(new R(i))); if (s.ge(a) && s.lt(b)) out.push({ s, e: s.add(step), v: nt, p: chordRel(ev.v, nt, key, ev.p) }); });
     }
     return out;
   });
@@ -341,7 +352,7 @@ def("strum", "strum(p, spread: 1/48)", "Roll each chord's notes, low to high, `s
     if (!(ev.v instanceof Chord)) return ev.s.ge(a) && ev.s.lt(b) ? [ev] : [];
     const key = ev.p.key ?? ctx.key;
     const notes = [...ev.v.notes].sort((x, y) => semisOf(x, key)[0] - semisOf(y, key)[0]);
-    return notes.map((nt, i) => { const s = ev.s.add(d.mul(new R(i))); return { s, e: ev.e, v: nt, p: ev.p }; }).filter(e => e.s.ge(a) && e.s.lt(b));
+    return notes.map((nt, i) => { const s = ev.s.add(d.mul(new R(i))); const p = chordRel(ev.v, nt, key, ev.p); return { s, e: ev.e, v: nt, p: i ? { ...p, strum: d.mul(new R(i)) } : p }; }).filter(e => e.s.ge(a) && e.s.lt(b));
   }));
 });
 def("hz", "hz(pitch)", "Frequency of a pitch in Hz (at the current tuning).", cat.pitch, ([p], _n, call) => (p instanceof Pitch ? p : new Pitch(N(p))).freq(call.interp.scene.tuningRef));

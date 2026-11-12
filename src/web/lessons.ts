@@ -8,10 +8,11 @@
 //   - examples suggest a specific edit and say what it will do;
 //   - every lesson ends with a checked exercise.
 import type { Scene, TimedNote } from "../core";
+import { buildChart, chordText } from "../core";
 
-export interface Cell { code: string; bars?: number }
+export interface Cell { code: string; bars?: number; sheet?: "chart" | "lead" | "score" }
 export interface Exercise {
-  task: string; starter: string; solution: string; bars?: number; hint?: string;
+  task: string; starter: string; solution: string; bars?: number; hint?: string; sheet?: "chart" | "lead" | "score";
   check: (s: Scene, n: TimedNote[], src?: string) => string | null;
   // for the tests: other answers that must pass, and wrong answers that must fail
   alsoRight?: string[]; wrong?: string[];
@@ -451,7 +452,7 @@ export const LESSONS: Lesson[] = [
       `<p><code>.loopAt(1)</code> stretches or squeezes the loop to last exactly one bar. <code>.chop(8)</code> cuts it into eight pieces, each of which starts on time. Change the tempo to 100 and the drummer slows down with you, and sounds lower, because changing a recording's speed changes its pitch. The pieces are now notes like any others, so pattern functions work on them: add <code>.rev</code> to the end and the eight pieces play in reverse order.</p>`,
       { code: `tempo 140\nvoice amen = ["loop_amen"].loopAt(1).chop(8).every(2, x => x.rev)\nvoice back = ["loop_amen"].loopAt(1).chop(8).speed(-1).gain(.4)`, bars: 4 },
       `<p>The first voice reverses the order of its pieces every second bar. The second plays each piece backwards underneath, and <code>.gain(.4)</code> turns its volume down. <code>.speed(x)</code> sets playback rate: 2 is twice as fast and an octave up, and a negative speed plays backwards. More controls, all in the Reference: <code>.begin</code> and <code>.end</code> play part of a sound, <code>.slice(n, i)</code> plays piece i of n, and <code>.cut(group)</code> makes each sound stop the one before it.</p>`,
-      `<p>Two ways to bring your own sounds. Drop audio files on Tine's full editor, the DAW (lesson 16), and they become samples named by file name. For recorded pianos, strings and the like, load a <b>SoundFont</b>, a single file holding a whole set of instruments, with a <code>soundfont("GeneralUser-GS.sf2")</code> line. Then <code>.gm(1)</code> to <code>.gm(128)</code> picks an instrument by its standard number, or <code>.gm("violin")</code> by name.</p>`,
+      `<p>Two ways to bring your own sounds. Drop audio files on Tine's full editor, the DAW (lesson 17), and they become samples named by file name. For recorded pianos, strings and the like, load a <b>SoundFont</b>, a single file holding a whole set of instruments, with a <code>soundfont("GeneralUser-GS.sf2")</code> line. Then <code>.gm(1)</code> to <code>.gm(128)</code> picks an instrument by its standard number, or <code>.gm("violin")</code> by name.</p>`,
       { exercise: {
         task: "Write <code>voice beat</code> as four evenly spaced sounds in the bar: the sample <code>\"bd_haus\"</code> first and third, and <code>\"sn_dolf\"</code> second and fourth.",
         starter: `voice beat = ["bd_haus"]`, solution: `voice beat = ["bd_haus" "sn_dolf" "bd_haus" "sn_dolf"]`,
@@ -547,7 +548,7 @@ export const LESSONS: Lesson[] = [
       `<p>This piece has a beginning and an end (this page starts it over when it finishes). Top-level voices loop forever, which suits playing live. For a finished piece, group voices into <b>sections</b>, each an indented block with a length in bars, and list the order to play them on a <b>form</b> line. It is twelve bars: four of verse, four of chorus, four of verse. The names are yours. Verse and chorus are the usual words for a song's main part and the part it keeps returning to.</p>`,
       `<p>Voices outside any section play throughout, as the drums do here. A section can set its own tempo and key, as the chorus does with its tempo. At the start of each section every pattern starts from its beginning, so every verse opens the same way, though random choices still differ between repeats. Change the form line to <code>form verse*2 chorus verse</code>: <code>*2</code> plays a section twice, and the piece grows to sixteen bars.</p>`,
       `<p>Section names follow the rule from lesson 1: <code>a</code>, <code>b</code> or <code>b2</code> are notes, so they cannot name a section.</p>`,
-      `<p>From the command line, <code>tine render piece.tine</code> writes an audio file (WAV), <code>tine midi piece.tine</code> a file of notes that other music software can open (MIDI, lesson 16), and <code>tine pack piece.tine</code> a single HTML file that plays the piece anywhere.</p>`,
+      `<p>From the command line, <code>tine render piece.tine</code> writes an audio file (WAV), <code>tine midi piece.tine</code> a file of notes that other music software can open (MIDI, lesson 17), and <code>tine pack piece.tine</code> a single HTML file that plays the piece anywhere.</p>`,
       { exercise: {
         task: "Finish this piece. Add a second section that contains at least one voice, and make the form play at least three sections in total, using both.",
         starter: "tempo 100\nkey d minor\n\nvoice drums = {[kick . snare .] [hat*8]}\n\nsection verse 2\n  voice bass = [^1 . ^1 ^5].octave(-2).inst(bass)\n\nform verse",
@@ -572,7 +573,42 @@ export const LESSONS: Lesson[] = [
   },
   // ------------------------------------------------------------------
   {
-    id: "live", title: "16. Performing live",
+    id: "paper", title: "16. Sheet music and chord charts",
+    parts: [
+      { code: `tempo 100\nkey c major\n\nvoice keys = changes("Cmaj7 | A7 | Dm7 G7 | Cmaj7").inst(keys)\nvoice tune = [e5 . g5 _ a5 g5 e5 .].inst(pluck)`, bars: 4, sheet: "chart" },
+      `<p>Under the code is a <b>chord chart</b>: the piece drawn as a grid of bars, four to a line, with the name of the chord that sounds in each bar (chord names are lesson 7). Bar 3 holds two chords, so it is split, Dm7 for its first half and G7 for its second. Change <code>A7</code> to <code>Am7</code> and play: the chart changes with the code. Musicians read charts like this to play along with a song they have not heard, which is what most jazz and pop players are handed at a gig.</p>`,
+      `<p>Tine finds the chords itself. It trusts voices whose notes came from chord names, like <code>changes</code>, <code>c@maj7</code> or <code>^2@7</code>, so the melody's notes never rename a chord. Without those, any voice that plays three or more notes at once is read, and named the simplest way that fits. Spreading a chord out with <code>arp</code> or <code>strum</code> (lesson 7) keeps its name.</p>`,
+      { code: `tempo 100\nkey c major\n\nvoice keys = changes("Cmaj7 | A7 | Dm7 G7 | Cmaj7").inst(keys)\nvoice tune = [e5 . g5 _ a5 g5 e5 .].inst(pluck)`, bars: 4, sheet: "lead" },
+      `<p>The same piece as a <b>lead sheet</b>: the melody written in standard notation with the chord names above it. Tine picks the voice that sounds most like a melody, one note at a time and high up. Here that is <code>tune</code>. The five horizontal lines are the <b>staff</b>. Each line and each gap between lines is one step of the scale, higher on the page is higher in pitch, and the curl at the start (the <b>treble clef</b>) fixes the bottom line as e4. A note's shape gives its length in the words of lesson 2. A filled head with a stem is a quarter note, a filled head joined to its neighbours by a thick bar (a <b>beam</b>) is an eighth note, a hollow head is a half note, and the zigzags and small hooks are rests of the same lengths. Change <code>g5 _</code> to <code>g5 g5</code> and the quarter note becomes two eighths.</p>`,
+      { code: `tempo 96\nkey a minor\n\nvoice drums = {[kick . snare .] [hat*8]}\nvoice bass  = [a2 . a2 e2 . . g2 .].inst(bass)\nvoice keys  = <a3@m7 d3@m7>.inst(keys)`, bars: 2, sheet: "score" },
+      `<p>A <b>score</b> gives every voice its own staff, bar for bar, which is what a band reads from. Low voices get the <b>bass clef</b> (the curl with two dots), which shifts the lines down so the bass does not need a ladder of extra lines. Drums get a percussion staff: each line is a drum rather than a pitch, and cymbals such as the hi-hat are drawn as crosses. The <code>key a minor</code> line shows up as the key signature, the sharps or flats just after the clef. A minor has none.</p>`,
+      `<p>From the command line, <code>tine chart piece.tine</code>, <code>tine lead piece.tine</code> and <code>tine score piece.tine</code> each write a page you can open in a browser, print or save as a PDF. A section that plays several times is printed once, with repeat signs or a "Form" line giving the order. <code>--jazz</code> writes chord names the way jazz charts do, C–7 for Cm7 and CΔ7 for Cmaj7. In the DAW, the <b>Sheet</b> tab shows all three for whatever you last evaluated.</p>`,
+      { exercise: {
+        task: "Write the code whose chord chart reads, one bar each: <b>Fmaj7 | Bb7 | Gm7 C7 | Fmaj7</b>. The third bar holds two chords, half a bar each. Any voice and any way of naming the chords counts.",
+        starter: `voice keys = changes("Fmaj7 | Bb7 | Gm7 | C7").inst(keys)`,
+        solution: `voice keys = changes("Fmaj7 | Bb7 | Gm7 C7 | Fmaj7").inst(keys)`,
+        bars: 4, sheet: "chart",
+        hint: "In <code>changes</code>, a <code>|</code> ends a bar, and chords written in the same bar share it equally.",
+        alsoRight: ["voice k = <f3@maj7 bb3@7 [g3@m7 c4@7] f3@maj7>", "key f major\nvoice k = changes(\"Fmaj7 | Bb7 | Gm7 C7 | Fmaj7\").strum"],
+        wrong: [`voice keys = changes("Fmaj7 | Bb7 | Gm7 | C7")`, `voice keys = changes("Fmaj7 | Bbmaj7 | Gm7 C7 | Fmaj7")`, `voice keys = changes("Fmaj7 | Bb7 | C7 Gm7 | Fmaj7")`, `voice keys = changes("Fmaj7 Bb7 | Gm7 C7")`],
+        check: (s) => {
+          const want = ["Fmaj7", "Bb7", "Gm7 C7", "Fmaj7"];
+          let got: string[];
+          try {
+            got = buildChart(s, "", { bars: 4 }).sections.flatMap(x => x.bars).map(b => b.nc ? "N.C." : b.chords.map(c => { const t = chordText(c, true); return (t.root + t.quality + (t.bass ? "/" + t.bass : "")).replace(/♭/g, "b").replace(/♯/g, "#"); }).join(" "));
+          } catch (e) { return (e as Error).message; }
+          for (let i = 0; i < 4; i++) {
+            const g = got[i] || "nothing";
+            if (g !== want[i]) return `Bar ${i + 1} of the chart reads ${g}; it should read ${want[i]}.`;
+          }
+          return null;
+        },
+      } },
+    ],
+  },
+  // ------------------------------------------------------------------
+  {
+    id: "live", title: "17. Performing live",
     parts: [
       { code: `voice drums = {[kick . snare .] [hat*8]}\nvoice lead  = [e5 . g5 a5].inst(pluck)  -- change a note while this plays` },
       `<p>Press play. While it runs, change <code>g5</code> to <code>b5</code> and press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>. The new line takes over at the next bar line and the drums never stumble. (A line or the end of a line starting <code>--</code> is a comment.) Changing a program while it plays is <b>live coding</b>, and the rest of this lesson is about the program built for it.</p>`,
