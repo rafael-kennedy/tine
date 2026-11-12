@@ -48,6 +48,11 @@ export class Engine {
 
   constructor() {
     this.ctx = new AudioContext({ latencyHint: "interactive" });
+    // iOS suspends or "interrupts" the context when the app goes to the
+    // background or a call comes in; pick up again when the page is back.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && this.started && this.ctx.state !== "running") this.ctx.resume().catch(() => {});
+    });
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.9;
     const comp = this.ctx.createDynamicsCompressor();
@@ -69,7 +74,8 @@ export class Engine {
   }
 
   get now() { return this.ctx.currentTime; }
-  async resume() { await this.ready; if (this.ctx.state !== "running") await this.ctx.resume(); }
+  private started = false;
+  async resume() { await this.ready; this.started = true; if (this.ctx.state !== "running") await this.ctx.resume(); }
 
   // ---------- effects worklet (see bus-worklet.ts) ----------
   // When it loads, every voice's effects and the shared reverb run on the

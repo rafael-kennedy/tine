@@ -3,6 +3,7 @@ import { randomSeed, VERSION } from "../core";
 import { CSS, LOGO_SVG } from "./theme";
 import { LESSONS, Lesson, Cell, Exercise } from "./lessons";
 import { h, store, makeCell, makeExercise, stopAll, CELL_CSS } from "./cells";
+import { TOUCH_CSS, setupMobile, keyBar, focusedEditor } from "./mobile";
 
 const LEARN_CSS = `
 body{min-height:100vh}
@@ -26,7 +27,9 @@ article p,article li{font-size:16px;line-height:1.65}
 .ref h3{margin-top:22px;text-transform:capitalize}
 article pre.static{font-family:var(--mono);font-size:14px;line-height:1.5;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;overflow:auto;color:var(--mute)}
 article table.ref{margin:8px 0 14px}
-@media (max-width: 800px){ .wrap{grid-template-columns:1fr} nav{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)} article{padding:20px 16px 80px} }
+@media (max-width: 800px){ .wrap{grid-template-columns:1fr} nav{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)} article{padding:20px 16px 80px} nav .lessons{display:none} nav.open .lessons{display:block} }
+nav .toggle{display:none}
+@media (max-width: 800px){ nav .toggle{display:inline-block;margin-left:10px} }
 `;
 
 let seed = Number(store.get("learn.seed")) || randomSeed();
@@ -103,12 +106,16 @@ function renderPage() {
 }
 
 function main() {
-  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + LEARN_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + LEARN_CSS + TOUCH_CSS; document.head.append(style);
+  setupMobile();
   const logo = h("a", { class: "logo", href: "#intro" }); logo.innerHTML = LOGO_SVG + "tine";
   const reroll = h("button", { class: "small", onclick: () => { seed = randomSeed(); seedLabel.textContent = String(seed); store.set("learn.seed", String(seed)); stopAll(); document.querySelectorAll(".cell").forEach(c => c.dispatchEvent(new Event("tine:recompile"))); } }, "🎲 new seed");
-  const nav = h("nav", {}, logo, navEl, h("div", { class: "seedbox" }, "seed ", seedLabel, " ", reroll, h("p", {}, `Tine ${VERSION}`)));
+  const toggle = h("button", { class: "small toggle", onclick: () => nav.classList.toggle("open") }, "lessons");
+  navEl.className = "lessons";
+  const nav = h("nav", {}, h("div", {}, logo, toggle), navEl, h("div", { class: "seedbox" }, "seed ", seedLabel, " ", reroll, h("p", {}, `Tine ${VERSION}`)));
   document.body.append(h("div", { class: "wrap" }, nav, h("article")));
-  window.addEventListener("hashchange", renderPage);
+  window.addEventListener("hashchange", () => { nav.classList.remove("open"); renderPage(); });
+  keyBar({ view: focusedEditor, onlyWhenFocused: true, runLabel: "▶ play", onRun: v => (v.dom.closest(".cell")?.querySelector("button.primary") as HTMLButtonElement | null)?.click(), onStop: () => stopAll() });
   renderPage();
 }
 main();

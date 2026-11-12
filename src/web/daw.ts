@@ -11,6 +11,7 @@ import { findToggles, toggleEdits, comboOf, hasModifier, describe as describeBin
 import { Roll } from "./roll";
 import { CSS, LOGO_SVG } from "./theme";
 import { captureToCode, Captured } from "./capture";
+import { TOUCH_CSS, setupMobile, keyBar } from "./mobile";
 
 const DEFAULT_CODE = `-- Welcome to the Tine DAW.
 -- Ctrl/Cmd+Enter evaluates (changes land on the next bar). Ctrl/Cmd+. stops.
@@ -109,7 +110,8 @@ body.dragging .drop{border-color:var(--brass);color:var(--text)}
 `;
 
 export async function startDaw() {
-  const style = document.createElement("style"); style.textContent = CSS + DAW_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + DAW_CSS + TOUCH_CSS; document.head.append(style);
+  setupMobile();
   const engine = new Engine();
   const transport = new Transport(engine);
   let fileInfo: { path: string; name: string; content: string } | null = null;
@@ -184,6 +186,7 @@ export async function startDaw() {
     onEval: () => run(true), onStop: () => stop(), onSave: () => save(),
     onChange: d => { store.set("tine.code", d); scheduleLive(); },
   });
+  keyBar({ view: () => view, onRun: () => run(true), onStop: () => stop() });
   const code = () => view.state.doc.toString();
   const setCode = (s: string) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: s } });
 
