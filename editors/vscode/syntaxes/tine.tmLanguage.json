@@ -67,7 +67,7 @@
     },
     {
       "name": "keyword.other.directive.tine",
-      "match": "^\\s*(tempo|meter|key|seed|tuning|form|use)\\b"
+      "match": "^\\s*(form|tempo|meter|key|seed|tuning|use)\\b"
     },
     {
       "name": "constant.language.boolean.tine",
@@ -95,11 +95,11 @@
     },
     {
       "name": "support.type.scale.tine",
-      "match": "\\b(phrygian_dominant|lydian_augmented|double_harmonic|lydian_dominant|harmonic_minor|bebop_dominant|melodic_minor|mixolydian_b6|bohlen_pierce|locrian_nat2|bebop_dorian|major_blues|bebop_major|mixolydian|major_pent|minor_pent|whole_tone|half_whole|whole_half|just_major|chromatic|hirajoshi|dorian_b2|augmented|phrygian|aeolian|locrian|altered|slendro|upright|ionian|dorian|lydian|square|major|minor|blues|pluck|organ|vibes|keys|sine|bass|bell|lead|tri|saw|pad|kit)\\b"
+      "match": "\\b(phrygian_dominant|lydian_augmented|double_harmonic|lydian_dominant|harmonic_minor|bebop_dominant|melodic_minor|mixolydian_b6|bohlen_pierce|locrian_nat2|bebop_dorian|major_blues|bebop_major|mixolydian|major_pent|minor_pent|whole_tone|half_whole|whole_half|just_major|chromatic|hirajoshi|dorian_b2|augmented|phrygian|supersaw|aeolian|locrian|altered|slendro|upright|strings|marimba|ionian|dorian|lydian|square|wobble|major|minor|blues|pluck|organ|vibes|synth|tb303|reese|brass|noise|keys|sine|bass|bell|lead|chip|tri|saw|pad|kit|fm)\\b"
     },
     {
       "name": "support.function.builtin.tine",
-      "match": "\\b(palindrome|scala_file|sometimes|transpose|voicelead|humanize|scramble|rand_int|weighted|note_num|bassnote|rootless|interval|arrange|per_bar|degrade|shuffle|degrees|release|sustain|program|changes|euclid|evolve|rarely|chance|octave|invert|legato|cutoff|attack|reverb|sample|square|filter|concat|repeat|rotate|within|drop24|early|every|swing|stack|trunc|often|maybe|chord|strum|pitch|ratio|scale|cents|scala|decay|drive|delay|as_cc|noise|drift|range|floor|round|clamp|print|tones|shell|guide|drop2|drop3|fast|slow|late|iter|echo|poly|loop|dice|walk|rand|pick|step|just|mode|gain|inst|midi|held|sine|fold|take|drop|ceil|sqrt|log2|lerp|type|root|name|rev|off|ply|cat|seq|key|arp|edo|vel|pan|res|hpf|lpf|dur|set|ctl|mpe|tri|saw|seg|run|len|map|sum|abs|sin|cos|exp|min|max|str|hz|cc|at)\\b(?=\\s*\\(|)"
+      "match": "\\b(palindrome|scala_file|sometimes|transpose|soundfont|voicelead|humanize|scramble|rand_int|weighted|note_num|compress|bassnote|rootless|interval|arrange|per_bar|degrade|shuffle|degrees|release|sustain|vibrato|samples|program|changes|euclid|evolve|rarely|chance|octave|invert|legato|cutoff|attack|reverb|detune|unison|wobble|coarse|chorus|phaser|sample|loopAt|splice|square|filter|concat|repeat|rotate|within|drop24|early|every|swing|stack|trunc|often|maybe|chord|strum|pitch|ratio|scale|cents|scala|decay|drive|delay|glide|vowel|crush|begin|speed|accel|slice|as_cc|noise|drift|range|floor|round|clamp|print|tones|shell|guide|drop2|drop3|fast|slow|late|iter|echo|poly|loop|dice|walk|rand|pick|step|just|mode|gain|wave|fenv|ring|room|duck|inst|chop|dirt|midi|held|sine|fold|take|drop|ceil|sqrt|log2|lerp|type|root|name|rev|off|ply|cat|seq|key|arp|edo|vel|pan|res|hpf|lpf|sub|dur|set|end|cut|ctl|mpe|tri|saw|seg|run|len|map|sum|abs|sin|cos|exp|min|max|str|hz|pw|fm|gm|cc|at)\\b(?=\\s*\\(|)"
     },
     {
       "name": "keyword.operator.chord.tine",

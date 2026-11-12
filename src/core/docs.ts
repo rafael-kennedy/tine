@@ -25,6 +25,7 @@ export function describeWord(word: string): string | null {
     seed: "seed n\nFreeze all randomness so the piece replays exactly.",
     meter: "meter 7/8\nBeats per bar and beat unit.",
     tuning: "tuning 432\nFrequency of A4 in Hz.",
+    use: "use \"other.tine\"\nRun another file here (its lets and voices become available).",
   };
   return k[word] ?? null;
 }

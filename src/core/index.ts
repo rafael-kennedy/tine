@@ -9,7 +9,7 @@ export * from "./values";
 export * from "./interp";
 export * from "./builtins";
 export * from "./scene";
-export const VERSION = "1.3.1";
+export { VERSION } from "./version";
 export * from "./synth";
 export * from "./render";
 export * from "./docs";
