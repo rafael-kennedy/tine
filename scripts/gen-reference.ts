@@ -1,6 +1,7 @@
 import { writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { builtinList, SCALES, DRUMS, CHORDS, INSTRUMENT_DOCS, parseQuality } from "../src/core";
+export function referenceMarkdown(): string {
 const head = readFileSync(join(import.meta.dir, "../docs/reference-head.md"), "utf8");
 let out = head + "\n## Built-in functions\n\nAny function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. With no other arguments the parentheses are optional: `p.rev`.\n";
 const byCat = new Map<string, ReturnType<typeof builtinList>>();
@@ -19,5 +20,10 @@ out += `\n## Drums\n\n| Name | General MIDI note |\n| --- | --- |\n`;
 for (const [k, v] of Object.entries(DRUMS)) out += `| \`${k}\` | ${v} |\n`;
 out += `\n## Instruments\n\n| Name | Sound |\n| --- | --- |\n`;
 for (const [k, v] of Object.entries(INSTRUMENT_DOCS)) out += `| \`${k}\` | ${v} |\n`;
-writeFileSync(join(import.meta.dir, "../docs/REFERENCE.md"), out);
-console.log("docs/REFERENCE.md written");
+return out;
+}
+
+if (import.meta.main) {
+  writeFileSync(join(import.meta.dir, "../docs/REFERENCE.md"), referenceMarkdown());
+  console.log("docs/REFERENCE.md written");
+}
