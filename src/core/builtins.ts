@@ -113,7 +113,7 @@ def("off", "off(p, t, f)", "Layer p with a copy shifted by t bars and transforme
 def("echo", "echo(p, times: 3, time: 1/8, decay: 0.6)", "Repeat each event, quieter each time.", cat.time, ([p, times, time, decay], named) => {
   const k = Math.round(N(named.times ?? times, 3)), dt = RR(named.time ?? time ?? new R(1, 8)), dc = N(named.decay ?? decay, 0.6);
   const q = P(p); const layers = [q];
-  for (let i = 1; i <= k; i++) layers.push(mapEv(shift(dt.mul(new R(i)), q), ev => ({ ...ev, p: { ...ev.p, vel: (ev.p.vel ?? 0.8) * Math.pow(dc, i) } })));
+  for (let i = 1; i <= k; i++) layers.push(mapEv(shift(dt.mul(new R(i)), q), ev => ({ ...ev, p: { ...ev.p, vel: (ev.p.vel ?? 0.8) * Math.pow(dc, i), echo: i } })));
   return stack(layers);
 });
 def("ply", "ply(p, n)", "Repeat each event n times within its own length. n may be a pattern.", cat.time, ([p, n]) => {
@@ -352,7 +352,7 @@ def("strum", "strum(p, spread: 1/48)", "Roll each chord's notes, low to high, `s
     if (!(ev.v instanceof Chord)) return ev.s.ge(a) && ev.s.lt(b) ? [ev] : [];
     const key = ev.p.key ?? ctx.key;
     const notes = [...ev.v.notes].sort((x, y) => semisOf(x, key)[0] - semisOf(y, key)[0]);
-    return notes.map((nt, i) => { const s = ev.s.add(d.mul(new R(i))); return { s, e: ev.e, v: nt, p: chordRel(ev.v, nt, key, ev.p) }; }).filter(e => e.s.ge(a) && e.s.lt(b));
+    return notes.map((nt, i) => { const s = ev.s.add(d.mul(new R(i))); const p = chordRel(ev.v, nt, key, ev.p); return { s, e: ev.e, v: nt, p: i ? { ...p, strum: d.mul(new R(i)) } : p }; }).filter(e => e.s.ge(a) && e.s.lt(b));
   }));
 });
 def("hz", "hz(pitch)", "Frequency of a pitch in Hz (at the current tuning).", cat.pitch, ([p], _n, call) => (p instanceof Pitch ? p : new Pitch(N(p))).freq(call.interp.scene.tuningRef));

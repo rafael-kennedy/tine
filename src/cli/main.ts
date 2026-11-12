@@ -4,7 +4,7 @@
 // language server, so a performer installs exactly one thing.
 import { readFileSync, writeFileSync, existsSync, watch, statSync, readdirSync } from "node:fs";
 import { resolve, dirname, basename, extname, join } from "node:path";
-import { evaluate, formatError, renderNotes, toMidiFile, toMusicXml, buildChart, chartHtml, chartPages, Paper, randomSeed, VERSION, timeline, pitchName, keySpelling, Scene, TineError, lineCol } from "../core";
+import { evaluate, formatError, renderNotes, toMidiFile, toMusicXml, buildChart, chartHtml, chartPages, Paper, buildScore, scoreHtml, scorePages, randomSeed, VERSION, timeline, pitchName, keySpelling, Scene, TineError, lineCol } from "../core";
 import { repl } from "./repl";
 import { renderToWav, playWav, openBrowser, loadSamples, bundledPack, fetchNeeded } from "./audio";
 import { dirtSender, dirtMode } from "./dirt";
@@ -26,6 +26,8 @@ usage:
   tine midi <file> [-o out.mid]     export a Standard MIDI File
   tine xml <file> [-o out.musicxml] export a score for MuseScore, Dorico, Sibelius
   tine chart <file> [-o out.html]   a chord chart to view and print (.svg also works)
+  tine lead <file> [-o out.html]    a lead sheet: melody, chord symbols, sections
+  tine score <file> [-o out.html]   sheet music: every voice on its own staff
   tine check <file>            report problems (exit code 1 if any)
   tine roll <file> [--bars N]  draw the piece as a piano roll in the terminal
   tine daw [file]              open the live-coding DAW in your browser
@@ -51,7 +53,10 @@ chart and score options:
   --jazz       jazz chord symbols: C-7, CΔ7, Cø7, C°7
   --a4         A4 paper (default US letter)
   --voices a,b read the chords from these voices only
-  --per-line N bars to a line (default 4)
+  --per-line N bars to a line (default 4 in charts and lead sheets)
+  --melody v   lead sheet: the voice to write as the melody (default: guessed)
+  --parts a,b  score: which voices, in this order (default all)
+  --no-chords  score: leave out chord symbols
 `;
 
 function args() {
@@ -59,7 +64,7 @@ function args() {
   const flags: Record<string, string | boolean> = {};
   const pos: string[] = [];
   for (let i = 0; i < a.length; i++) {
-    if (a[i].startsWith("--")) { const k = a[i].slice(2); const nxt = a[i + 1]; if (nxt !== undefined && !nxt.startsWith("-") && !["exe", "help", "version", "no-open", "jazz", "a4"].includes(k)) { flags[k] = nxt; i++; } else flags[k] = true; }
+    if (a[i].startsWith("--")) { const k = a[i].slice(2); const nxt = a[i + 1]; if (nxt !== undefined && !nxt.startsWith("-") && !["exe", "help", "version", "no-open", "jazz", "a4", "no-chords"].includes(k)) { flags[k] = nxt; i++; } else flags[k] = true; }
     else if (a[i] === "-o") { flags.o = a[++i]; }
     else if (a[i] === "-h") flags.help = true;
     else pos.push(a[i]);
@@ -150,6 +155,26 @@ async function main() {
         console.log(`wrote ${out}: ${n} bars${chart.voices.length ? `, chords from ${chart.voices.join(", ")}` : ""}  ${dim("(open it in a browser to view or print)")}`);
       }
       if (!chart.voices.length) console.error(yellow("warning: no chords found. Chords come from chord symbols (changes(), ^1@7, c@maj7) or voices that play three notes at once; --voices picks them."));
+      return;
+    }
+    case "lead": case "score": {
+      const { scene } = load(pos[0], flags);
+      const title = basename(pos[0], ".tine");
+      const list = (k: string) => typeof flags[k] === "string" ? (flags[k] as string).split(",").map(s => s.trim()) : undefined;
+      const score = buildScore(scene, title, cmd, { bars, melody: flags.melody as string | undefined, voices: list("parts"), chordVoices: list("voices"), chords: !flags["no-chords"] });
+      for (const v of [...(list("parts") ?? []), ...(flags.melody ? [flags.melody as string] : [])]) if (!score.parts.some(p => p.name === v)) console.error(yellow(`warning: no notes from a voice named '${v}'`));
+      const draw = { paper: (flags.a4 ? "a4" : "letter") as Paper, style: flags.jazz ? "jazz" as const : "plain" as const, perLine: flags["per-line"] ? parseInt(flags["per-line"] as string, 10) : undefined };
+      const out = outName(pos[0], `.${cmd}.html`, flags);
+      if (extname(out) === ".svg") {
+        const pages = scorePages(score, draw);
+        const names = pages.length === 1 ? [out] : pages.map((_, i) => out.replace(/\.svg$/, `-${i + 1}.svg`));
+        pages.forEach((p, i) => writeFileSync(names[i], p));
+        console.log(`wrote ${names.join(", ")}`);
+      } else {
+        writeFileSync(out, scoreHtml(score, draw));
+        console.log(`wrote ${out}: ${score.measures.length} bars, ${cmd === "lead" ? `melody from ${score.parts[0]?.name ?? "(none)"}` : `${score.parts.length} staves`}  ${dim("(open it in a browser to view or print)")}`);
+      }
+      if (cmd === "lead" && !score.parts.length) console.error(yellow("warning: no melody found; name one with --melody"));
       return;
     }
     case "play": {

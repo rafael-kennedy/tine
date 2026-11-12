@@ -24,3 +24,4 @@ export * from "./sf2";
 export * from "./chart";
 export * from "./page";
 export * from "./chartsvg";
+export * from "./notation";

@@ -10,7 +10,7 @@ export interface ChartDrawOptions { paper?: Paper; perLine?: number; style?: Sym
 const ROOT = 21, QUAL = 13.5, BASS = 17, H = 40, ROW = 62, MARK = 24;
 const INK = "#111", SOFT = "#666";
 
-function symbol(c: ChartChord, x: number, y: number, flats: boolean, style: SymbolStyle, scale: number) {
+export function symbol(c: ChartChord, x: number, y: number, flats: boolean, style: SymbolStyle, scale: number) {
   const t = chordText(c, flats, style);
   const r = ROOT * scale, q = QUAL * scale, b = BASS * scale, up = 7.5 * scale;
   let s = `<text x="${fmt(x)}" y="${fmt(y)}" font-size="${fmt(r)}" font-weight="600" fill="${INK}">${esc(t.root)}`;
@@ -18,18 +18,24 @@ function symbol(c: ChartChord, x: number, y: number, flats: boolean, style: Symb
   if (t.bass) s += `<tspan font-size="${fmt(b)}" dy="${fmt(t.quality ? up : 0)}">/${esc(t.bass)}</tspan>`;
   return s + `</text>`;
 }
-function symbolWidth(c: ChartChord, flats: boolean, style: SymbolStyle, scale: number) {
+export function symbolWidth(c: ChartChord, flats: boolean, style: SymbolStyle, scale: number) {
   const t = chordText(c, flats, style);
   return (textWidth(t.root, ROOT, true) + textWidth(t.quality, QUAL) + (t.bass ? textWidth("/" + t.bass, BASS) : 0)) * scale;
 }
 
-// a quarter note drawn, not typed: few text faces have a good ♩
-export function crotchet(x: number, y: number, size = 1) {
-  return `<ellipse cx="${fmt(x)}" cy="${fmt(y - 2.4 * size)}" rx="${fmt(3.4 * size)}" ry="${fmt(2.4 * size)}" transform="rotate(-22 ${fmt(x)} ${fmt(y - 2.4 * size)})" fill="${SOFT}"/><line x1="${fmt(x + 3 * size)}" y1="${fmt(y - 3 * size)}" x2="${fmt(x + 3 * size)}" y2="${fmt(y - 13 * size)}" stroke="${SOFT}" stroke-width="${fmt(0.9 * size)}"/>`;
+// the beat note of a tempo mark, drawn, not typed: few text faces have a good ♩
+// unit is the meter's lower number: 2 a half note, 4 a quarter, 8 an eighth
+export function crotchet(x: number, y: number, size = 1, unit = 4) {
+  const cy = y - 2.4 * size, sx = x + 3 * size, top = y - 13 * size;
+  const head = unit === 2
+    ? `<ellipse cx="${fmt(x)}" cy="${fmt(cy)}" rx="${fmt(3.1 * size)}" ry="${fmt(2.1 * size)}" transform="rotate(-22 ${fmt(x)} ${fmt(cy)})" fill="none" stroke="${SOFT}" stroke-width="${fmt(0.9 * size)}"/>`
+    : `<ellipse cx="${fmt(x)}" cy="${fmt(cy)}" rx="${fmt(3.4 * size)}" ry="${fmt(2.4 * size)}" transform="rotate(-22 ${fmt(x)} ${fmt(cy)})" fill="${SOFT}"/>`;
+  const flag = unit === 8 ? `<path d="M${fmt(sx)} ${fmt(top)} q${fmt(1 * size)} ${fmt(3.5 * size)} ${fmt(4.2 * size)} ${fmt(5.5 * size)} q${fmt(1 * size)} ${fmt(1.5 * size)} ${fmt(0.2 * size)} ${fmt(4 * size)}" fill="none" stroke="${SOFT}" stroke-width="${fmt(1 * size)}"/>` : "";
+  return head + `<line x1="${fmt(sx)}" y1="${fmt(y - 3 * size)}" x2="${fmt(sx)}" y2="${fmt(top)}" stroke="${SOFT}" stroke-width="${fmt(0.9 * size)}"/>` + flag;
 }
-const tempoMark = (x: number, y: number, bpm: number, anchorEnd: boolean, italic = false) => {
+const tempoMark = (x: number, y: number, bpm: number, anchorEnd: boolean, italic = false, unit = 4) => {
   const t = `= ${fmt(bpm)}`, w = textWidth(t, 11.5), x0 = anchorEnd ? x - w - 10 : x;
-  return crotchet(x0 + 3.4, y + 1) + `<text x="${fmt(x0 + 10)}" y="${fmt(y)}" font-size="11.5"${italic ? ' font-style="italic"' : ""} fill="${SOFT}">${t}</text>`;
+  return crotchet(x0 + 3.4, y + 1, 1, unit) + `<text x="${fmt(x0 + 10)}" y="${fmt(y)}" font-size="11.5"${italic ? ' font-style="italic"' : ""} fill="${SOFT}">${t}</text>`;
 };
 const line = (x1: number, y1: number, x2: number, y2: number, w = 1) => `<line x1="${fmt(x1)}" y1="${fmt(y1)}" x2="${fmt(x2)}" y2="${fmt(y2)}" stroke="${INK}" stroke-width="${w}"/>`;
 const dot = (x: number, y: number) => `<circle cx="${fmt(x)}" cy="${fmt(y)}" r="2.2" fill="${INK}"/>`;
@@ -65,7 +71,7 @@ export function chartPages(chart: Chart, opts: ChartDrawOptions = {}): string[] 
     if (first) {
       body += `<text x="${P.w / 2}" y="${M + 26}" font-size="26" text-anchor="middle" fill="${INK}">${esc(chart.title)}</text>`;
       body += `<text x="${M}" y="${M + 52}" font-size="11.5" fill="${SOFT}">${esc(keyLabel(chart.key))}</text>`;
-      body += tempoMark(P.w - M, M + 52, chart.tempo, true);
+      body += tempoMark(P.w - M, M + 52, chart.tempo, true, false, chart.meter[1]);
       y = M + 64;
       if (chart.roadmap) {
         body += `<text x="${P.w / 2}" y="${y + 6}" font-size="11.5" font-style="italic" text-anchor="middle" fill="${SOFT}">Form: ${esc(chart.roadmap.join(" · "))}</text>`;
@@ -99,7 +105,7 @@ export function chartPages(chart: Chart, opts: ChartDrawOptions = {}): string[] 
         }
         const notes = [sec.keyChanged ? keyLabel(sec.key) : "", sec.empty ? "no chords" : ""].filter(Boolean).join(" · ");
         if (notes) { body += `<text x="${fmt(x)}" y="${y + 12}" font-size="11.5" font-style="italic" fill="${SOFT}">${esc(notes)}</text>`; x += textWidth(notes, 11.5) + 14; }
-        if (sec.tempoChanged) body += tempoMark(x, y + 12, sec.tempo, false, true);
+        if (sec.tempoChanged) body += tempoMark(x, y + 12, sec.tempo, false, true, chart.meter[1]);
         if (sec.times > 2) body += `<text x="${fmt(M + W)}" y="${y + 12}" font-size="12" font-weight="600" text-anchor="end" fill="${INK}">×${sec.times}</text>`;
         y += MARK;
       }
