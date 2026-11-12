@@ -1,0 +1,129 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Tine",
+  "scopeName": "source.tine",
+  "fileTypes": [
+    "tine"
+  ],
+  "patterns": [
+    {
+      "name": "entity.name.tag.toggle.tine",
+      "match": "--\\s*@[A-Za-z0-9_]+\\s*$"
+    },
+    {
+      "name": "comment.line.double-dash.tine",
+      "match": "--.*$"
+    },
+    {
+      "name": "string.quoted.double.tine",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.tine",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "match": "^\\s*(?:(active)\\s+)?(voice|section)\\s+([A-Za-z_][A-Za-z0-9_#]*)",
+      "captures": {
+        "1": {
+          "name": "storage.modifier.tine"
+        },
+        "2": {
+          "name": "keyword.declaration.tine"
+        },
+        "3": {
+          "name": "entity.name.section.tine"
+        }
+      }
+    },
+    {
+      "match": "^\\s*(let)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\()",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration.tine"
+        },
+        "2": {
+          "name": "entity.name.function.tine"
+        }
+      }
+    },
+    {
+      "match": "^\\s*(let)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": {
+          "name": "keyword.declaration.tine"
+        },
+        "2": {
+          "name": "variable.other.definition.tine"
+        }
+      }
+    },
+    {
+      "name": "keyword.control.tine",
+      "match": "\\b(if|then|else|and|or|not)\\b"
+    },
+    {
+      "name": "keyword.other.directive.tine",
+      "match": "^\\s*(form|tempo|meter|key|seed|tuning|use)\\b"
+    },
+    {
+      "name": "constant.language.boolean.tine",
+      "match": "\\b(true|false|silence)\\b"
+    },
+    {
+      "name": "constant.other.degree.tine",
+      "match": "\\^(#|b)*-?\\d+"
+    },
+    {
+      "name": "constant.other.note.tine",
+      "match": "\\b[A-Ga-g](#|b)*\\d?(?![A-Za-z0-9_#])"
+    },
+    {
+      "name": "constant.numeric.tine",
+      "match": "\\b\\d+(\\.\\d+)?(hz|c(?![A-Za-z0-9_])|\\\\\\d+)?"
+    },
+    {
+      "name": "constant.numeric.tine",
+      "match": "(?<![A-Za-z0-9_\\)\\]])\\.\\d+"
+    },
+    {
+      "name": "support.constant.drum.tine",
+      "match": "\\b(ridebell|cowbell|snare2|splash|crash2|bongo2|conga2|shaker|kick2|snare|pedal|crash|china|ride2|bongo|conga|clave|block|kick|clap|tom1|tom2|tom3|ohat|tom4|tom5|tom6|ride|tamb|rim|hat)\\b"
+    },
+    {
+      "name": "support.type.scale.tine",
+      "match": "\\b(phrygian_dominant|lydian_augmented|double_harmonic|lydian_dominant|harmonic_minor|bebop_dominant|melodic_minor|mixolydian_b6|bohlen_pierce|locrian_nat2|bebop_dorian|major_blues|bebop_major|mixolydian|major_pent|minor_pent|whole_tone|half_whole|whole_half|just_major|chromatic|hirajoshi|dorian_b2|augmented|phrygian|supersaw|aeolian|locrian|altered|slendro|upright|strings|marimba|ionian|dorian|lydian|square|wobble|major|minor|blues|pluck|organ|vibes|synth|tb303|reese|brass|noise|keys|sine|bass|bell|lead|chip|tri|saw|pad|kit|fm)\\b"
+    },
+    {
+      "name": "support.function.builtin.tine",
+      "match": "\\b(palindrome|scala_file|sometimes|transpose|soundfont|voicelead|humanize|scramble|rand_int|weighted|note_num|compress|bassnote|rootless|interval|arrange|per_bar|degrade|shuffle|degrees|release|sustain|vibrato|samples|program|changes|euclid|evolve|rarely|chance|octave|invert|legato|cutoff|attack|reverb|detune|unison|wobble|coarse|chorus|phaser|sample|loopAt|splice|square|filter|concat|repeat|rotate|within|drop24|early|every|swing|stack|trunc|often|maybe|chord|strum|pitch|ratio|scale|cents|scala|decay|drive|delay|glide|vowel|crush|begin|speed|accel|slice|as_cc|noise|drift|range|floor|round|clamp|print|tones|shell|guide|drop2|drop3|fast|slow|late|iter|echo|poly|loop|dice|walk|rand|pick|step|just|mode|gain|wave|fenv|ring|room|duck|inst|chop|dirt|midi|held|sine|fold|take|drop|ceil|sqrt|log2|lerp|type|root|name|rev|off|ply|cat|seq|key|arp|edo|vel|pan|res|hpf|lpf|sub|dur|set|end|cut|ctl|mpe|tri|saw|seg|run|len|map|sum|abs|sin|cos|exp|min|max|str|hz|pw|fm|gm|cc|at)\\b(?=\\s*\\(|)"
+    },
+    {
+      "name": "keyword.operator.chord.tine",
+      "match": "@[A-Za-z0-9#+]+(/[A-Ga-g](#|b)?\\d?)?"
+    },
+    {
+      "name": "keyword.operator.arrow.tine",
+      "match": "=>"
+    },
+    {
+      "name": "keyword.operator.phrase.tine",
+      "match": "[|?!_]"
+    },
+    {
+      "name": "keyword.operator.tine",
+      "match": "\\*\\*|==|!=|<=|>=|\\.\\.|[-+*/%=]"
+    },
+    {
+      "name": "punctuation.section.phrase.tine",
+      "match": "[\\[\\]{}<>]"
+    },
+    {
+      "name": "variable.other.tine",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+    }
+  ]
+}

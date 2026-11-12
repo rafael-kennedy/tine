@@ -1,0 +1,91 @@
+<idea-plugin>
+    <id>tine.language</id>
+    <name>Tine</name>
+    <vendor>Tine</vendor>
+    <description><![CDATA[
+<p>Support for <b>Tine</b>, a programming language for music.</p>
+<ul>
+  <li>Highlighting for notes, scale degrees, chord symbols, scales, drums and instruments, with its own color settings page.</li>
+  <li>Completion, hover docs, parameter info, live error checking, go to definition, structure view and formatting from <code>tine lsp</code>, the same language server every Tine editor uses.</li>
+  <li>Run configurations for every <code>tine</code> command: open in the DAW, play, render WAV, export MIDI and MusicXML, score, lead sheet, chord chart, check, piano roll, pack, SuperDirt.</li>
+  <li>A run icon in the gutter, a Tools | Tine menu, file context menu actions, and clickable errors in the run console.</li>
+  <li>Over 250 live templates generated from the standard library, scoped to Tine files.</li>
+  <li>File | New | Tine Piece, line comments, bracket matching and quote pairing.</li>
+</ul>
+<p>Needs the <code>tine</code> command: install Tine.app from the DMG, or put the binary on your PATH, or set it in Settings | Languages &amp; Frameworks | Tine.</p>
+]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lsp</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType name="Tine" implementationClass="tine.intellij.lang.TineFileType" fieldName="INSTANCE"
+                  language="Tine" extensions="tine"/>
+        <lang.parserDefinition language="Tine" implementationClass="tine.intellij.lang.TineParserDefinition"/>
+        <lang.syntaxHighlighterFactory language="Tine" implementationClass="tine.intellij.lang.TineSyntaxHighlighterFactory"/>
+        <colorSettingsPage implementation="tine.intellij.lang.TineColorSettingsPage"/>
+        <lang.commenter language="Tine" implementationClass="tine.intellij.lang.TineCommenter"/>
+        <lang.braceMatcher language="Tine" implementationClass="tine.intellij.lang.TineBraceMatcher"/>
+        <lang.quoteHandler language="Tine" implementationClass="tine.intellij.lang.TineQuoteHandler"/>
+
+        <platform.lsp.serverSupportProvider implementation="tine.intellij.lsp.TineLspServerSupportProvider"/>
+
+        <applicationService serviceImplementation="tine.intellij.settings.TineSettings"/>
+        <applicationConfigurable parentId="language" instance="tine.intellij.settings.TineConfigurable"
+                                 id="tine.settings" displayName="Tine"/>
+        <notificationGroup id="Tine" displayType="BALLOON"/>
+
+        <configurationType implementation="tine.intellij.run.TineRunConfigurationType"/>
+        <runConfigurationProducer implementation="tine.intellij.run.TineRunConfigurationProducer"/>
+        <runLineMarkerContributor language="Tine" implementationClass="tine.intellij.run.TineRunLineMarkerContributor"/>
+
+        <liveTemplateContext contextId="TINE" implementation="tine.intellij.lang.TineTemplateContextType"/>
+        <defaultLiveTemplates file="/liveTemplates/Tine-statements.xml"/>
+        <defaultLiveTemplates file="/liveTemplates/Tine-functions.xml"/>
+        <defaultLiveTemplates file="/liveTemplates/Tine-words.xml"/>
+
+        <internalFileTemplate name="Tine Piece"/>
+    </extensions>
+
+    <actions>
+        <action id="Tine.NewFile" class="tine.intellij.actions.NewTineFileAction"
+                text="Tine Piece" description="Create a new Tine piece" icon="/icons/tine.svg">
+            <add-to-group group-id="NewGroup" anchor="last"/>
+        </action>
+
+        <group id="Tine.Commands" text="Tine" popup="true" icon="/icons/tine.svg">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+            <action id="Tine.Daw" class="tine.intellij.actions.TineDawAction" text="Open in DAW (Live)"
+                    description="Open this piece in the live-coding DAW; it reloads on every save"/>
+            <action id="Tine.Play" class="tine.intellij.actions.TinePlayAction" text="Play"
+                    description="Render and play through your speakers"/>
+            <action id="Tine.Check" class="tine.intellij.actions.TineCheckAction" text="Check"
+                    description="Report problems, including ones that only happen while playing"/>
+            <action id="Tine.Roll" class="tine.intellij.actions.TineRollAction" text="Piano Roll"
+                    description="Draw the piece as a piano roll in the console"/>
+            <separator/>
+            <action id="Tine.Score" class="tine.intellij.actions.TineScoreAction" text="Score"
+                    description="Sheet music, every voice on its own staff"/>
+            <action id="Tine.Lead" class="tine.intellij.actions.TineLeadAction" text="Lead Sheet"
+                    description="Melody, chord symbols and sections"/>
+            <action id="Tine.Chart" class="tine.intellij.actions.TineChartAction" text="Chord Chart"
+                    description="A chord chart to view and print"/>
+            <separator/>
+            <action id="Tine.Render" class="tine.intellij.actions.TineRenderAction" text="Render WAV"
+                    description="Render to a WAV file next to the piece"/>
+            <action id="Tine.Midi" class="tine.intellij.actions.TineMidiAction" text="Export MIDI"
+                    description="Export a Standard MIDI File"/>
+            <action id="Tine.Xml" class="tine.intellij.actions.TineXmlAction" text="Export MusicXML"
+                    description="Export a score for MuseScore, Dorico or Sibelius"/>
+            <action id="Tine.Pack" class="tine.intellij.actions.TinePackAction" text="Pack as HTML Player"
+                    description="One self-contained HTML file that plays the piece"/>
+            <separator/>
+            <action id="Tine.Learn" class="tine.intellij.actions.TineLearnAction" text="Open Tutorial"
+                    description="The interactive Tine tutorial"/>
+            <action id="Tine.Theory" class="tine.intellij.actions.TineTheoryAction" text="Open Theory Course"
+                    description="The jazz-first music theory course"/>
+        </group>
+    </actions>
+</idea-plugin>

@@ -1,0 +1,19 @@
+{
+  "id": "tine",
+  "name": "Tine",
+  "programArgs": {
+    "default": "tine lsp",
+    "windows": "cmd /C tine lsp"
+  },
+  "fileTypeMappings": [
+    {
+      "fileType": {
+        "name": "Tine",
+        "patterns": [
+          "*.tine"
+        ]
+      },
+      "languageId": "tine"
+    }
+  ]
+}
