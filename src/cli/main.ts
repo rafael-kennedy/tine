@@ -8,6 +8,7 @@ import { evaluate, formatError, renderNotes, toMidiFile, toMusicXml, buildChart,
 import { repl } from "./repl";
 import { renderToWav, playWav, openBrowser, loadSamples, bundledPack, fetchNeeded } from "./audio";
 import { dirtSender, dirtMode } from "./dirt";
+import { chooseFile, NoDialog, readRecent, pushRecent, sameOrigin } from "./dialog";
 import { roll } from "./roll";
 import * as assets from "./assets.gen";
 
@@ -236,36 +237,83 @@ voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3 .].every(4, rev).inst(pluck)
 
 async function serve(kind: "daw" | "learn" | "theory", file: string | undefined, flags: Record<string, any>) {
   const port = flags.port ? parseInt(flags.port, 10) : 7357;
-  const path = file ? resolve(file) : undefined;
+  // the piece being edited; Open and New in the DAW switch it (see dialog.ts)
+  let path = file ? resolve(file) : undefined;
   if (path && !existsSync(path)) writeFileSync(path, template(randomSeed()));
-  const sampleDir = (flags.samples as string) ?? (path ? join(dirname(path), "samples") : undefined);
+  const sampleDir = () => (flags.samples as string) ?? (path ? join(dirname(path), "samples") : undefined);
   const listeners = new Set<ReadableStreamDefaultController>();
+  const tell = (msg: object) => { for (const l of listeners) { try { l.enqueue(`data: ${JSON.stringify(msg)}\n\n`); } catch { listeners.delete(l); } } };
   let lastWrite = 0;
-  if (path) {
-    watch(path, () => {
-      if (Date.now() - lastWrite < 400) return; // our own save
-      const content = readFileSync(path, "utf8");
-      for (const l of listeners) { try { l.enqueue(`data: ${JSON.stringify({ content })}\n\n`); } catch { listeners.delete(l); } }
+  let watcher: ReturnType<typeof watch> | null = null;
+  const follow = (p: string) => {
+    watcher?.close();
+    path = p;
+    pushRecent(p);
+    watcher = watch(p, () => {
+      if (Date.now() - lastWrite < 400 || p !== path) return; // our own save
+      tell({ content: readFileSync(p, "utf8") });
     });
-  }
+  };
+  if (path) follow(path);
+  let asking = false; // one dialog at a time
+  const pieceInfo = () => path ? { path, name: basename(path), content: readFileSync(path, "utf8") } : { path: null, content: null };
+  const switchTo = (p: string) => { follow(p); tell({ switched: p }); return Response.json(pieceInfo()); };
+  const pick = async (kind: "open" | "save") => {
+    if (asking) return new Response("a file dialog is already open", { status: 409 });
+    asking = true;
+    try { return await chooseFile(kind, path ? dirname(path) : undefined); }
+    catch (e) { return new Response((e as Error).message, { status: e instanceof NoDialog ? 501 : 500 }); }
+    finally { asking = false; }
+  };
   const dirt = dirtSender(flags.dirt as string | undefined);
   const server = Bun.serve({
     port, hostname: "127.0.0.1",
+    // a file dialog can stay open for minutes, and /api/watch never ends
+    idleTimeout: 0,
     websocket: {
       // notes the DAW routes to SuperDirt with .dirt(): see core/dirt.ts
       message(_ws, m) { try { const { t, note } = JSON.parse(String(m)); dirt.send(note, t); } catch { /* not a note */ } },
     },
     async fetch(req, srv) {
       const url = new URL(req.url);
-      if (url.pathname === "/api/dirt") { if (srv.upgrade(req)) return undefined as any; return new Response("expected a WebSocket", { status: 400 }); }
+      if (url.pathname === "/api/dirt") { if (!sameOrigin(req, server.port!)) return new Response("forbidden", { status: 403 }); if (srv.upgrade(req)) return undefined as any; return new Response("expected a WebSocket", { status: 400 }); }
       if (url.pathname === "/" || url.pathname === "/index.html") return new Response(kind === "learn" ? assets.LEARN_HTML : kind === "theory" ? assets.THEORY_HTML : assets.DAW_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
       if (url.pathname === "/learn") return new Response(assets.LEARN_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
       if (url.pathname === "/theory") return new Response(assets.THEORY_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
       if (url.pathname === "/daw") return new Response(assets.DAW_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
+      if (url.pathname.startsWith("/api/") && !sameOrigin(req, server.port!)) return new Response("forbidden", { status: 403 });
       if (url.pathname === "/api/file") {
-        if (!path) return Response.json({ path: null, content: null });
-        if (req.method === "POST") { const body = await req.text(); lastWrite = Date.now(); writeFileSync(path, body); return Response.json({ ok: true }); }
-        return Response.json({ path, name: basename(path), content: readFileSync(path, "utf8") });
+        if (req.method === "POST") {
+          if (!path) return new Response("no piece is open", { status: 409 });
+          // a tab still showing the previous piece must not write over this one
+          const from = req.headers.get("x-tine-path");
+          if (from && from !== path) return new Response(`the DAW has switched to ${path}; reload this tab`, { status: 409 });
+          const body = await req.text(); lastWrite = Date.now(); writeFileSync(path, body); return Response.json({ ok: true });
+        }
+        return Response.json({ ...pieceInfo(), canOpen: true });
+      }
+      if (url.pathname === "/api/recent") return Response.json(readRecent().filter(p => existsSync(p)));
+      if (url.pathname === "/api/open" && req.method === "POST") {
+        const body = await req.text();
+        if (body) {
+          // only a piece the user opened before: never a path the page made up
+          let want = ""; try { want = String(JSON.parse(body).path ?? ""); } catch { /* */ }
+          if (!readRecent().includes(want) || !existsSync(want)) return new Response("not a recent piece", { status: 403 });
+          return switchTo(want);
+        }
+        const p = await pick("open");
+        if (p instanceof Response) return p;
+        if (!p) return new Response(null, { status: 204 });
+        if (!existsSync(p) || !statSync(p).isFile()) return new Response(`${p} is not a file`, { status: 404 });
+        return switchTo(p);
+      }
+      if (url.pathname === "/api/new" && req.method === "POST") {
+        const p = await pick("save");
+        if (p instanceof Response) return p;
+        if (!p) return new Response(null, { status: 204 });
+        // an existing file is opened, never replaced with the template
+        if (!existsSync(p)) { lastWrite = Date.now(); writeFileSync(p, template(randomSeed())); }
+        return switchTo(p);
       }
       if (url.pathname === "/api/watch") {
         let ctl: ReadableStreamDefaultController;
@@ -274,7 +322,7 @@ async function serve(kind: "daw" | "learn" | "theory", file: string | undefined,
       }
       if (url.pathname === "/tine-samples.tsb") return new Response(bundledPack(), { headers: { "content-type": "application/octet-stream", "cache-control": "max-age=86400" } });
       // the samples folder next to the piece, or a folder named by a samples("...") line
-      const dirOf = () => { const d = url.searchParams.get("dir"); return d ? resolve(path ? dirname(path) : process.cwd(), d) : sampleDir; };
+      const dirOf = () => { const d = url.searchParams.get("dir"); return d ? resolve(path ? dirname(path) : process.cwd(), d) : sampleDir(); };
       if (url.pathname === "/api/samples") {
         const d = dirOf();
         return Response.json(d && existsSync(d) ? listAudio(d) : []);

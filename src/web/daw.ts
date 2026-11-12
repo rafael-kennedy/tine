@@ -113,7 +113,9 @@ export async function startDaw() {
   const engine = new Engine();
   const transport = new Transport(engine);
   let fileInfo: { path: string; name: string; content: string } | null = null;
-  try { const r = await fetch("/api/file"); if (r.ok) { const j = await r.json(); if (j.path) fileInfo = j; } } catch { /* standalone */ }
+  let canOpen = false; // served by tine daw, which can show file dialogs
+  try { const r = await fetch("/api/file"); if (r.ok) { const j = await r.json(); canOpen = !!j.canOpen; if (j.path) fileInfo = j; } } catch { /* standalone */ }
+  if (fileInfo) document.title = `${fileInfo.name} · Tine`;
 
   let seed = Number(store.get("tine.seed")) || randomSeed();
   let lastScene: Scene | null = null;
@@ -131,6 +133,9 @@ export async function startDaw() {
   const rerollBtn = h("button", { class: "small", title: "New seed: re-roll every random choice" }, "🎲 reroll");
   const keepBtn = h("button", { class: "small", title: "Freeze this seed into the code and star the take" }, "★ keep take");
   const saveBtn = h("button", { class: "small", title: "Save (Ctrl/Cmd+S)" }, fileInfo ? `save ${fileInfo.name}` : "save .tine");
+  const openBtn = h("button", { class: "small", title: "Open a piece (Ctrl/Cmd+O)" }, "open");
+  const newBtn = h("button", { class: "small", title: "Start a new piece in a file you name" }, "new");
+  const recentSel = h("select", { class: "small", title: "Pieces opened recently" }, h("option", { value: "" }, "recent…")) as HTMLSelectElement;
   const wavBtn = h("button", { class: "small" }, "export wav");
   const midBtn = h("button", { class: "small" }, "export midi");
   const themeBtn = h("button", { class: "small", title: "Light/dark" }, "◐");
@@ -141,7 +146,7 @@ export async function startDaw() {
     h("div", { class: "grp" }, quant, modeSel),
     h("div", { class: "grp" }, h("span", { class: "dim" }, "seed"), seedEl, rerollBtn, keepBtn),
     h("div", { class: "sep" }),
-    h("div", { class: "grp" }, saveBtn, wavBtn, midBtn, themeBtn),
+    h("div", { class: "grp" }, ...(canOpen ? [openBtn, newBtn, recentSel] : []), saveBtn, wavBtn, midBtn, themeBtn),
   );
 
   const edWrap = h("section", { id: "ed" });
@@ -530,13 +535,56 @@ export async function startDaw() {
     const a = h("a", { href: url, download: name }); document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
+  let savedText = fileInfo?.content ?? null;
+  const dirty = () => savedText !== null && code() !== savedText;
   async function save() {
     if (fileInfo) {
-      try { await fetch("/api/file", { method: "POST", body: code() }); log(`saved ${fileInfo.path}`, "i"); return; } catch { log("save failed; downloading instead", "e"); }
+      try {
+        const text = code();
+        const r = await fetch("/api/file", { method: "POST", body: text, headers: { "x-tine-path": fileInfo.path } });
+        if (r.ok) { savedText = text; log(`saved ${fileInfo.path}`, "i"); return; }
+        log(`not saved: ${await r.text()}`, "e"); return;
+      } catch { log("save failed; downloading instead", "e"); }
     }
     download("piece.tine", code(), "text/plain");
   }
   saveBtn.onclick = save;
+
+  // Open, New and Recent: the server shows the native dialog and switches its
+  // file; this page then reloads so samples, sound fonts and the watcher all
+  // start fresh for the new piece.
+  async function switchPiece(endpoint: "/api/open" | "/api/new", body?: string) {
+    if (dirty() && !confirm(`${fileInfo?.name ?? "This piece"} has unsaved changes. Discard them?`)) return;
+    log(endpoint === "/api/new" ? "choose where to save the new piece…" : "choose a piece to open…", "i");
+    try {
+      const r = await fetch(endpoint, { method: "POST", body: body ?? "" });
+      if (r.status === 204) { log("cancelled", "i"); return; }
+      if (!r.ok) { log(await r.text(), "e"); return; }
+      savedText = null; // nothing left to guard: we are leaving on purpose
+      location.reload();
+    } catch (e) { log(`could not open: ${(e as Error).message}`, "e"); }
+  }
+  openBtn.onclick = () => switchPiece("/api/open");
+  newBtn.onclick = () => switchPiece("/api/new");
+  async function fillRecent() {
+    try {
+      const list: string[] = await (await fetch("/api/recent")).json();
+      recentSel.replaceChildren(h("option", { value: "" }, "recent…"), ...list.filter(p => p !== fileInfo?.path).map(p => h("option", { value: p, title: p }, p.split(/[\\/]/).pop()!)));
+      recentSel.disabled = recentSel.options.length < 2;
+    } catch { /* */ }
+  }
+  recentSel.onchange = () => { const p = recentSel.value; recentSel.value = ""; if (p) switchPiece("/api/open", JSON.stringify({ path: p })); };
+  if (canOpen) {
+    fillRecent();
+    // Cmd/Ctrl+O is ours; Cmd+N belongs to the browser, so New is a button
+    window.addEventListener("keydown", e => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === "o") { e.preventDefault(); switchPiece("/api/open"); }
+      else if (k === "s" && !view.hasFocus) { e.preventDefault(); save(); } // the editor handles its own
+    });
+    window.addEventListener("beforeunload", e => { if (dirty()) { e.preventDefault(); e.returnValue = ""; } });
+  }
   wavBtn.onclick = async () => {
     const s = compile(); if (!s) return;
     log("rendering…", "i");
@@ -593,7 +641,11 @@ export async function startDaw() {
     // the file changed on disk (edited in another editor): reload and re-evaluate
     try {
       const es = new EventSource("/api/watch");
-      es.onmessage = ev => { const { content } = JSON.parse(ev.data); if (content !== code()) { setCode(content); run(false); log("file changed on disk: re-evaluated", "i"); } };
+      es.onmessage = ev => {
+        const m = JSON.parse(ev.data);
+        if (m.switched) { if (m.switched !== fileInfo!.path) log(`another tab opened ${m.switched}; saving here is off until you reload`, "e"); return; }
+        if (m.content !== code()) { setCode(m.content); savedText = m.content; run(false); log("file changed on disk: re-evaluated", "i"); }
+      };
     } catch { /* no SSE */ }
   }
 
@@ -658,7 +710,7 @@ export async function startDaw() {
     h("h4", {}, "keys"),
     (() => {
       const t = h("table", { class: "kb" });
-      for (const [k, d] of [["Ctrl/Cmd + Enter", "evaluate (and play)"], ["Shift + Enter", "evaluate"], ["Ctrl/Cmd + .", "stop"], ["Ctrl/Cmd + S", "save"], ["Ctrl/Cmd + /", "toggle comment"], ["Ctrl + Space", "complete a name"]]) t.append(h("tr", {}, h("td", {}, h("kbd", {}, k)), h("td", {}, d)));
+      for (const [k, d] of [["Ctrl/Cmd + Enter", "evaluate (and play)"], ["Shift + Enter", "evaluate"], ["Ctrl/Cmd + .", "stop"], ["Ctrl/Cmd + S", "save"], ["Ctrl/Cmd + O", "open a piece (tine daw)"], ["Ctrl/Cmd + /", "toggle comment"], ["Ctrl + Space", "complete a name"]]) t.append(h("tr", {}, h("td", {}, h("kbd", {}, k)), h("td", {}, d)));
       return t;
     })(),
     h("h4", {}, "phrases"),

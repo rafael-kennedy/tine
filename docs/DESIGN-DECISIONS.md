@@ -448,3 +448,14 @@ Replaces the lesson list in decision 18. The live cells, the listening checker a
 - **Given up for now:** cross-staff beaming, grand staves for wide piano parts (a wide part gets ledger lines), slurs, dynamics, lyrics, octave transposition marks, and avoiding collisions between voices in one staff beyond stem direction.
 
 - **The tutorial gained lesson 16, "Sheet music and chord charts"**, before "Performing live" (now 17), because it needs chords (7) and sections (15). Its examples draw a chart, a lead sheet and a score under the code, redrawn as the reader edits, and its exercise is checked against the chart Tine draws, not the notes. Staff notation terms (staff, clef, beam, key signature) are defined there in one sentence each, as the tutorial's rules ask. Lesson ids are unchanged, so saved progress survives.
+
+## 48. Opening and creating pieces from the DAW page
+
+The Mac app is a launcher for `tine daw <file>`, so there was no way to reach another piece without a terminal. Open, New and a Recent menu now live in the DAW header whenever `tine daw` serves it.
+
+- **The server shows the native file dialog** (osascript on macOS, zenity or kdialog on Linux, a WinForms dialog through PowerShell on Windows) and switches the file it serves. Considered and rejected: the browser's own file picker, which gives the page a file's contents but never its path, so it cannot save back or watch the file for edits in another editor. Also rejected: a new server per piece, which changes the port and with it the page's origin, so settings kept in the browser reset with each piece.
+- **After a switch the page reloads.** The sample library, the `samples(...)` folders and the SoundFont all depend on the piece's folder, and a reload resets them all at once. The cost: playback stops and the console clears. Opening another piece is a break in the session anyway.
+- **The dialog comes to the front without extra permissions.** On macOS, `tell me to activate` raises osascript's own dialog. Telling the browser or System Events to do it would trigger macOS's Automation permission prompt. Not yet tried on a real Mac.
+- **Only the page itself may call.** Any website can send requests to 127.0.0.1. The file endpoints, and the existing save and SuperDirt endpoints, check that the Host header is ours (which stops DNS rebinding) and that any Origin is ours. Reopening by path accepts only paths on the recent list (`~/.tine/recent.json`, ten entries), and anything else must come from a dialog the user answered.
+- **Unsaved work is guarded.** Open, New and closing the tab ask before dropping unsaved edits. Each save names the file its tab is showing. A second tab still on the previous piece is refused instead of writing over the new one.
+- **New never overwrites.** If the chosen name already exists, that file is opened. Cmd+O opens a piece. Cmd+N belongs to the browser and cannot be taken, so New is a button only.

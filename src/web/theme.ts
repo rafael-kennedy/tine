@@ -31,7 +31,7 @@ button{font:inherit;color:inherit;background:var(--ink3);border:1px solid var(--
 button:hover{border-color:var(--brass)}
 button.primary{background:var(--brass);color:#14161c;border-color:var(--brass);font-weight:600}
 button.on{background:var(--teal);color:#0d1414;border-color:var(--teal)}
-button.small{padding:2px 8px;font-size:12px}
+button.small,select.small{padding:2px 8px;font-size:12px}
 select,input{font:inherit;color:inherit;background:var(--ink3);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
 a{color:var(--teal)}
 code,kbd{font-family:var(--mono);font-size:.9em}

@@ -274,7 +274,7 @@ tine xml <file>           MusicXML score for MuseScore, Dorico, Sibelius, Finale
 tine chart <file>         chord chart, as a printable page (or -o chart.svg)
 tine lead <file>          lead sheet: melody, chord symbols, sections
 tine score <file>         sheet music: every voice on its own staff
-tine daw [file]           live-coding DAW in the browser
+tine daw [file]           live-coding DAW in the browser; open, new and recent pieces in its header
 tine learn                interactive tutorial
 tine pack <file>          single-file HTML player
 tine pack <file> --exe    standalone executable for one piece
