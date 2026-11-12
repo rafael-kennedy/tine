@@ -13,7 +13,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdtempSync, cpSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
 import { referenceMarkdown } from "./gen-reference";
 import { textmateGrammar } from "./grammar";
 import { vimSyntax, emacsMode } from "./gen-editors";
@@ -66,13 +66,21 @@ const SLOW: { name: string; script: string; owns: string[] }[] = [
   ] },
 ];
 
+// A zip's bytes carry timestamps, permissions and entry order that differ between
+// machines, so a zip is compared by its entries' names and contents.
+function digest(abs: string): string {
+  if (!abs.endsWith(".zip")) return Bun.hash(readFileSync(abs)).toString();
+  const names = execFileSync("unzip", ["-Z1", abs], { encoding: "utf8" }).split("\n").filter(Boolean).sort();
+  return Bun.hash(names.map(n => n + "\0" + (n.endsWith("/") ? "" : execFileSync("unzip", ["-p", abs, n], { encoding: "utf8" }))).join("\0")).toString();
+}
+
 function snapshot(dir: string, paths: string[]): Map<string, string> {
   const m = new Map<string, string>();
   const walk = (rel: string) => {
     const abs = join(dir, rel);
     if (!existsSync(abs)) return;
-    if (!statSync(abs).isDirectory()) { m.set(rel, Bun.hash(readFileSync(abs)).toString()); return; }
-    for (const e of new Bun.Glob("**/*").scanSync({ cwd: abs, onlyFiles: true, dot: true })) m.set(join(rel, e), Bun.hash(readFileSync(join(abs, e))).toString());
+    if (!statSync(abs).isDirectory()) { m.set(rel, digest(abs)); return; }
+    for (const e of new Bun.Glob("**/*").scanSync({ cwd: abs, onlyFiles: true, dot: true })) m.set(join(rel, e), digest(join(abs, e)));
   };
   for (const p of paths) walk(p);
   return m;
