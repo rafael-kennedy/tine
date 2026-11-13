@@ -143,7 +143,7 @@ def("humanize", "humanize(p, time: 0.004, vel: 0.1)", "Seeded random drift in ti
   const dt = N(named.time ?? time, 0.004), dv = N(named.vel ?? vel, 0.1), salt = call.interp.salt(), q = P(p);
   return new Pat((a, b, ctx) => q.query(a, b, ctx).map(ev => {
     const j = R.approx((evRand(ctx, salt, ev.s, 1) * 2 - 1) * dt, 100000);
-    return { ...ev, s: ev.s.add(j), e: ev.e.add(j), p: { ...ev.p, vel: Math.max(0, Math.min(1, (ev.p.vel ?? 0.8) + (evRand(ctx, salt, ev.s, 2) * 2 - 1) * dv)) } };
+    return { ...ev, s: ev.s.add(j), e: ev.e.add(j), p: { ...ev.p, nudge: ev.p.nudge ? ev.p.nudge.add(j) : j, vel: Math.max(0, Math.min(1, (ev.p.vel ?? 0.8) + (evRand(ctx, salt, ev.s, 2) * 2 - 1) * dv)) } };
   }));
 });
 def("stack", "stack(a, b, ...)", "Play patterns at the same time.", cat.time, (args) => stack(args.map(P)));

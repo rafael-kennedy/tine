@@ -12,7 +12,7 @@ import { R } from "./rational";
 import { Scene } from "./interp";
 import { TimedNote, renderNotes, timeline } from "./scene";
 import { keyFifths, Key } from "./pitch";
-import { spell, noteValues } from "./musicxml";
+import { spell, noteValues, asWritten } from "./musicxml";
 import { GLYPHS } from "./glyphs.gen";
 import { chordBars, harmonyVoices, ChartBar, keyLabel, SymbolStyle, chordSpelling } from "./chart";
 import { symbol as chordSymbol, symbolWidth, crotchet } from "./chartsvg";
@@ -305,7 +305,7 @@ export function buildScore(scene: Scene, title: string, kind: "lead" | "score", 
   const beats = scene.meter[0];
   const r = renderNotes(scene, timeline(scene).segments.length ? undefined : opts.bars ?? 8);
   // a strummed chord is written as the chord: each note back where the strum began
-  const notes = r.notes.filter(pitched).map(n => n.params.strum === undefined ? n : { ...n, bar: n.bar - num(n.params.strum), bars: n.bars + num(n.params.strum) });
+  const notes = r.notes.filter(pitched).map(asWritten).map(n => n.params.strum === undefined ? n : { ...n, bar: n.bar - num(n.params.strum), bars: n.bars + num(n.params.strum) });
   const harmony = opts.chordVoices ?? harmonyVoices(r.notes.filter(n => n.params.ccOut === undefined), beats);
   const melody = lead ? opts.melody ?? guessMelody(notes, harmony) : undefined;
   // chord symbols read what sounds, echoes included, as the chord chart does

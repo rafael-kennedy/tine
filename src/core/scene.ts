@@ -19,6 +19,7 @@ export interface TimedNote {
   vel: number;
   params: Record<string, any>;
   section?: string;
+  written?: { bar: number; bars: number }; // the note a score writes, if not the one that sounds
 }
 
 export interface Segment { section: SectionDef; startBar: number; bars: number; tempo: number; startSec: number; key: Key }
@@ -90,7 +91,8 @@ function finish(scene: Scene, n: Note, offsetBar: number, offsetSec: number, tem
   if (params.fm !== undefined && params.wave === undefined && (params.inst === undefined || params.inst === "synth")) { params.wave = "fm"; params.inst = "synth"; }
   if (params.duckRelease !== undefined) { params.duckSec = Number(params.duckRelease instanceof R ? params.duckRelease.toNumber() : params.duckRelease) * bs; delete params.duckRelease; }
   if (params.delayTime !== undefined) { params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs; delete params.delayTime; }
-  return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section };
+  const written = n.written ? { written: { bar: offsetBar + n.written.start.toNumber(), bars: n.params.durBeats !== undefined ? bars : n.written.dur.toNumber() } } : {};
+  return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section, ...written };
 }
 
 // Live mode. `section` (optional) is a launched section whose bar 0 sits at `sectionStart`.

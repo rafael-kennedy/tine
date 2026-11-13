@@ -85,9 +85,12 @@ export function harmonyXml(notes: TimedNote[], flats: boolean): { sym: string; x
   return { sym: `${id.root}${id.sym}/${slash ? bassPc : ""}`, xml };
 }
 
+// A score writes the note as composed: legato and humanize are performance.
+export const asWritten = (n: TimedNote): TimedNote => n.written ? { ...n, bar: n.written.bar, bars: n.written.bars } : n;
+
 export function toMusicXml(scene: Scene, notes: TimedNote[], bars: number, title = "Tine piece"): string {
   const qpb = new R(scene.meter[0] * 4, scene.meter[1]); // quarters per bar
-  const playable = notes.filter(n => n.params.ccOut === undefined);
+  const playable = notes.filter(n => n.params.ccOut === undefined).map(asWritten);
   const exact = playable.map(n => {
     const s = R.approx(n.bar, 10_000).mul(qpb), e = R.approx(n.bar, 10_000).add(R.approx(n.bars, 10_000)).mul(qpb);
     return { n, s, e };
