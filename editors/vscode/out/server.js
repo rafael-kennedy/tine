@@ -144,6 +144,18 @@ class TineError extends Error {
     this.hint = hint;
   }
 }
+function lineCol(src, offset) {
+  let line = 0, col = 0;
+  for (let i = 0;i < offset && i < src.length; i++) {
+    if (src[i] === `
+`) {
+      line++;
+      col = 0;
+    } else
+      col++;
+  }
+  return { line, col };
+}
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
   const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
@@ -220,7 +232,8 @@ var OPS = [
   "|",
   "@",
   "!",
-  "_"
+  "_",
+  "~"
 ];
 var isIdStart = (c) => /[A-Za-z_]/.test(c);
 var isId = (c) => /[A-Za-z0-9_#]/.test(c);
@@ -622,6 +635,13 @@ class Parser {
       const items = [];
       while (this.tok.type === "ident") {
         const n = this.next();
+        let { text: name, end } = n;
+        while (this.isOp(".") && this.peek().type === "ident") {
+          this.next();
+          const p = this.next();
+          name += "." + p.text;
+          end = p.end;
+        }
         let times = 1;
         if (this.isOp("*")) {
           this.next();
@@ -631,7 +651,7 @@ class Parser {
           this.next();
           times = c.num.n / c.num.d;
         }
-        items.push({ name: n.text, times, span: this.spanOf(n) });
+        items.push({ name, times, span: { start: n.start, end } });
       }
       if (!items.length)
         this.err("form lists section names in order, like: form intro verse*2 chorus");
@@ -643,7 +663,18 @@ class Parser {
       if (s.type !== "str")
         this.err('use expects a file path in quotes, like use "drums.tine"');
       this.next();
-      return { t: "use", path: s.text, span: sp(this.spanOf(t), this.spanOf(s)) };
+      const pathSpan = this.spanOf(s);
+      if (this.tok.type === "ident" && this.tok.text === "as") {
+        this.next();
+        const n = this.tok;
+        if (n.type === "note")
+          this.err(`'${n.text}' is a note name, so it cannot name a used file`, n, renameHint(n.text));
+        if (n.type !== "ident")
+          this.err('use ... as expects a name, like use "drums.tine" as drums');
+        this.next();
+        return { t: "use", path: s.text, as: n.text, asSpan: this.spanOf(n), pathSpan, span: sp(this.spanOf(t), this.spanOf(n)) };
+      }
+      return { t: "use", path: s.text, pathSpan, span: sp(this.spanOf(t), pathSpan) };
     }
     const e = this.expr();
     if (this.isOp("="))
@@ -976,6 +1007,11 @@ class Parser {
           this.err("expected a length after ':' like c:2");
         this.next();
         weight = a.num.n / a.num.d;
+        continue;
+      }
+      if (this.isOp("~")) {
+        this.next();
+        node = { t: "mod", kind: "slur", e: node, arg: null, span: sp(node.span, this.spanOf(m)) };
         continue;
       }
       if (this.isOp("!")) {
@@ -1660,10 +1696,14 @@ function resolveNotes(voice, evs, ctx) {
         params.inst = `sample:${ev.v}`;
       params.hit = true;
     }
+    const nudge = params.nudge;
     delete params.key;
     delete params.vel;
     delete params.legato;
     delete params.dur;
+    delete params.nudge;
+    const wdur = ev.p.dur !== undefined ? dur : ev.e.sub(ev.s);
+    const written = nudge || !wdur.eq(dur) ? { start: nudge ? ev.s.sub(nudge) : ev.s, dur: wdur } : undefined;
     if (ev.v instanceof Chord && ev.v.root !== undefined) {
       const r = valueToSemis(ev.v.root, key)[0];
       if (r !== undefined)
@@ -1685,7 +1725,7 @@ function resolveNotes(voice, evs, ctx) {
         params.chordBass = b;
     }
     for (const semi of semis)
-      out.push({ voice, start: ev.s, dur, semi, vel: Math.max(0, Math.min(1, vel)), params });
+      out.push({ voice, start: ev.s, dur, semi, vel: Math.max(0, Math.min(1, vel)), params, ...written ? { written } : {} });
   }
   return out;
 }
@@ -1697,6 +1737,20 @@ class Rec {
   }
   toString() {
     return `(${Object.entries(this.fields).map(([k, v]) => `${k}: ${show(v)}`).join(", ")})`;
+  }
+}
+
+class Namespace {
+  name;
+  path;
+  fields;
+  constructor(name, path, fields) {
+    this.name = name;
+    this.path = path;
+    this.fields = fields;
+  }
+  toString() {
+    return `<${this.name}: ${this.path}>`;
   }
 }
 
@@ -1795,6 +1849,8 @@ function typeName(v) {
     return "function";
   if (v instanceof Rec)
     return "record";
+  if (v instanceof Namespace)
+    return "namespace";
   if (v instanceof Rest)
     return "rest";
   if (v === null || v === undefined)
@@ -2437,7 +2493,7 @@ def("humanize", "humanize(p, time: 0.004, vel: 0.1)", "Seeded random drift in ti
   const dt = N(named.time ?? time, 0.004), dv = N(named.vel ?? vel, 0.1), salt = call.interp.salt(), q = P(p);
   return new Pat((a, b, ctx) => q.query(a, b, ctx).map((ev) => {
     const j = R.approx((evRand(ctx, salt, ev.s, 1) * 2 - 1) * dt, 1e5);
-    return { ...ev, s: ev.s.add(j), e: ev.e.add(j), p: { ...ev.p, vel: Math.max(0, Math.min(1, (ev.p.vel ?? 0.8) + (evRand(ctx, salt, ev.s, 2) * 2 - 1) * dv)) } };
+    return { ...ev, s: ev.s.add(j), e: ev.e.add(j), p: { ...ev.p, nudge: ev.p.nudge ? ev.p.nudge.add(j) : j, vel: Math.max(0, Math.min(1, (ev.p.vel ?? 0.8) + (evRand(ctx, salt, ev.s, 2) * 2 - 1) * dv)) } };
   }));
 });
 def("stack", "stack(a, b, ...)", "Play patterns at the same time.", cat.time, (args) => stack(args.map(P)));
@@ -2803,7 +2859,28 @@ param("pw", "pw(p, width)", "Pulse width of the pulse wave, 0 to 1 (.5 is square
 param("detune", "detune(p, cents)", "Spread of the unison voices, in cents either side.");
 param("unison", "unison(p, n)", "How many detuned oscillators sound together (1 to 16).");
 param("sub", "sub(p, level)", "A sine one octave below, 0 to 1.");
-param("glide", "glide(p, seconds)", "Slide into each note from the one before it in the voice.");
+param("glide", "glide(p, seconds)", "Slide into each note from the one before it in the voice. On a note slurred into (c4~ d4), the slide joins the two into one sound.");
+var throughPhrase = (p, name, value) => {
+  const q = setParam(p, name, value);
+  return new Pat((a, b, ctx) => {
+    const evs = q.query(a, b, ctx);
+    const last = new Map;
+    for (let c = a.floor();c < b.toNumber(); c++) {
+      let m;
+      for (const ev of q.query(new R(c), new R(c + 1), ctx))
+        if (!m || ev.s.gt(m))
+          m = ev.s;
+      if (m)
+        last.set(c, m);
+    }
+    return evs.map((ev) => {
+      const m = last.get(ev.s.floor());
+      return m && ev.s.eq(m) ? { ...ev, p: { ...ev.p, [name]: name === "slur" ? false : 0 } } : ev;
+    });
+  });
+};
+def("slur", "slur(p)", "Play p's notes as one connected sound, without a new attack on each, up to the last note in each bar. Scores draw a slur. For one pair, write c4~ d4 in the phrase.", cat.param, ([p]) => throughPhrase(P(p), "slur", true));
+def("gliss", "gliss(p, amount: 1)", "Glissando: each note slides to the next across the last `amount` of its length (1 = all of it), up to the last note in each bar. amount may be a pattern: .gliss([1 0]).", cat.param, ([p, x], named) => throughPhrase(P(p), "gliss", named.amount ?? x ?? 1));
 fxdef("fenv", "fenv(p, octaves, attack: .001, decay: .2)", "Filter envelope: the cutoff jumps up by this many octaves and falls back over decay seconds. The acid squelch.", [["octaves", "fenv", 2], ["attack", "fattack", undefined], ["decay", "fdecay", undefined]]);
 fxdef("fm", "fm(p, index, ratio: 2, decay: .4)", "Frequency modulation (switches the synth to the fm wave): index is brightness, ratio the modulator's pitch, decay how fast the brightness fades.", [["index", "fm", 3], ["ratio", "fmRatio", undefined], ["decay", "fmDecay", undefined]]);
 fxdef("vibrato", "vibrato(p, rate: 5, depth: .3)", "Pitch wobble, rate in Hz, depth in semitones.", [["rate", "vibrato", 5], ["depth", "vibratoDepth", undefined]]);
@@ -3161,6 +3238,10 @@ class Interp {
   opts;
   sectionStack = [];
   queryCtx = null;
+  file = "";
+  prefix = "";
+  at;
+  using = [];
   constructor(opts = {}) {
     this.opts = opts;
     const root = opts.globals ?? Interp.rootEnv();
@@ -3206,11 +3287,13 @@ class Interp {
     this.src = src;
     let prog;
     prog = parse(src);
-    for (const st of prog.stmts)
-      if (st.t === "directive" && st.name === "seed") {
-        this.scene.seed = Math.floor(num(this.eval(st.args[0], this.env)));
-        this.scene.seedExplicit = true;
-      }
+    if (!this.prefix) {
+      for (const st of prog.stmts)
+        if (st.t === "directive" && st.name === "seed") {
+          this.scene.seed = Math.floor(num(this.eval(st.args[0], this.env)));
+          this.scene.seedExplicit = true;
+        }
+    }
     for (const st of prog.stmts) {
       try {
         this.stmt(st, this.env);
@@ -3223,6 +3306,45 @@ class Interp {
       }
     }
     return this.scene;
+  }
+  use(st, env) {
+    if (!this.opts.readFile)
+      throw new TineError("runtime", "'use' is not available here", st.span);
+    const path = joinPath(dirOf(this.file), st.path);
+    if (path === this.file || this.using.includes(path)) {
+      const chain = [...this.using, this.file, path].filter(Boolean).join(" uses ");
+      throw new TineError("runtime", `'${st.path}' would use itself: ${chain}`, st.pathSpan, "files cannot use each other in a circle");
+    }
+    let src;
+    try {
+      src = this.opts.readFile(path);
+    } catch {
+      throw new TineError("runtime", `cannot read '${st.path}'`, st.pathSpan, path !== st.path ? `looked for ${path}` : undefined);
+    }
+    const scope = st.as ? new Env(Interp.rootEnv()) : env;
+    const sub = new Interp({ ...this.opts, globals: scope, seed: this.scene.seed });
+    sub.scene = this.scene;
+    sub.sectionStack = st.as ? [] : this.sectionStack;
+    sub.file = path;
+    sub.prefix = st.as ? `${this.prefix}${st.as}.` : this.prefix;
+    sub.at = this.at ?? st.span;
+    sub.using = [...this.using, ...this.file ? [this.file] : []];
+    const relocate = (e) => {
+      const where = e.span ? ` line ${lineCol(src, e.span.start).line + 1}` : "";
+      const out = new TineError(e.kind, `in ${st.path}${where}: ${e.message}`, st.span, e.hint);
+      return out;
+    };
+    const before = this.scene.errors.length;
+    try {
+      sub.run(src, path);
+    } catch (e) {
+      throw relocate(sub.wrap(e, { start: 0, end: 1 }));
+    }
+    for (let i = before;i < this.scene.errors.length; i++)
+      this.scene.errors[i] = relocate(this.scene.errors[i]);
+    if (st.as)
+      env.set(st.as, new Namespace(st.as, st.path, Object.fromEntries(scope.vars)));
+    return null;
   }
   wrap(e, span) {
     if (e instanceof TineError) {
@@ -3247,7 +3369,7 @@ class Interp {
     const sec = this.sectionStack[this.sectionStack.length - 1];
     switch (st.t) {
       case "let": {
-        this.beginStatement(`let:${st.name}`);
+        this.beginStatement(`let:${this.prefix}${st.name}`);
         if (st.params) {
           const c = new Closure(st.name, st.params, st.value, env);
           env.set(st.name, c);
@@ -3258,14 +3380,21 @@ class Interp {
         return v;
       }
       case "voice": {
-        this.beginStatement(`voice:${st.name}`);
+        const name = this.prefix + st.name;
+        this.beginStatement(`voice:${name}`);
         const v = this.eval(st.value, env);
         const pat = this.asPattern(v, st.value.span);
-        const def = { name: st.name, pat, span: st.span, section: sec?.name, active: st.active };
-        (sec ? sec.voices : this.scene.voices).set(st.name, def);
+        const def = { name, pat, span: st.span, section: sec?.name, active: st.active };
+        if (this.file) {
+          def.file = this.file;
+          def.at = this.at;
+        }
+        (sec ? sec.voices : this.scene.voices).set(name, def);
         return pat;
       }
       case "directive": {
+        if (this.prefix && !sec)
+          return null;
         this.beginStatement(`directive:${st.name}`);
         const args = st.args.map((a) => this.eval(a, env));
         if (st.name === "tempo") {
@@ -3295,8 +3424,12 @@ class Interp {
       }
       case "section": {
         const bars = num(this.eval(st.bars, env));
-        const def = { name: st.name, bars, voices: new Map, span: st.span };
-        this.scene.sections.set(st.name, def);
+        const def = { name: this.prefix + st.name, bars, voices: new Map, span: st.span };
+        if (this.file) {
+          def.file = this.file;
+          def.at = this.at;
+        }
+        this.scene.sections.set(def.name, def);
         this.sectionStack.push(def);
         const inner = new Env(env);
         try {
@@ -3308,6 +3441,8 @@ class Interp {
         return null;
       }
       case "form": {
+        if (this.prefix)
+          return null;
         this.scene.form = st.items.map((i) => ({ name: i.name, times: i.times }));
         for (const i of st.items)
           if (!this.scene.sections.has(i.name)) {
@@ -3318,15 +3453,8 @@ class Interp {
           }
         return null;
       }
-      case "use": {
-        if (!this.opts.readFile)
-          throw new TineError("runtime", "'use' is not available here", st.span);
-        const src = this.opts.readFile(st.path);
-        const sub = new Interp({ ...this.opts, globals: env, seed: this.scene.seed });
-        sub.scene = this.scene;
-        sub.run(src, st.path);
-        return null;
-      }
+      case "use":
+        return this.use(st, env);
       case "expr": {
         this.beginStatement(`expr:${st.span.start}`);
         const v = this.eval(st.e, env);
@@ -3447,6 +3575,19 @@ class Interp {
       }
       case "method": {
         const obj = this.eval(n.obj, env);
+        if (obj instanceof Namespace) {
+          if (!Object.hasOwn(obj.fields, n.name)) {
+            const s = suggest(n.name, Object.keys(obj.fields));
+            throw new TineError("name", `${obj.path} has no '${n.name}'`, n.nameSpan, s ? `did you mean '${obj.name}.${s}'?` : `it defines: ${Object.keys(obj.fields).join(", ") || "nothing with let"}`);
+          }
+          const fv = obj.fields[n.name];
+          if (n.args === null)
+            return fv;
+          const named = {};
+          for (const x of n.named)
+            named[x.name] = this.eval(x.value, env);
+          return this.call(fv, n.args.map((a) => this.eval(a, env)), named, n.span, `${obj.name}.${n.name}`);
+        }
         if (obj instanceof Rec && n.name in obj.fields) {
           const fv = obj.fields[n.name];
           if (n.args === null)
@@ -3574,6 +3715,8 @@ class Interp {
       }
       case "rep":
         return v;
+      case "slur":
+        return setParam(toPat(v), "slur", true);
     }
   }
 }
@@ -3753,6 +3896,24 @@ function evaluate(src, opts = {}) {
   const it = new Interp(opts);
   return it.run(src);
 }
+function dirOf(p) {
+  const i = p.lastIndexOf("/");
+  return i < 0 ? "" : p.slice(0, i + 1);
+}
+function joinPath(dir, p) {
+  if (p.startsWith("/") || /^[A-Za-z]:[\\/]/.test(p) || !dir)
+    return p;
+  const out = [];
+  for (const part of (dir + p).split("/")) {
+    if (part === "." || part === "")
+      continue;
+    if (part === ".." && out.length && out[out.length - 1] !== "..")
+      out.pop();
+    else
+      out.push(part);
+  }
+  return (dir.startsWith("/") ? "/" : "") + out.join("/");
+}
 // ../../src/core/synth.ts
 var INSTRUMENT_DOCS = {
   keys: "Electric piano: FM tines, warm and bell-like. The default.",
@@ -3819,8 +3980,12 @@ function queryVoice(v, a, b, ctx, opts) {
     return [];
   const before = R.inexact;
   try {
-    const notes = resolveNotes(v.name, v.pat.query(a, b, ctx), ctx);
-    return notes.some((n) => n.params.glide !== undefined) ? withGlide(notes, v, a, ctx) : notes;
+    let notes = resolveNotes(v.name, v.pat.query(a, b, ctx), ctx);
+    if (notes.some((n) => n.params.glide !== undefined))
+      notes = withGlide(notes, v, a, ctx);
+    if (hasSlurs(notes, v, ctx))
+      notes = withSlurs(notes, v, ctx);
+    return notes;
   } catch (e) {
     if (opts.onError) {
       opts.onError(v.name, e);
@@ -3848,6 +4013,95 @@ function withGlide(notes, v, a, ctx) {
     return prev ? { ...n, params: { ...n.params, glideFrom: prev.semi } } : n;
   });
 }
+var linked = (n) => !!n.params.slur || n.params.gliss !== undefined && n.params.gliss !== false && Number(n.params.gliss) > 0;
+var RUN_BLOCK = 4;
+var slurring = new WeakMap;
+var marksSlur = (n) => n.params.slur !== undefined || n.params.gliss !== undefined;
+function hasSlurs(notes, v, ctx) {
+  if (notes.some(marksSlur)) {
+    slurring.set(v, true);
+    return true;
+  }
+  let s = slurring.get(v);
+  if (s === undefined) {
+    s = resolveNotes(v.name, v.pat.query(new R(0), new R(RUN_BLOCK), ctx), ctx).some(marksSlur);
+    slurring.set(v, s);
+  }
+  return s;
+}
+function withSlurs(notes, v, ctx) {
+  const bars = new Map;
+  const onsetsOf = (k) => {
+    let g = bars.get(k);
+    if (!g) {
+      const lo = new R(k), hi = new R(k + 1);
+      const ns = resolveNotes(v.name, v.pat.query(lo, hi, ctx), ctx).filter((n) => !n.start.lt(lo) && n.start.lt(hi));
+      g = [];
+      for (const n of ns.sort((x, y) => x.start.cmp(y.start) || x.semi - y.semi)) {
+        const last = g[g.length - 1];
+        if (last && last[0].start.eq(n.start))
+          last.push(n);
+        else
+          g.push([n]);
+      }
+      bars.set(k, g);
+    }
+    return g;
+  };
+  const near = (n, dir) => {
+    const k = Math.floor(n.start.toNumber());
+    const groups = [...onsetsOf(k - 1), ...onsetsOf(k), ...onsetsOf(k + 1)];
+    const gi = groups.findIndex((g) => g[0].start.eq(n.start));
+    if (gi < 0)
+      return;
+    const at = groups[gi].findIndex((x) => x.semi === n.semi);
+    return groups[gi + dir]?.[at];
+  };
+  const span = (x, y) => y.start.sub(x.start).toNumber();
+  const block = (x) => Math.floor(x.start.toNumber() / RUN_BLOCK);
+  const linkTo = (cur, next, from) => {
+    const gl = cur.params.gliss !== undefined && cur.params.gliss !== false ? Math.min(1, Math.max(0, Number(cur.params.gliss))) : 0;
+    return { at: span(from, next), semi: next.semi - from.semi, glide: next.params.glide !== undefined ? Number(next.params.glide) || 0 : 0, gliss: gl };
+  };
+  return notes.map((n) => {
+    const after = linked(n) ? near(n, 1) : undefined;
+    const p = after ? { ...n.params, join: linkTo(n, after, n) } : n.params;
+    const prev = near(n, -1);
+    if (prev && linked(prev) && block(prev) === block(n))
+      return { ...n, params: { ...p, slurIn: true } };
+    if (!after)
+      return p === n.params ? n : { ...n, params: p };
+    const links = [];
+    let cur = n, end = n.dur.toNumber();
+    for (;; ) {
+      const next = near(cur, 1);
+      if (!next || block(next) !== block(n))
+        break;
+      links.push(linkTo(cur, next, n));
+      end = span(n, next) + next.dur.toNumber();
+      if (!linked(next))
+        break;
+      cur = next;
+    }
+    return { ...n, params: links.length ? { ...p, run: { links, end } } : p };
+  });
+}
+function runCurve(run, bs) {
+  const out = [];
+  let prevAt = 0, prevSemi = 0;
+  for (const l of run.links) {
+    const t = l.at * bs;
+    if (l.gliss > 0)
+      out.push(t - (l.at - prevAt) * bs * l.gliss, prevSemi, t, l.semi);
+    else if (l.glide > 0)
+      out.push(t, prevSemi, t + l.glide, l.semi);
+    else
+      out.push(t, prevSemi, t + 0.004, l.semi);
+    prevAt = l.at;
+    prevSemi = l.semi;
+  }
+  return out;
+}
 function finish(scene, n, offsetBar, offsetSec, tempo, section) {
   const bs = barSeconds(scene, tempo);
   const local = n.start.toNumber();
@@ -3873,11 +4127,19 @@ function finish(scene, n, offsetBar, offsetSec, tempo, section) {
     params.duckSec = Number(params.duckRelease instanceof R ? params.duckRelease.toNumber() : params.duckRelease) * bs;
     delete params.duckRelease;
   }
+  if (params.run !== undefined) {
+    params.curve = runCurve(params.run, bs);
+    params.runSec = params.run.end * bs;
+    delete params.run;
+  }
+  if (params.join !== undefined)
+    params.join = { ...params.join, at: params.join.at * bs };
   if (params.delayTime !== undefined) {
     params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs;
     delete params.delayTime;
   }
-  return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section };
+  const written = n.written ? { written: { bar: offsetBar + n.written.start.toNumber(), bars: n.params.durBeats !== undefined ? bars : n.written.dur.toNumber() } } : {};
+  return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section, ...written };
 }
 function liveNotes(scene, a, b, opts = {}) {
   const out = [];
@@ -3929,6 +4191,8 @@ function renderNotes(scene, bars, opts = {}) {
   const n = bars ?? 8;
   return { notes: liveNotes(scene, 0, n, opts), seconds: n * barSeconds(scene), bars: n };
 }
+// ../../src/core/version.ts
+var VERSION = "1.3.1";
 // ../../src/core/adpcm.ts
 var SCALE = Array.from({ length: 32 }, (_, i) => Math.pow(2, i / 2));
 
@@ -3987,37 +4251,34 @@ ${b.doc}`;
     return `chord quality ${word}: ${CHORDS[word].map((x) => Math.round(x * 100) / 100).join(" ")} semitones`;
   if (INSTRUMENTS.includes(word))
     return `instrument ${word}: ${INSTRUMENT_DOCS[word] ?? ""}`;
-  const k = {
-    voice: `voice name = pattern
-A named part that loops (or plays in sections).`,
-    let: `let name = value  /  let f(x) = body
-Define a value or a function.`,
-    section: `section name bars
-An indented block of voices lasting that many bars.`,
-    form: `form a b*2 c
-Play sections in order: a finished piece.`,
-    tempo: `tempo bpm
-Beats (the meter's denominator) per minute.`,
-    key: `key root scale
-The key that degrees like ^3 resolve against.`,
-    seed: `seed n
-Freeze all randomness so the piece replays exactly.`,
-    meter: `meter 7/8
-Beats per bar and beat unit.`,
-    tuning: `tuning 432
-Frequency of A4 in Hz.`
-  };
-  return k[word] ?? null;
+  return KEYWORD_DOCS[word] ?? null;
 }
+var KEYWORD_DOCS = {
+  voice: `voice name = pattern
+A named part that loops (or plays in sections).`,
+  let: `let name = value  /  let f(x) = body
+Define a value or a function.`,
+  section: `section name bars
+An indented block of voices lasting that many bars.`,
+  form: `form a b*2 c
+Play sections in order: a finished piece.`,
+  tempo: `tempo bpm
+Beats (the meter's denominator) per minute.`,
+  key: `key root scale
+The key that degrees like ^3 resolve against.`,
+  seed: `seed n
+Freeze all randomness so the piece replays exactly.`,
+  meter: `meter 7/8
+Beats per bar and beat unit.`,
+  tuning: `tuning 432
+Frequency of A4 in Hz.`,
+  use: 'use "other.tine"  /  use "other.tine" as name\nRun another file here (its lets and voices become available). With `as name`, the file keeps its own scope: read its lets as name.x, and its voices and sections become name.voice and name.section. Paths are relative to the using file.'
+};
 // ../../src/core/dirt.ts
 var DRUM_NAME = new Map(Object.entries(DRUMS).map(([k, v]) => [v, k]).reverse());
 // ../../src/core/page.ts
 var NARROW = new Set([..."ijlI.,:;'|!()[]/ "]);
 var WIDE = new Set([..."MWmw"]);
-
-// ../../src/core/index.ts
-var VERSION = "1.3.0";
-
 // ../../src/lsp/server.ts
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
@@ -4059,6 +4320,30 @@ function readerFor(uri) {
     return;
   }
 }
+function usesIn(src) {
+  try {
+    return parse(src).stmts.filter((s) => s.t === "use");
+  } catch {
+    return [];
+  }
+}
+function usedFile(uri, path) {
+  try {
+    const file = import_node_path.resolve(import_node_path.dirname(import_node_url.fileURLToPath(uri)), path);
+    const u = import_node_url.pathToFileURL(file).href;
+    return { uri: u, src: docs2.get(u) ?? import_node_fs.readFileSync(file, "utf8") };
+  } catch {
+    return null;
+  }
+}
+function namespaced(uri, src, start) {
+  const m = src.slice(Math.max(0, start - 64), start).match(/([A-Za-z_][A-Za-z0-9_]*)\.$/);
+  if (!m)
+    return null;
+  const u = usesIn(src).find((x) => x.as === m[1]);
+  const file = u && usedFile(uri, u.path);
+  return file ? { alias: m[1], file } : null;
+}
 var INEXACT_MSG = (v) => `voice ${v}: its timing needs fractions too large to keep exact, so some times are rounded (by at most a millionth of a bar). It plays, but a note can miss a bar line by that much. Simpler ratios keep it exact.`;
 function diagnose(uri) {
   const src = docs2.get(uri) ?? "";
@@ -4070,7 +4355,10 @@ ${e.hint}` : ""), code: e.kind });
     for (const e of scene.errors)
       add(e);
     if (!scene.errors.length) {
-      const spanOf = (v) => scene.voices.get(v)?.span ?? [...scene.sections.values()].find((s) => s.voices.has(v))?.voices.get(v)?.span;
+      const spanOf = (v) => {
+        const d = scene.voices.get(v) ?? [...scene.sections.values()].find((s) => s.voices.has(v))?.voices.get(v);
+        return d?.file ? d.at : d?.span;
+      };
       const warned = new Set;
       const onInexact = (v) => {
         if (!warned.has(v)) {
@@ -4079,7 +4367,7 @@ ${e.hint}` : ""), code: e.kind });
         }
       };
       try {
-        renderNotes(scene, scene.form ? undefined : 2, { onInexact, onError: (v, e) => add(new TineError("runtime", `voice ${v}: ${e.message}`, scene.voices.get(v)?.span ?? [...scene.sections.values()].find((s) => s.voices.has(v))?.voices.get(v)?.span)) });
+        renderNotes(scene, scene.form ? undefined : 2, { onInexact, onError: (v, e) => add(new TineError("runtime", `voice ${v}: ${e.message}`, spanOf(v))) });
       } catch (e) {
         if (e instanceof TineError)
           add(e);
@@ -4138,6 +4426,19 @@ voice probe = ${word}`, { seed: 1 });
       text = `scale degree ${word}`;
     }
   }
+  const ns = namespaced(uri, src, start);
+  if (ns) {
+    const d = definitions(ns.file.src).find((x) => x.name === word && (x.kind === "let" || x.kind === "fn"));
+    text = d ? `${d.detail}
+from ${ns.alias} (${ns.file.uri.split("/").pop()})` : null;
+  }
+  const u = !text && usesIn(src).find((x) => x.as === word);
+  if (u)
+    text = `use "${u.path}" as ${u.as}
+${(() => {
+      const f = usedFile(uri, u.path);
+      return f ? definitions(f.src).filter((d) => d.kind === "let" || d.kind === "fn").map((d) => d.name).join(", ") || "no lets" : "file not found";
+    })()}`;
   if (!text) {
     const d = flat(definitions(src)).find((x) => x.name === word);
     if (d) {
@@ -4175,12 +4476,23 @@ function completion(uri, p) {
         items.push({ label: q, kind: 12, detail: "chord symbol" });
     return items;
   }
+  const nsm = before.match(/([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_]*$/);
+  const ns = nsm && namespaced(uri, src, off - (before.length - before.lastIndexOf(".") - 1));
+  if (ns) {
+    const file = ns.file.uri.split("/").pop();
+    return definitions(ns.file.src).filter((d) => d.kind === "fn" || d.kind === "let").map((d) => ({ label: d.name, kind: d.kind === "fn" ? 3 : 6, detail: `${d.detail}  (${file})` }));
+  }
   const afterDot = /\.[A-Za-z_]*$/.test(before);
   for (const b of builtinList())
     items.push({ label: b.name, kind: 3, detail: b.sig, documentation: b.doc, insertText: b.name });
   for (const d of flat(definitions(src)))
     if (d.kind === "fn" || d.kind === "let")
       items.push({ label: d.name, kind: d.kind === "fn" ? 3 : 6, detail: d.detail });
+  if (!afterDot) {
+    for (const u of usesIn(src))
+      if (u.as)
+        items.push({ label: u.as, kind: 9, detail: `use "${u.path}"` });
+  }
   if (!afterDot) {
     for (const k of KEYWORDS)
       items.push({ label: k, kind: 14 });
@@ -4233,7 +4545,19 @@ function signature(uri, p) {
 }
 function definition(uri, p) {
   const src = docs2.get(uri) ?? "";
-  const { word } = wordAt(src, posToOffset(src, p));
+  const off = posToOffset(src, p);
+  const { word, start } = wordAt(src, off);
+  const top = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
+  const u = usesIn(src).find((x) => off >= x.pathSpan.start && off <= x.pathSpan.end || x.as === word);
+  if (u) {
+    const f = usedFile(uri, u.path);
+    return f ? { uri: f.uri, range: top } : null;
+  }
+  const ns = namespaced(uri, src, start);
+  if (ns) {
+    const d = definitions(ns.file.src).find((x) => x.name === word);
+    return { uri: ns.file.uri, range: d ? range(ns.file.src, d.nameSpan) : top };
+  }
   const d = flat(definitions(src)).find((x) => x.name === word);
   return d ? { uri, range: range(src, d.nameSpan) } : null;
 }
