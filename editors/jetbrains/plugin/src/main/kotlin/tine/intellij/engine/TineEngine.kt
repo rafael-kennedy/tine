@@ -94,18 +94,22 @@ class TineEngine(private val project: Project) : Disposable {
         if (exe == null) { notifyMissing(); return null }
         stopping = false
         val a = AudioOut({ n -> client?.notify("pull", mapOf("frames" to n)) }, sampleRate, onProblem = { msg -> log(msg) })
+        var self: EngineClient? = null
         val c = try {
             EngineClient(listOf(exe.absolutePath, "engine", "--rate", sampleRate.toString()), project.basePath?.let(::File),
-                onNotify = ::onNotify, onAudio = { pcm, n -> a.accept(pcm, n) }, onExit = ::onExit)
+                onNotify = ::onNotify, onAudio = { pcm, n -> a.accept(pcm, n) },
+                // only the engine in use may restart itself; one that failed its handshake just ends
+                onExit = { code, err -> if (self != null && self === client) onExit(code, err) })
+                .also { self = it }
         } catch (e: Exception) { warn("Could not start the Tine engine", e.message ?: ""); return null }
         try {
             val hello = c.request("hello").get(5, java.util.concurrent.TimeUnit.SECONDS).asJsonObject
             if ((hello.get("protocol")?.asInt ?: 0) < 1) throw IllegalStateException("protocol ${hello.get("protocol")}")
         } catch (e: Exception) {
             c.close()
-            warn("This tine cannot play inside the IDE",
-                "Playing from IntelliJ needs a tine that has the engine command. ${TineCli.version(exe)} was found at ${exe.path}. " +
-                    "The run configurations and the browser DAW still work.")
+            val version = TineCli.version(exe)
+            tooOld("${exe.path} is $version, which cannot play inside the IDE: it has no engine command. " +
+                "Set a newer tine in Settings | Languages & Frameworks | Tine. The run configurations and the browser DAW still work.")
             return null
         }
         client = c; audio = a
@@ -342,6 +346,22 @@ class TineEngine(private val project: Project) : Disposable {
     private fun warn(title: String, text: String) {
         NotificationGroupManager.getInstance().getNotificationGroup("Tine")
             .createNotification(title, text, NotificationType.WARNING).notify(project)
+    }
+
+    /** Said where the person is looking: a hint at the caret, and a balloon with a button to the setting. */
+    private fun tooOld(text: String) {
+        ApplicationManager.getApplication().invokeLater({
+            if (project.isDisposed) return@invokeLater
+            com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).selectedTextEditor?.let {
+                com.intellij.codeInsight.hint.HintManager.getInstance().showErrorHint(it, text)
+            }
+        }, project.disposed)
+        NotificationGroupManager.getInstance().getNotificationGroup("Tine")
+            .createNotification("Tine: this tine cannot play in the IDE", text, NotificationType.ERROR)
+            .addAction(NotificationAction.createSimpleExpiring("Set path...") {
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, TineConfigurable::class.java)
+            })
+            .notify(project)
     }
 
     private fun notifyMissing() {
