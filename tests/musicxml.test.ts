@@ -26,8 +26,15 @@ describe("MusicXML", () => {
     const M = Number(/<divisions>(\d+)/.exec(x)![1]) * 7 / 2;
     expect(measureSums(x)).toEqual([M, M]);
   });
+  test("legato and humanize change the sound, not the written notes", () => {
+    const x = xml("voice a = [c4 d4 e4 f4 g4 a4 b4 c5].legato(.37).humanize()");
+    expect(x).not.toContain("time-modification");
+    expect(x.match(/<type>eighth<\/type>/g)!.length).toBe(8);
+    expect(x).not.toContain("<rest/>");
+  });
   test("a note across a bar line is tied", () => {
-    const x = xml("voice a = [. . . c].legato(2)", 2);
+    // legato is performance, so a long legato does not write a long note; dur does
+    const x = xml("voice a = [. . . c].dur(2)", 2);
     expect(x).toContain('<tie type="start"/>');
     expect(x).toContain('<tie type="stop"/>');
   });

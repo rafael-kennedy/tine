@@ -1,7 +1,7 @@
 // Browser audio + MIDI engine. Notes are rendered with the same pure DSP
 // code the command line uses (src/core/synth.ts), one AudioBuffer per note,
 // so the DAW, the tutorial and exported WAVs sound alike.
-import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx, renderSample, presetFor, renderSf } from "../core";
+import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx, renderSample, presetFor, renderSf, performed, slides, slideBends, heldSec, SLIDE_RANGE } from "../core";
 import { library, loadBundled, request, once, decodeBytes, soundfont, fontPending } from "./samples";
 
 // Parameters can be exact rationals (class R). A structured clone to the
@@ -13,6 +13,7 @@ export function plainParams(p: Record<string, any>): Record<string, any> {
     if (v && typeof v === "object" && typeof v.toNumber === "function") out[k] = v.toNumber();
     else if (v === null || typeof v !== "object") out[k] = v;
     else if (k === "ctl") out[k] = plainParams(v);
+    else if (k === "curve" && Array.isArray(v)) out[k] = v.map(Number); // a slur's pitch path
   }
   return out;
 }
@@ -24,6 +25,10 @@ const NOT_SOUND = new Set(["inst", "pan", "reverb", "chordRoot", "chordBass", "e
 const NEW_FX = ["vowel", "crush", "coarse", "ring", "chorus", "phaser", "comp", "room", "duck"];
 
 interface Chain { input: GainNode; hp: BiquadFilterNode; lp: BiquadFilterNode; pre: GainNode; shaper: WaveShaperNode; post: GainNode; dly: DelayNode; fb: GainNode; wet: GainNode; drive: number; hpSet: number; lpSet: number }
+
+// A rendered note is capped so one long note cannot fill memory; a slurred
+// run is one note by design, so it may be longer.
+const maxSec = (n: { params: Record<string, any> }) => (n.params.runSec !== undefined ? 32 : 12);
 
 export interface PlayableNote { semi: number; vel: number; durSec: number; params: Record<string, any>; voice: string }
 
@@ -43,6 +48,7 @@ export class Engine {
   tuningRef = 440;
   private mpeRot = 0;
   private chans = new Map<string, ChannelState>(); // output id -> channel -> program and bend
+  private wideBend = new Set<string>(); // output|channel whose bend range is SLIDE_RANGE
   onRealtime: ((status: number, t: number) => void) | null = null; // MIDI clock, start, continue, stop
   private thruNodes = new Map<number, { src: AudioBufferSourceNode; g: GainNode }>();
 
@@ -169,7 +175,7 @@ export class Engine {
     const name = this.sampleName(n, inst, false);
     if (!name || !request(name)) return null;
     const p = plainParams(n.params);
-    const key = `S|${name}|${library.version}|${n.semi.toFixed(3)}|${n.vel.toFixed(2)}|${p.fit ? n.durSec.toFixed(3) : ""}|${p.begin ?? ""}|${p.end ?? ""}|${p.speed ?? ""}|${p.accel ?? ""}|${p.loopSec ?? ""}|${p.hit ?? ""}|${p.drum ?? ""}|${p.gain ?? ""}`;
+    const key = `S|${name}|${library.version}|${n.semi.toFixed(3)}|${n.vel.toFixed(2)}|${p.fit ? n.durSec.toFixed(3) : ""}|${p.begin ?? ""}|${p.end ?? ""}|${p.speed ?? ""}|${p.accel ?? ""}|${p.loopSec ?? ""}|${p.hit ?? ""}|${p.drum ?? ""}|${p.gain ?? ""}|${p.curve ?? ""}`;
     const b = this.cache.get(key);
     if (b) return b;
     return this.store(key, renderSample(library.get(name)!, { semi: n.semi, vel: n.vel, durSec: n.durSec, params: p }, this.ctx.sampleRate));
@@ -178,12 +184,14 @@ export class Engine {
   // Ask the worker for notes that will play soon. Cheap to call repeatedly.
   prepare(notes: PlayableNote[]) {
     if (!this.worker) return;
-    for (const n of notes) {
-      if (n.params.midi !== undefined || n.params.ccOut !== undefined || n.params.dirt !== undefined) continue;
+    for (const heard of notes) {
+      if (heard.params.midi !== undefined || heard.params.ccOut !== undefined || heard.params.dirt !== undefined) continue;
+      const n = performed(heard);
+      if (!n) continue;
       const inst = String(n.params.inst ?? "keys");
       if (inst.startsWith("sample:")) { this.sampleName(n, inst, true); continue; }
       if (inst === "gm") continue;
-      const dur = Math.min(n.durSec, 12), key = this.keyOf(n, inst, dur);
+      const dur = Math.min(n.durSec, maxSec(n)), key = this.keyOf(n, inst, dur);
       if (this.cache.has(key) || this.pending.has(key)) continue;
       this.pending.add(key);
       this.worker.postMessage({ key, sr: this.ctx.sampleRate, note: this.job(n, inst, dur) });
@@ -194,7 +202,7 @@ export class Engine {
     const inst = String(n.params.inst ?? "keys");
     if (inst.startsWith("sample:")) return this.sampleBuffer(n, inst);
     if (inst === "gm") return this.gmBuffer(n);
-    const dur = Math.min(n.durSec, 12);
+    const dur = Math.min(n.durSec, maxSec(n));
     const key = this.keyOf(n, inst, dur);
     let b = this.cache.get(key);
     if (b) { this.cache.delete(key); this.cache.set(key, b); this.stats.ahead++; return b; }
@@ -202,9 +210,11 @@ export class Engine {
     return this.store(key, renderNote(this.job(n, inst, dur), this.ctx.sampleRate));
   }
 
-  play(n: PlayableNote, when: number) {
-    if (n.params.dirt !== undefined) { this.sendDirt(n, when); return; }
-    if (n.params.midi !== undefined || n.params.ccOut !== undefined) { this.sendMidi(n, when); return; }
+  play(heard: PlayableNote, when: number) {
+    if (heard.params.dirt !== undefined) { this.sendDirt(heard, when); return; }
+    if (heard.params.midi !== undefined || heard.params.ccOut !== undefined) { this.sendMidi(heard, when); return; }
+    const n = performed(heard);
+    if (!n) return; // inside a slurred run, which its first note plays
     const buf = this.bufferFor(n);
     if (!buf) return;
     const src = this.ctx.createBufferSource();
@@ -379,10 +389,24 @@ export class Engine {
     const semi = n.semi + 12 * Math.log2(this.tuningRef / 440);
     const key = out.id;
     if (!this.chans.has(key)) this.chans.set(key, new Map());
-    const m = noteMessages({ semi, vel: n.vel, params: n.params }, ch, this.chans.get(key)!, n.params.mpe ? { bend: true } : {});
+    const chans = this.chans.get(key)!;
+    // a sliding note widens its channel's bend range (once), as the MIDI file does
+    const sliding = n.params.ccOut === undefined && slides(n.params);
+    const wide = sliding || this.wideBend.has(`${key}|${ch}`);
+    if (sliding && !this.wideBend.has(`${key}|${ch}`)) {
+      this.wideBend.add(`${key}|${ch}`);
+      for (const [c, v] of [[0x65, 0], [0x64, 0], [0x06, SLIDE_RANGE], [0x26, 0]]) out.send([0xb0 | ch, c, v], this.toPerf(when));
+    }
+    const range = wide ? SLIDE_RANGE : 2;
+    const bends = sliding ? slideBends({ semi, params: n.params }, ch, range) : [];
+    const glidesIn = bends.length > 0 && bends[0].sec === 0;
+    const m = noteMessages({ semi, vel: n.vel, params: n.params }, ch, chans, glidesIn ? { bend: false, range } : n.params.mpe ? { bend: true, range } : { range });
     const t0 = this.toPerf(when);
+    if (glidesIn) out.send(bends.shift()!.data, t0);
     for (const msg of m.on) out.send(msg, t0);
-    if (m.off) out.send(m.off, this.toPerf(when + Math.max(0.01, n.durSec)));
+    for (const b of bends) out.send(b.data, this.toPerf(when + b.sec));
+    if (bends.length) { const last = bends[bends.length - 1].data; chans.get(ch)!.bend = last[1] | (last[2] << 7); }
+    if (m.off) out.send(m.off, this.toPerf(when + Math.max(0.01, heldSec(n))));
   }
 
   // ---------- SuperDirt (see core/dirt.ts) ----------
@@ -404,7 +428,7 @@ export class Engine {
 
   sendClock(when: number) { const out = this.output(); out?.send([0xf8], this.toPerf(when)); }
   sendStartStop(start: boolean) { const out = this.output(); out?.send([start ? 0xfa : 0xfc]); }
-  panic() { this.chans.clear(); for (const o of this.outputs()) for (let c = 0; c < 16; c++) o.send([0xb0 | c, 123, 0]); }
+  panic() { this.chans.clear(); this.wideBend.clear(); for (const o of this.outputs()) for (let c = 0; c < 16; c++) o.send([0xb0 | c, 123, 0]); }
 
   async loadSample(name: string, data: ArrayBuffer, bank?: string) {
     library.add(name, await decodeBytes(new Uint8Array(data)), bank);
@@ -415,11 +439,11 @@ export class Engine {
     if (!soundfont) { if (fontPending()) return null; once("gm() needs a SoundFont: add a line like soundfont(\"GeneralUser-GS.sf2\"), or drop an .sf2 file here"); return null; }
     const pre = presetFor(soundfont, n.params);
     if (!pre) { once(`the SoundFont has no preset for gm(${n.params.gmName ?? (n.params.gmProgram ?? 0) + 1})`); return null; }
-    const gain = Number(n.params.gain ?? 1), dur = Math.min(n.durSec, 12);
-    const key = `GM|${library.version}|${pre.bank}:${pre.program}|${n.semi.toFixed(3)}|${n.vel.toFixed(2)}|${dur.toFixed(3)}|${gain}|${this.tuningRef}`;
+    const gain = Number(n.params.gain ?? 1), dur = Math.min(n.durSec, maxSec(n));
+    const key = `GM|${library.version}|${pre.bank}:${pre.program}|${n.semi.toFixed(3)}|${n.vel.toFixed(2)}|${dur.toFixed(3)}|${gain}|${this.tuningRef}|${n.params.curve ?? ""}`;
     const b = this.cache.get(key);
     if (b) return b;
-    return this.store(key, renderSf(soundfont, pre, { semi: n.semi + 12 * Math.log2(this.tuningRef / 440), vel: n.vel, durSec: dur, gain }, this.ctx.sampleRate));
+    return this.store(key, renderSf(soundfont, pre, { semi: n.semi + 12 * Math.log2(this.tuningRef / 440), vel: n.vel, durSec: dur, gain, curve: n.params.curve }, this.ctx.sampleRate));
   }
 
   // Play one library sound now, for the sound browser.

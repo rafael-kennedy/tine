@@ -27,7 +27,7 @@ voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .]
 | **Tutorial** | `tine learn`: 17 interactive lessons for programmers new to music, with live examples and a checked exercise in each |
 | **Theory course** | `tine theory`: a jazz-first college theory sequence, 101 through 202, in 35 lessons with live examples, challenges checked by what your code plays, and quizzes with ear training |
 | **Packaging** | standalone `tine` binaries for Linux, macOS and Windows; `tine pack` turns one piece into a single-file HTML player or its own executable |
-| **Editors** | a language server (`tine lsp`), a VS Code extension, and support files for Neovim, Vim, Helix, Emacs, Sublime, JetBrains and Zed (`editors/`) |
+| **Editors** | a language server (`tine lsp`), an audio engine editors drive (`tine engine`), a JetBrains plugin that plays and swaps code inside the IDE, a VS Code extension, and support files for Neovim, Vim, Helix, Emacs, Sublime, JetBrains and Zed (`editors/`) |
 | **Brand** | logo, icons and palette in `brand/` |
 | **Docs** | `docs/REFERENCE.md` (the whole language), `docs/DESIGN-DECISIONS.md` (why it is the way it is) |
 | **Examples** | `examples/`: a groove, a song with form, microtonal tunings, polyrhythm, generative music, a live MIDI set |
@@ -89,7 +89,10 @@ voice a5 = [c4 (c4 + 50c) (c4 + 5\31) (c4 * 7/4) 432hz]
 let fill(p) = p.fast(2).vel(.6)
 voice a6 = [kick . snare .].every(4, fill)
 voice a7 = per_bar(n => [c e g].transpose(n % 4 * 2))
--- composing: sections and form
+-- slurs and glissandos: one connected sound, drawn in the score
+voice a8 = [e4~ f4~ g4 c5]
+voice a9 = [c4 g4].gliss
+-- composing: sections and form (use "drums.tine" as drums brings in another file)
 section verse 8
   voice bass = [^1 . ^5 .].octave(-2).inst(bass)
 form verse verse

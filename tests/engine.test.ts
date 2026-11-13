@@ -107,7 +107,7 @@ describe("tine engine", () => {
 });
 
 test("the streaming mixer sounds like the offline mix", () => {
-  const s = evaluate("voice a = [c e g b].inst(pad)\nvoice b = [c3 _ g2 _].inst(bass).delay(.3)\nvoice d = [kick snare].lpf(800)", { seed: 1 });
+  const s = evaluate("voice a = [c~ e g~ b].inst(pad)\nvoice b = [c3 _ g2 _].inst(bass).delay(.3)\nvoice d = [kick snare].lpf(800)", { seed: 1 });
   const { notes, seconds } = renderNotes(s, 2);
   const [L] = mix(notes, seconds, 44100);
   const m = new StreamMixer(44100);

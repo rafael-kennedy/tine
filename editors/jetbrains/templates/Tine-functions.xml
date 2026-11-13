@@ -2086,8 +2086,60 @@
         <option name="OC_SOURCE" value="false" />
       </context>
     </template>
-    <template name="glide" value="glide($SECONDS$)$END$" description="glide(p, seconds)  [sound]  Method: p.glide(...). Slide into each note from the one before it in the voice." toReformat="false" toShortenFQNames="false">
+    <template name="glide" value="glide($SECONDS$)$END$" description="glide(p, seconds)  [sound]  Method: p.glide(...). Slide into each note from the one before it in the voice. On a note slurred into (c4~ d4), the slide joins the two into one sound." toReformat="false" toShortenFQNames="false">
       <variable name="SECONDS" expression="" defaultValue="&quot;seconds&quot;" alwaysStopAt="true" />
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="slur" value="slur$END$" description="slur(p)  [sound]  Method: p.slur. Play p's notes as one connected sound, without a new attack on each, up to the last note in each bar. Scores draw a slur. For one pair, write c4~ d4 in the phrase." toReformat="false" toShortenFQNames="false">
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="gliss" value="gliss$END$" description="gliss(p, amount: 1)  [sound]  Method: p.gliss. Glissando: each note slides to the next across the last `amount` of its length (1 = all of it), up to the last note in each bar. amount may be a pattern: .gliss([1 0])." toReformat="false" toShortenFQNames="false">
       <context>
         <option name="OTHER" value="true" />
         <option name="JAVA_CODE" value="false" />

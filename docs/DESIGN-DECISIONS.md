@@ -459,3 +459,34 @@ The Mac app is a launcher for `tine daw <file>`, so there was no way to reach an
 - **Only the page itself may call.** Any website can send requests to 127.0.0.1. The file endpoints, and the existing save and SuperDirt endpoints, check that the Host header is ours (which stops DNS rebinding) and that any Origin is ours. Reopening by path accepts only paths on the recent list (`~/.tine/recent.json`, ten entries), and anything else must come from a dialog the user answered.
 - **Unsaved work is guarded.** Open, New and closing the tab ask before dropping unsaved edits. Each save names the file its tab is showing. A second tab still on the previous piece is refused instead of writing over the new one.
 - **New never overwrites.** If the chosen name already exists, that file is opened. Cmd+O opens a piece. Cmd+N belongs to the browser and cannot be taken, so New is a button only.
+
+## 49. Slurs, glissandos and slides
+
+- **Three things, one mechanism.** A slide (`.glide`) bends a note's arrival. A glissando (`.gliss`) bends its departure: the note travels to the next note's pitch across the last part of its length. A slur (`c4~ d4`, `.slur`) means no new attack. All three join notes, so they share one representation: a note says how it joins the next.
+- **A slurred run is one sound.** Notes are rendered one at a time, so a real slur cannot be two notes. The first note of a run holds until the last ends and follows a pitch path (a step, a glide ramp, or a glissando ramp) through the run's notes. The others are marked `slurIn`: audio skips them, while MIDI and scores still see every note. This also gives the 303's tied slide that section 43 left for later.
+- **Every engine follows the path.** The general synth, the 1.0 instruments (except `pluck`, whose pitch is its delay line), SoundFonts and samples read the same curve. Drums ignore it.
+- **Runs look both ways, like glide.** A window can hold only the end of a run, so the scene asks the bars around it. Runs break every 4 bars of the voice, so a loop slurred all the way round still plays and a window never looks further than its block.
+- **`~` belongs to the note before it.** `c4~ d4` reads as a tie does in a score. `.slur` and `.gliss` on a phrase stop at its last note in each bar, as a slur over a bar does.
+- **MIDI says it the way synths expect.** A slur holds the first note until just after the second starts, which a mono synth hears as legato. Glides and glissandos are pitch bend, and a voice that slides gets a bend range of 12 instead of 2.
+- **Scores write the composed note.** Legato and humanize change how a note sounds, not how it is written, so they no longer turn into rests and tuplets.
+
+## 50. Pieces in several files: `use ... as name`
+
+`use "file.tine"` pastes a file in, which is right for a set built as one shared space, but two parts that both define `kick` silently collide. `use "drums.tine" as drums` keeps the file to itself.
+
+- **The used file sees only builtins.** Its lets and functions are read through the name (`drums.groove`, `drums.fill(2)`, nested `drums.fills.roll`). A namespace is a value but not a playable one.
+- **Voices and sections keep their prefix:** `drums.kick`, `drums.verse`. `form` accepts dotted names. Voices are still not values, in a namespace as in a single file, so one rule holds.
+- **A part is not the piece.** Its top-level `tempo`, `key`, `meter`, `seed`, `tuning` and `form` are skipped, so the file still plays alone with its own settings without overriding the piece. Settings inside its sections apply.
+- **Changed for every `use`:** paths are relative to the file that says them (before, to the main file, which broke nested folders); a file that uses itself is an error instead of a stack overflow; an error inside a used file is reported on the `use` line with the file and line, and keeps where it really is for editors that can show it there.
+- **Considered and kept for later:** flat includes only, with loud name clashes. Adding `as` later would not have broken anything, but shared libraries and other people's files need it to be safe.
+
+## 51. `tine engine`: playing without a browser
+
+Decision 2 put audio in the browser because it was the only portable real-time platform. Inside an IDE, the JVM is a second one. `tine engine` is the browser's scheduler and mixer as a headless process an editor drives.
+
+- **The editor owns the device and pulls.** The engine renders only the blocks it is asked for, so the sound card is the one clock and nothing drifts. The editor keeps a few blocks in flight; JetBrains plays them through Java Sound. Considered: native audio inside `tine` (lowest latency, but native builds and signing for five platforms) and a hidden embedded browser (Web MIDI there is uncertain). The protocol does not change if native audio replaces Java Sound later.
+- **One protocol, two directions, one pipe.** JSON lines in; frames out, each a type byte and a length: JSON messages and 16-bit PCM. It is separate from `tine lsp`, so a language server restart never stops the music.
+- **The streaming mixer is the offline mix cut into blocks.** Both render notes through the same function, effects and reverb keep their state across blocks, and a test checks the two agree. Two differences: no final peak normalisation (a live stream cannot look ahead), and per-voice gains for mute, solo and faders that act within a block.
+- **The editor buffer is the truth.** Evaluation reads unsaved text before the disk, for every file the piece uses. Saving does not swap, so an autosave never surprises a set.
+- **Errors never stop the music.** A voice that fails keeps its last good version, as in the DAW. Errors are placed in the file they are in.
+- **Phase 1 only.** Mixer surfaces, scenes, toggles, takes, MIDI and the playhead in the code come next, on the same engine.

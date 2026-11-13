@@ -143,7 +143,7 @@ def("humanize", "humanize(p, time: 0.004, vel: 0.1)", "Seeded random drift in ti
   const dt = N(named.time ?? time, 0.004), dv = N(named.vel ?? vel, 0.1), salt = call.interp.salt(), q = P(p);
   return new Pat((a, b, ctx) => q.query(a, b, ctx).map(ev => {
     const j = R.approx((evRand(ctx, salt, ev.s, 1) * 2 - 1) * dt, 100000);
-    return { ...ev, s: ev.s.add(j), e: ev.e.add(j), p: { ...ev.p, vel: Math.max(0, Math.min(1, (ev.p.vel ?? 0.8) + (evRand(ctx, salt, ev.s, 2) * 2 - 1) * dv)) } };
+    return { ...ev, s: ev.s.add(j), e: ev.e.add(j), p: { ...ev.p, nudge: ev.p.nudge ? ev.p.nudge.add(j) : j, vel: Math.max(0, Math.min(1, (ev.p.vel ?? 0.8) + (evRand(ctx, salt, ev.s, 2) * 2 - 1) * dv)) } };
   }));
 });
 def("stack", "stack(a, b, ...)", "Play patterns at the same time.", cat.time, (args) => stack(args.map(P)));
@@ -431,7 +431,24 @@ param("pw", "pw(p, width)", "Pulse width of the pulse wave, 0 to 1 (.5 is square
 param("detune", "detune(p, cents)", "Spread of the unison voices, in cents either side.");
 param("unison", "unison(p, n)", "How many detuned oscillators sound together (1 to 16).");
 param("sub", "sub(p, level)", "A sine one octave below, 0 to 1.");
-param("glide", "glide(p, seconds)", "Slide into each note from the one before it in the voice.");
+param("glide", "glide(p, seconds)", "Slide into each note from the one before it in the voice. On a note slurred into (c4~ d4), the slide joins the two into one sound.");
+// Marks every note of p but the last in each bar, so a phrase is slurred
+// (or glissed) through and ends on its last note, as a slur in a score does.
+const throughPhrase = (p: Pat, name: string, value: any) => {
+  const q = setParam(p, name, value);
+  return new Pat((a, b, ctx) => {
+    const evs = q.query(a, b, ctx);
+    const last = new Map<number, R>();
+    for (let c = a.floor(); c < b.toNumber(); c++) {
+      let m: R | undefined;
+      for (const ev of q.query(new R(c), new R(c + 1), ctx)) if (!m || ev.s.gt(m)) m = ev.s;
+      if (m) last.set(c, m);
+    }
+    return evs.map(ev => { const m = last.get(ev.s.floor()); return m && ev.s.eq(m) ? { ...ev, p: { ...ev.p, [name]: name === "slur" ? false : 0 } } : ev; });
+  });
+};
+def("slur", "slur(p)", "Play p's notes as one connected sound, without a new attack on each, up to the last note in each bar. Scores draw a slur. For one pair, write c4~ d4 in the phrase.", cat.param, ([p]) => throughPhrase(P(p), "slur", true));
+def("gliss", "gliss(p, amount: 1)", "Glissando: each note slides to the next across the last `amount` of its length (1 = all of it), up to the last note in each bar. amount may be a pattern: .gliss([1 0]).", cat.param, ([p, x], named) => throughPhrase(P(p), "gliss", named.amount ?? x ?? 1));
 fxdef("fenv", "fenv(p, octaves, attack: .001, decay: .2)", "Filter envelope: the cutoff jumps up by this many octaves and falls back over decay seconds. The acid squelch.", [["octaves", "fenv", 2], ["attack", "fattack", undefined], ["decay", "fdecay", undefined]]);
 fxdef("fm", "fm(p, index, ratio: 2, decay: .4)", "Frequency modulation (switches the synth to the fm wave): index is brightness, ratio the modulator's pitch, decay how fast the brightness fades.", [["index", "fm", 3], ["ratio", "fmRatio", undefined], ["decay", "fmDecay", undefined]]);
 fxdef("vibrato", "vibrato(p, rate: 5, depth: .3)", "Pitch wobble, rate in Hz, depth in semitones.", [["rate", "vibrato", 5], ["depth", "vibratoDepth", undefined]]);
