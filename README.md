@@ -49,7 +49,7 @@ From source, with [Bun](https://bun.sh): `bun install`, then `bun src/cli/main.t
 
 ### On a phone or tablet
 
-`bun run build:app` writes an installable web app to `dist/app/`: a home screen with the DAW (Studio), Learn Tine and Tine Theory. Put that folder on any static HTTPS host. On iPhone or iPad, open it in Safari and choose Share, then Add to Home Screen. On Android, Chrome offers Install. After the first visit it works offline; the sample pack is cached the first time the Studio loads it.
+Open https://rafael-kennedy.github.io/tine/ on your phone. It is rebuilt from `main` on every push. `bun run build:app` writes the same installable web app to `dist/app/`: a home screen with the DAW (Studio), Learn Tine and Tine Theory. Put that folder on any static HTTPS host. On iPhone or iPad, open it in Safari and choose Share, then Add to Home Screen. On Android, Chrome offers Install. After the first visit it works offline; the sample pack is cached the first time the Studio loads it.
 
 On touch screens every app gets larger controls, and code editors get a key bar with Run, Stop, comment, undo and the brackets and symbols phone keyboards hide. On iOS 16.4 and later, sound plays with the silent switch on. Web MIDI is not available in iOS browsers.
 
