@@ -18,8 +18,20 @@ A Tine file (`.tine`) is a list of statements, one per line. Blocks are indented
 | `section name 8` | An indented block of voices (and tempo/key) lasting 8 bars. |
 | `form intro verse*2 chorus` | Play sections in this order. Makes the file a finished piece. |
 | `use "other.tine"` | Run another file here (its lets and voices become available). |
+| `use "drums.tine" as drums` | Run another file in its own scope. Its lets read as `drums.name`, its voices and sections are named `drums.kick`, `drums.verse`. |
 
 A line that starts with `.` continues the line above, for long method chains.
+
+### Pieces in several files
+
+`use` paths are relative to the file that says them. Plain `use` pastes the other file in: it sees your names and you see its names. `use ... as name` keeps the file to itself:
+
+- it sees only builtins, not the names in the file that uses it;
+- its lets and functions are read through the name: `drums.groove`, `drums.fill(2)`, and nested `drums.fills.roll`;
+- its voices and sections join the piece with the name in front, so `form intro drums.verse*2` works;
+- its top-level `tempo`, `key`, `meter`, `seed`, `tuning` and `form` are skipped, so the file still plays alone with its own settings. Settings inside its sections still apply.
+
+An error inside a used file is reported on the `use` line, with the file and line it came from.
 
 ## Values
 
@@ -36,6 +48,7 @@ A line that starts with `.` continues the line above, for long method chains.
 | text | `"hello"` |
 | boolean | `true`, `false` |
 | record | `(root: d, scale: dorian)`; read with `.root` |
+| namespace | what `use "drums.tine" as drums` binds; read with `drums.groove` |
 | function | `x => x + 1`, `(a, b) => a * b` |
 | key, scale | `key(d, dorian)`, `edo(31, [0 5 10])`, `just([1 5/4 3/2])` |
 

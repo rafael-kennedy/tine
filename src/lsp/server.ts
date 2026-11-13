@@ -7,7 +7,7 @@ import {
 } from "../core";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 type Pos = { line: number; character: number };
 const docs = new Map<string, string>();
@@ -34,6 +34,26 @@ function readerFor(uri: string) {
   try { const dir = dirname(fileURLToPath(uri)); return (p: string) => readFileSync(resolve(dir, p), "utf8"); } catch { return undefined; }
 }
 
+// `use "drums.tine" as drums` lines in a file, and what the used file defines.
+function usesIn(src: string): Extract<Stmt, { t: "use" }>[] {
+  try { return parse(src).stmts.filter((s): s is Extract<Stmt, { t: "use" }> => s.t === "use"); } catch { return []; }
+}
+function usedFile(uri: string, path: string): { uri: string; src: string } | null {
+  try {
+    const file = resolve(dirname(fileURLToPath(uri)), path);
+    const u = pathToFileURL(file).href;
+    return { uri: u, src: docs.get(u) ?? readFileSync(file, "utf8") };
+  } catch { return null; }
+}
+// The namespace a word belongs to, when it is written alias.word.
+function namespaced(uri: string, src: string, start: number): { alias: string; file: { uri: string; src: string } } | null {
+  const m = src.slice(Math.max(0, start - 64), start).match(/([A-Za-z_][A-Za-z0-9_]*)\.$/);
+  if (!m) return null;
+  const u = usesIn(src).find(x => x.as === m[1]);
+  const file = u && usedFile(uri, u.path);
+  return file ? { alias: m[1], file } : null;
+}
+
 export const INEXACT_MSG = (v: string) => `voice ${v}: its timing needs fractions too large to keep exact, so some times are rounded (by at most a millionth of a bar). It plays, but a note can miss a bar line by that much. Simpler ratios keep it exact.`;
 
 function diagnose(uri: string) {
@@ -45,10 +65,13 @@ function diagnose(uri: string) {
     for (const e of scene.errors) add(e);
     if (!scene.errors.length) {
       // query a little music so errors that happen at play time show up now
-      const spanOf = (v: string) => scene.voices.get(v)?.span ?? [...scene.sections.values()].find(s => s.voices.has(v))?.voices.get(v)?.span;
+      const spanOf = (v: string) => {
+        const d = scene.voices.get(v) ?? [...scene.sections.values()].find(s => s.voices.has(v))?.voices.get(v);
+        return d?.file ? d.at : d?.span;   // a voice from a used file is reported on its use line
+      };
       const warned = new Set<string>();
       const onInexact = (v: string) => { if (!warned.has(v)) { warned.add(v); add(new TineError("timing", INEXACT_MSG(v), spanOf(v)), 2); } };
-      try { renderNotes(scene, scene.form ? undefined : 2, { onInexact, onError: (v, e) => add(new TineError("runtime", `voice ${v}: ${(e as Error).message}`, scene.voices.get(v)?.span ?? [...scene.sections.values()].find(s => s.voices.has(v))?.voices.get(v)?.span)) }); }
+      try { renderNotes(scene, scene.form ? undefined : 2, { onInexact, onError: (v, e) => add(new TineError("runtime", `voice ${v}: ${(e as Error).message}`, spanOf(v))) }); }
       catch (e) { if (e instanceof TineError) add(e); }
     }
   } catch (e) {
@@ -93,6 +116,13 @@ function hover(uri: string, p: Pos) {
       text = `scale degree ${word}${n ? ` = MIDI ${Math.round(n.semi * 100) / 100} in ${s.key}` : ""}`;
     } catch { text = `scale degree ${word}`; }
   }
+  const ns = namespaced(uri, src, start);
+  if (ns) {
+    const d = definitions(ns.file.src).find(x => x.name === word && (x.kind === "let" || x.kind === "fn"));
+    text = d ? `${d.detail}\nfrom ${ns.alias} (${ns.file.uri.split("/").pop()})` : null;
+  }
+  const u = !text && usesIn(src).find(x => x.as === word);
+  if (u) text = `use "${u.path}" as ${u.as}\n${(() => { const f = usedFile(uri, u.path); return f ? definitions(f.src).filter(d => d.kind === "let" || d.kind === "fn").map(d => d.name).join(", ") || "no lets" : "file not found"; })()}`;
   if (!text) {
     const d = flat(definitions(src)).find(x => x.name === word);
     if (d) {
@@ -122,9 +152,17 @@ function completion(uri: string, p: Pos) {
     for (const q of ["7b9", "7#9", "7#11", "7b13", "7alt", "maj7#11", "9sus4", "13sus4", "69", "m69", "maj13", "m13", "mmaj7", "7#5", "7b5"]) if (!items.some(i => i.label === q)) items.push({ label: q, kind: 12, detail: "chord symbol" });
     return items;
   }
+  const nsm = before.match(/([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_]*$/);
+  const ns = nsm && namespaced(uri, src, off - (before.length - before.lastIndexOf(".") - 1));
+  if (ns) {
+    const file = ns.file.uri.split("/").pop();
+    return definitions(ns.file.src).filter(d => d.kind === "fn" || d.kind === "let")
+      .map(d => ({ label: d.name, kind: d.kind === "fn" ? 3 : 6, detail: `${d.detail}  (${file})` }));
+  }
   const afterDot = /\.[A-Za-z_]*$/.test(before);
   for (const b of builtinList()) items.push({ label: b.name, kind: 3, detail: b.sig, documentation: b.doc, insertText: b.name });
   for (const d of flat(definitions(src))) if (d.kind === "fn" || d.kind === "let") items.push({ label: d.name, kind: d.kind === "fn" ? 3 : 6, detail: d.detail });
+  if (!afterDot) for (const u of usesIn(src)) if (u.as) items.push({ label: u.as, kind: 9, detail: `use "${u.path}"` });
   if (!afterDot) {
     for (const k of KEYWORDS) items.push({ label: k, kind: 14 });
     for (const s of Object.keys(SCALES)) items.push({ label: s, kind: 7, detail: "scale" });
@@ -159,7 +197,17 @@ function signature(uri: string, p: Pos) {
 
 function definition(uri: string, p: Pos) {
   const src = docs.get(uri) ?? "";
-  const { word } = wordAt(src, posToOffset(src, p));
+  const off = posToOffset(src, p);
+  const { word, start } = wordAt(src, off);
+  const top = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
+  // on the path of a use line, or on a namespace name: open the file
+  const u = usesIn(src).find(x => (off >= x.pathSpan.start && off <= x.pathSpan.end) || x.as === word);
+  if (u) { const f = usedFile(uri, u.path); return f ? { uri: f.uri, range: top } : null; }
+  const ns = namespaced(uri, src, start);
+  if (ns) {
+    const d = definitions(ns.file.src).find(x => x.name === word);
+    return { uri: ns.file.uri, range: d ? range(ns.file.src, d.nameSpan) : top };
+  }
   const d = flat(definitions(src)).find(x => x.name === word);
   return d ? { uri, range: range(src, d.nameSpan) } : null;
 }

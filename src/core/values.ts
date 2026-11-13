@@ -8,6 +8,13 @@ export class Rec {
   toString() { return `(${Object.entries(this.fields).map(([k, v]) => `${k}: ${show(v)}`).join(", ")})`; }
 }
 
+// What `use "drums.tine" as drums` binds: the file's own lets and functions,
+// read as drums.name or called as drums.fill(2). Not playable by itself.
+export class Namespace {
+  constructor(public name: string, public path: string, public fields: Record<string, any>) {}
+  toString() { return `<${this.name}: ${this.path}>`; }
+}
+
 export class Closure {
   constructor(public name: string, public params: string[], public body: Node, public env: Env) {}
   toString() { return `<fn ${this.name}(${this.params.join(", ")})>`; }
@@ -54,6 +61,7 @@ export function typeName(v: any): string {
   if (v instanceof Scale) return "scale";
   if (v instanceof Closure || v instanceof Builtin) return "function";
   if (v instanceof Rec) return "record";
+  if (v instanceof Namespace) return "namespace";
   if (v instanceof Rest) return "rest";
   if (v === null || v === undefined) return "nothing";
   return typeof v;

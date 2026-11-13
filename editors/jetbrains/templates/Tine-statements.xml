@@ -362,7 +362,7 @@
         <option name="OC_SOURCE" value="false" />
       </context>
     </template>
-    <template name="use" value="use $ARG1$$END$" description="use &quot;other.tine&quot;  [statement]  Run another file here (its lets and voices become available)." toReformat="false" toShortenFQNames="false">
+    <template name="use" value="use $ARG1$$END$" description="use &quot;other.tine&quot;  /  use &quot;other.tine&quot; as name  [statement]  Run another file here (its lets and voices become available). With `as name`, the file keeps its own scope: read its lets as name.x, and its voices and sections become name.voice and name.section. Paths are relative to the using file." toReformat="false" toShortenFQNames="false">
       <variable name="ARG1" expression="" defaultValue="&quot;\&quot;other.tine\&quot;&quot;" alwaysStopAt="true" />
       <context>
         <option name="OTHER" value="true" />

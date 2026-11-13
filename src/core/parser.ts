@@ -32,7 +32,7 @@ export type Stmt =
   | { t: "directive"; name: "tempo" | "meter" | "key" | "seed" | "tuning"; args: Node[]; span: Span }
   | { t: "section"; name: string; bars: Node; body: Stmt[]; span: Span; nameSpan: Span }
   | { t: "form"; items: { name: string; times: number; span: Span }[]; span: Span }
-  | { t: "use"; path: string; span: Span }
+  | { t: "use"; path: string; as?: string; asSpan?: Span; pathSpan: Span; span: Span }
   | { t: "expr"; e: Node; span: Span };
 
 export interface Program { stmts: Stmt[]; src: string }
@@ -187,9 +187,12 @@ class Parser {
       const items: { name: string; times: number; span: Span }[] = [];
       while (this.tok.type === "ident") {
         const n = this.next();
+        // a section from a namespace: form intro drums.verse*2
+        let name = n.text, end = n.end;
+        while (this.isOp(".") && this.peek().type === "ident") { this.next(); const p = this.next(); name += "." + p.text; end = p.end; }
         let times = 1;
         if (this.isOp("*")) { this.next(); const c = this.tok; if (c.type !== "num") this.err("expected a repeat count after '*'"); this.next(); times = c.num!.n / c.num!.d; }
-        items.push({ name: n.text, times, span: this.spanOf(n) });
+        items.push({ name, times, span: { start: n.start, end } });
       }
       if (!items.length) this.err("form lists section names in order, like: form intro verse*2 chorus");
       return { t: "form", items, span: sp(this.spanOf(t), items[items.length - 1].span) };
@@ -198,7 +201,16 @@ class Parser {
       this.next();
       const s = this.tok; if (s.type !== "str") this.err('use expects a file path in quotes, like use "drums.tine"');
       this.next();
-      return { t: "use", path: s.text, span: sp(this.spanOf(t), this.spanOf(s)) };
+      const pathSpan = this.spanOf(s);
+      if (this.tok.type === "ident" && this.tok.text === "as") {
+        this.next();
+        const n = this.tok;
+        if (n.type === "note") this.err(`'${n.text}' is a note name, so it cannot name a used file`, n, renameHint(n.text));
+        if (n.type !== "ident") this.err('use ... as expects a name, like use "drums.tine" as drums');
+        this.next();
+        return { t: "use", path: s.text, as: n.text, asSpan: this.spanOf(n), pathSpan, span: sp(this.spanOf(t), this.spanOf(n)) };
+      }
+      return { t: "use", path: s.text, pathSpan, span: sp(this.spanOf(t), pathSpan) };
     }
     const e = this.expr();
     if (this.isOp("=") ) this.err("to define a name, write 'let name = ...'", this.tok);

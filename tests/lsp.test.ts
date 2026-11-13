@@ -46,3 +46,31 @@ test("language server: diagnostics, hover, completion, definition", async () => 
   expect(sig.signatures[0].label).toContain("riff(n)");
   c.p.kill();
 });
+
+test("language server: use ... as name across files", async () => {
+  const { mkdtempSync, writeFileSync, mkdirSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { pathToFileURL } = await import("node:url");
+  const dir = mkdtempSync(join(tmpdir(), "tine-lsp-"));
+  mkdirSync(join(dir, "parts"));
+  writeFileSync(join(dir, "parts/drums.tine"), "tempo 90\nlet hits = [kick snare]\nlet fill(n) = [kick kick].fast(n)\nvoice beat = hits\nvoice oops = [kick].fsat(2)\n");
+  const c = client();
+  await c.request("initialize", { capabilities: {} });
+  const uri = pathToFileURL(join(dir, "main.tine")).href;
+  const text = "use \"parts/drums.tine\" as drums\nvoice f = drums.fill(2)\n";
+  c.write({ method: "textDocument/didOpen", params: { textDocument: { uri, text, languageId: "tine", version: 1 } } });
+  const d = await c.next("textDocument/publishDiagnostics");
+  expect(d.diagnostics.length).toBe(1);
+  expect(d.diagnostics[0].message).toContain("in parts/drums.tine line 5");
+  expect(d.diagnostics[0].range.start.line).toBe(0);
+  const comp = await c.request("textDocument/completion", { textDocument: { uri }, position: { line: 1, character: 16 } });
+  expect(comp.map((x: any) => x.label).sort()).toEqual(["fill", "hits"]);
+  const def = await c.request("textDocument/definition", { textDocument: { uri }, position: { line: 1, character: 17 } });
+  expect(def.uri).toBe(pathToFileURL(join(dir, "parts/drums.tine")).href);
+  expect(def.range.start.line).toBe(2);
+  const file = await c.request("textDocument/definition", { textDocument: { uri }, position: { line: 0, character: 8 } });
+  expect(file.uri).toBe(def.uri);
+  const h = await c.request("textDocument/hover", { textDocument: { uri }, position: { line: 1, character: 17 } });
+  expect(h.contents.value).toContain("let fill(n)");
+  c.p.kill();
+});
