@@ -5,6 +5,7 @@
     <description><![CDATA[
 <p>Support for <b>Tine</b>, a programming language for music.</p>
 <ul>
+  <li>Play and perform inside the IDE, no browser: Cmd+Enter hears the code in the editor at the next bar, saved or not, across every file the piece uses. A transport in the toolbar, active voices that update as you type, and errors that only happen while playing shown in place.</li>
   <li>Highlighting for notes, scale degrees, chord symbols, scales, drums and instruments, with its own color settings page.</li>
   <li>Completion, hover docs, parameter info, live error checking, go to definition, structure view and formatting from <code>tine lsp</code>, the same language server every Tine editor uses.</li>
   <li>Run configurations for every <code>tine</code> command: open in the DAW, play, render WAV, export MIDI and MusicXML, score, lead sheet, chord chart, check, piano roll, pack, SuperDirt.</li>
@@ -45,9 +46,38 @@
         <defaultLiveTemplates file="/liveTemplates/Tine-words.xml"/>
 
         <internalFileTemplate name="Tine Piece"/>
+
+        <externalAnnotator language="Tine" implementationClass="tine.intellij.engine.TineEngineAnnotator"/>
+        <postStartupActivity implementation="tine.intellij.engine.TineEngineStartup"/>
+        <statusBarWidgetFactory id="Tine.Transport" implementation="tine.intellij.engine.TineStatusWidgetFactory" order="first"/>
+        <actionPromoter implementation="tine.intellij.engine.TineActionPromoter"/>
     </extensions>
 
     <actions>
+        <!-- Playing inside the IDE: tine engine, heard through the IDE's Java Sound. -->
+        <group id="Tine.Transport" text="Tine Transport">
+            <add-to-group group-id="MainToolbarRight" anchor="first"/>
+            <add-to-group group-id="NavBarToolBar" anchor="first"/>
+            <action id="Tine.Engine.PlayStop" class="tine.intellij.engine.TinePlayStopAction" text="Play"
+                    description="Play this piece in the IDE" icon="AllIcons.Actions.Execute"/>
+            <action id="Tine.Engine.Position" class="tine.intellij.engine.TinePositionAction" text="Position"/>
+            <action id="Tine.Engine.Quantize" class="tine.intellij.engine.TineQuantizeAction" text="Swap: bar"
+                    description="When Cmd+Enter takes effect: next bar, next beat, or now"/>
+        </group>
+        <action id="Tine.Engine.Evaluate" class="tine.intellij.engine.TineEvaluateAction" text="Play Code in IDE"
+                description="Hear the code as it is in the editor, at the next bar; starts playing if stopped"
+                icon="AllIcons.Actions.Execute">
+            <keyboard-shortcut keymap="$default" first-keystroke="control ENTER"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta ENTER"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta ENTER"/>
+        </action>
+        <action id="Tine.Engine.Stop" class="tine.intellij.engine.TineStopAction" text="Stop Tine"
+                description="Stop the music; reverb and delay tails ring out" icon="AllIcons.Actions.Suspend">
+            <keyboard-shortcut keymap="$default" first-keystroke="control PERIOD"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta PERIOD"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta PERIOD"/>
+        </action>
+
         <action id="Tine.NewFile" class="tine.intellij.actions.NewTineFileAction"
                 text="Tine Piece" description="Create a new Tine piece" icon="/icons/tine.svg">
             <add-to-group group-id="NewGroup" anchor="last"/>
@@ -57,6 +87,9 @@
             <add-to-group group-id="ToolsMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+            <reference ref="Tine.Engine.Evaluate"/>
+            <reference ref="Tine.Engine.Stop"/>
+            <separator/>
             <action id="Tine.Daw" class="tine.intellij.actions.TineDawAction" text="Open in DAW (Live)"
                     description="Open this piece in the live-coding DAW; it reloads on every save"/>
             <action id="Tine.Play" class="tine.intellij.actions.TinePlayAction" text="Play"
