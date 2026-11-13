@@ -6,7 +6,7 @@ import { parse, Node, Stmt, Program } from "./parser";
 import { TineError, Span, suggest } from "./errors";
 import { R, ONE, ZERO } from "./rational";
 import { Pitch, Degree, Key, Scale, parseNote, parseDegree, SCALES, DRUMS, DEFAULT_KEY } from "./pitch";
-import { Pat, Chord, REST, Rest, toPat, seq, stack, alt, fast, choice, degrade, silence, mapV, sampleAt, Ctx, makeCtx } from "./pattern";
+import { Pat, Chord, REST, Rest, toPat, seq, stack, alt, fast, choice, degrade, silence, mapV, sampleAt, setParam, Ctx, makeCtx } from "./pattern";
 import { hashStr, Stream, rand01 } from "./rng";
 import { Env, Closure, Builtin, Rec, typeName, show, num, isNum, truthy } from "./values";
 import { makeChord, registerBuiltins } from "./builtins";
@@ -377,6 +377,7 @@ export class Interp {
         catch (e) { throw new TineError("type", (e as Error).message, n.span); }
       }
       case "rep": return v;
+      case "slur": return setParam(toPat(v), "slur", true); // c4~ d4: connect to the next note
     }
   }
 }

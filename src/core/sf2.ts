@@ -116,7 +116,9 @@ export function regions(sf: SoundFont, preset: SfPreset, key: number, vel: numbe
   return out;
 }
 
-export interface SfNote { semi: number; vel: number; durSec: number; gain?: number }
+import { bender } from "./synth";
+
+export interface SfNote { semi: number; vel: number; durSec: number; gain?: number; curve?: number[] }
 
 export function renderSf(sf: SoundFont, preset: SfPreset, n: SfNote, sr: number): Float32Array {
   const key = Math.max(0, Math.min(127, Math.round(n.semi))), vel = Math.max(1, Math.min(127, Math.round(n.vel * 127)));
@@ -132,6 +134,7 @@ export function renderSf(sf: SoundFont, preset: SfPreset, n: SfNote, sr: number)
   const out = new Float32Array(len);
   const d = sf.data;
   for (const { r, rel } of parts) {
+    const bend = bender(n.curve, sr);
     const g = r.g, s = r.sample;
     const start = s.start + g(G.startOffset, 0) + 32768 * g(G.startCoarse, 0);
     const end = s.end + g(G.endOffset, 0) + 32768 * g(G.endCoarse, 0);
@@ -176,7 +179,7 @@ export function renderSf(sf: SoundFont, preset: SfPreset, n: SfNote, sr: number)
       }
       out[i] += x * e * gain;
       if (i > last) last = i;
-      pos += step;
+      pos += bend ? step * bend(i) : step;
       if (loops && (mode === 1 || t < n.durSec) && pos >= le) pos -= le - ls;
     }
   }

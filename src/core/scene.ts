@@ -52,8 +52,10 @@ function queryVoice(v: VoiceDef, a: R, b: R, ctx: Ctx, opts: QueryOptions): Note
   if (opts.muted?.has(v.name)) return [];
   const before = R.inexact;
   try {
-    const notes = resolveNotes(v.name, v.pat.query(a, b, ctx), ctx);
-    return notes.some(n => n.params.glide !== undefined) ? withGlide(notes, v, a, ctx) : notes;
+    let notes = resolveNotes(v.name, v.pat.query(a, b, ctx), ctx);
+    if (notes.some(n => n.params.glide !== undefined)) notes = withGlide(notes, v, a, ctx);
+    if (hasSlurs(notes, v, ctx)) notes = withSlurs(notes, v, ctx);
+    return notes;
   }
   catch (e) {
     if (opts.onError) { opts.onError(v.name, e); return []; }
@@ -77,6 +79,95 @@ function withGlide(notes: Note[], v: VoiceDef, a: R, ctx: Ctx): Note[] {
   });
 }
 
+// A slurred or glissando note joins the next one into a single sound.
+const linked = (n: Note) => !!n.params.slur || (n.params.gliss !== undefined && n.params.gliss !== false && Number(n.params.gliss) > 0);
+// Runs break every RUN_BLOCK bars of the voice, so a slur that never ends
+// (a loop slurred all the way round) still plays, and a window never has to
+// look further than the end of its block.
+const RUN_BLOCK = 4;
+
+// Whether a voice slurs at all. A window can hold only the end of a run, so
+// the notes in it are not enough to tell; the first bars of the voice are
+// asked once, and any slur seen later is remembered.
+const slurring = new WeakMap<VoiceDef, boolean>();
+const marksSlur = (n: Note) => n.params.slur !== undefined || n.params.gliss !== undefined;
+function hasSlurs(notes: Note[], v: VoiceDef, ctx: Ctx): boolean {
+  if (notes.some(marksSlur)) { slurring.set(v, true); return true; }
+  let s = slurring.get(v);
+  if (s === undefined) {
+    s = resolveNotes(v.name, v.pat.query(new R(0), new R(RUN_BLOCK), ctx), ctx).some(marksSlur);
+    slurring.set(v, s);
+  }
+  return s;
+}
+
+// A run of slurred notes is played as one sound: its first note (the head)
+// holds until the last ends and follows the run's pitches, and the others are
+// marked slurIn so audio skips them (MIDI and scores still see every note).
+// Like glide, this asks the pattern for the bars around the window, so the
+// answer is the same live, in a render, and from any starting bar. A chord
+// slurs voice by voice: the lowest note to the next lowest, and so on.
+function withSlurs(notes: Note[], v: VoiceDef, ctx: Ctx): Note[] {
+  const bars = new Map<number, Note[][]>();
+  const onsetsOf = (k: number): Note[][] => {
+    let g = bars.get(k);
+    if (!g) {
+      const lo = new R(k), hi = new R(k + 1);
+      const ns = resolveNotes(v.name, v.pat.query(lo, hi, ctx), ctx).filter(n => !n.start.lt(lo) && n.start.lt(hi));
+      g = [];
+      for (const n of ns.sort((x, y) => x.start.cmp(y.start) || x.semi - y.semi)) {
+        const last = g[g.length - 1];
+        if (last && last[0].start.eq(n.start)) last.push(n); else g.push([n]);
+      }
+      bars.set(k, g);
+    }
+    return g;
+  };
+  // the note at the same place in the onset before (-1) or after (+1), within a bar
+  const near = (n: Note, dir: -1 | 1): Note | undefined => {
+    const k = Math.floor(n.start.toNumber());
+    const groups = [...onsetsOf(k - 1), ...onsetsOf(k), ...onsetsOf(k + 1)];
+    const gi = groups.findIndex(g => g[0].start.eq(n.start));
+    if (gi < 0) return undefined;
+    const at = groups[gi].findIndex(x => x.semi === n.semi);
+    return groups[gi + dir]?.[at];
+  };
+  const span = (x: Note, y: Note) => y.start.sub(x.start).toNumber();
+  const block = (x: Note) => Math.floor(x.start.toNumber() / RUN_BLOCK);
+  return notes.map(n => {
+    const prev = near(n, -1);
+    if (prev && linked(prev) && block(prev) === block(n)) return { ...n, params: { ...n.params, slurIn: true } };
+    if (!linked(n)) return n;
+    const links: { at: number; semi: number; glide: number; gliss: number }[] = [];
+    let cur = n, end = n.dur.toNumber();
+    for (;;) {
+      const next = near(cur, 1);
+      if (!next || block(next) !== block(n)) break;
+      const gl = cur.params.gliss !== undefined && cur.params.gliss !== false ? Math.min(1, Math.max(0, Number(cur.params.gliss))) : 0;
+      links.push({ at: span(n, next), semi: next.semi - n.semi, glide: next.params.glide !== undefined ? Number(next.params.glide) || 0 : 0, gliss: gl });
+      end = span(n, next) + next.dur.toNumber();
+      if (!linked(next)) break;
+      cur = next;
+    }
+    return links.length ? { ...n, params: { ...n.params, run: { links, end } } } : n;
+  });
+}
+
+// The pitch path of a run, in seconds and semitones from its first note:
+// pairs of [time, offset], joined by straight lines.
+function runCurve(run: { links: { at: number; semi: number; glide: number; gliss: number }[] }, bs: number): number[] {
+  const out: number[] = [];
+  let prevAt = 0, prevSemi = 0;
+  for (const l of run.links) {
+    const t = l.at * bs;
+    if (l.gliss > 0) out.push(t - (l.at - prevAt) * bs * l.gliss, prevSemi, t, l.semi);
+    else if (l.glide > 0) out.push(t, prevSemi, t + l.glide, l.semi);
+    else out.push(t, prevSemi, t + 0.004, l.semi);
+    prevAt = l.at; prevSemi = l.semi;
+  }
+  return out;
+}
+
 function finish(scene: Scene, n: Note, offsetBar: number, offsetSec: number, tempo: number, section?: string): TimedNote {
   const bs = barSeconds(scene, tempo);
   const local = n.start.toNumber();
@@ -90,6 +181,7 @@ function finish(scene: Scene, n: Note, offsetBar: number, offsetSec: number, tem
   // the fm function switches the synth to its fm wave
   if (params.fm !== undefined && params.wave === undefined && (params.inst === undefined || params.inst === "synth")) { params.wave = "fm"; params.inst = "synth"; }
   if (params.duckRelease !== undefined) { params.duckSec = Number(params.duckRelease instanceof R ? params.duckRelease.toNumber() : params.duckRelease) * bs; delete params.duckRelease; }
+  if (params.run !== undefined) { params.curve = runCurve(params.run, bs); params.runSec = params.run.end * bs; delete params.run; }
   if (params.delayTime !== undefined) { params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs; delete params.delayTime; }
   const written = n.written ? { written: { bar: offsetBar + n.written.start.toNumber(), bars: n.params.durBeats !== undefined ? bars : n.written.dur.toNumber() } } : {};
   return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section, ...written };

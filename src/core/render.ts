@@ -2,7 +2,7 @@
 // Standard MIDI File export. All pure, so it runs in the CLI and the browser.
 import { TimedNote, timeline, barSeconds } from "./scene";
 import { Scene } from "./interp";
-import { renderNote, reverb, noteLength } from "./synth";
+import { renderNote, reverb, noteLength, performed } from "./synth";
 import { hasFx, fxOf, processBus, Fx } from "./fx";
 import { SampleData, SampleLibrary, renderSample, applyCuts } from "./samples";
 import { SoundFont, presetFor, renderSf } from "./sf2";
@@ -20,8 +20,10 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
   const buses = new Map<string, { L: Float32Array; R: Float32Array; changes: { time: number; fx: Fx }[] }>();
   for (const v of fxVoices) buses.set(v, { L: new Float32Array(len), R: new Float32Array(len), changes: [] });
   if (notes.some(n => n.params.cut !== undefined)) notes = applyCuts(notes);
-  for (const n of notes) {
-    if (n.params.midi !== undefined || n.params.ccOut !== undefined || n.params.dirt !== undefined) continue; // routed to external gear
+  for (const heard of notes) {
+    if (heard.params.midi !== undefined || heard.params.ccOut !== undefined || heard.params.dirt !== undefined) continue; // routed to external gear
+    const n = performed(heard);
+    if (!n) continue; // inside a slurred run, which its first note plays
     const inst = String(n.params.inst ?? "keys");
     let buf: Float32Array;
     if (inst.startsWith("sample:")) {
@@ -32,9 +34,9 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
     } else if (inst === "gm") {
       const pre = opts.soundfont ? presetFor(opts.soundfont, n.params) : undefined;
       if (!pre) continue;
-      const gain = Number(n.params.gain ?? 1), key = `gm|${pre.bank}:${pre.program}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${gain}|${opts.tuningRef ?? 440}`;
+      const gain = Number(n.params.gain ?? 1), key = `gm|${pre.bank}:${pre.program}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${gain}|${opts.tuningRef ?? 440}|${n.params.curve ?? ""}`;
       buf = cache.get(key)!;
-      if (!buf) { buf = renderSf(opts.soundfont!, pre, { semi: n.semi + 12 * Math.log2((opts.tuningRef ?? 440) / 440), vel: n.vel, durSec: n.durSec, gain }, sr); if (cache.size < 2000) cache.set(key, buf); }
+      if (!buf) { buf = renderSf(opts.soundfont!, pre, { semi: n.semi + 12 * Math.log2((opts.tuningRef ?? 440) / 440), vel: n.vel, durSec: n.durSec, gain, curve: n.params.curve }, sr); if (cache.size < 2000) cache.set(key, buf); }
     } else {
       const key = `${inst}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${JSON.stringify(n.params)}`;
       buf = cache.get(key)!;
