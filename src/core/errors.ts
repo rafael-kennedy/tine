@@ -7,6 +7,9 @@ export class TineError extends Error {
   span?: Span;
   hint?: string;
   kind: "syntax" | "name" | "type" | "runtime" | "timing";
+  // For an error inside a used file, reported on the use line: where it really is.
+  // file is relative to the main file, as written in the use lines.
+  origin?: { file: string; span?: Span; message: string };
   constructor(kind: TineError["kind"], message: string, span?: Span, hint?: string) {
     super(message);
     this.kind = kind; this.span = span; this.hint = hint;

@@ -42,6 +42,8 @@ usage:
                                save the file to change the music at the next bar
   tine new <name>              start a new piece from a template
   tine lsp                     run the language server (for editors)
+  tine engine                  run the audio engine for editors (JSON on stdin,
+                               audio and JSON frames on stdout; --rate 48000)
 
 options:
   --seed N     override the seed for this run (files with 'seed' keep theirs)
@@ -216,6 +218,7 @@ async function main() {
       return;
     }
     case "lsp": { const { startServer } = await import("../lsp/server"); startServer(); return; }
+    case "engine": { const { startEngine } = await import("../engine/server"); startEngine(parseInt(String(flags.rate ?? "44100"), 10) || 44100); return; }
     default:
       if (cmd && existsSync(cmd) && cmd.endsWith(".tine")) { process.argv.splice(2, 0, "play"); return main(); }
       console.error(`unknown command '${cmd}'\n`); console.log(USAGE); process.exit(2);

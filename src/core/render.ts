@@ -21,31 +21,10 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
   for (const v of fxVoices) buses.set(v, { L: new Float32Array(len), R: new Float32Array(len), changes: [] });
   if (notes.some(n => n.params.cut !== undefined)) notes = applyCuts(notes);
   for (const n of notes) {
-    if (n.params.midi !== undefined || n.params.ccOut !== undefined || n.params.dirt !== undefined) continue; // routed to external gear
+    const buf = noteBuffer(n, sr, opts, cache);
+    if (!buf) continue;
     const inst = String(n.params.inst ?? "keys");
-    let buf: Float32Array;
-    if (inst.startsWith("sample:")) {
-      const name = opts.samples?.resolve(inst.slice(7), n.params.sampleN, n.params.drum);
-      const sm = name ? opts.samples!.get(name) : undefined;
-      if (!sm) continue;
-      buf = renderSample(sm, n, sr);
-    } else if (inst === "gm") {
-      const pre = opts.soundfont ? presetFor(opts.soundfont, n.params) : undefined;
-      if (!pre) continue;
-      const gain = Number(n.params.gain ?? 1), key = `gm|${pre.bank}:${pre.program}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${gain}|${opts.tuningRef ?? 440}`;
-      buf = cache.get(key)!;
-      if (!buf) { buf = renderSf(opts.soundfont!, pre, { semi: n.semi + 12 * Math.log2((opts.tuningRef ?? 440) / 440), vel: n.vel, durSec: n.durSec, gain }, sr); if (cache.size < 2000) cache.set(key, buf); }
-    } else {
-      const key = `${inst}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${JSON.stringify(n.params)}`;
-      buf = cache.get(key)!;
-      if (!buf) {
-        buf = renderNote({ inst, freq: freqOf(n.semi, opts.tuningRef), semi: n.semi, vel: n.vel, dur: n.durSec, params: n.params }, sr);
-        if (cache.size < 2000) cache.set(key, buf);
-      }
-    }
-    const pan = Math.max(-1, Math.min(1, Number(n.params.pan ?? 0)));
-    const gl = Math.cos((pan + 1) * Math.PI / 4), gr = Math.sin((pan + 1) * Math.PI / 4);
-    const send = Number(n.params.reverb ?? (inst === "pad" || inst === "bell" ? 0.35 : 0.12));
+    const { gl, gr, send } = placement(n.params, inst);
     const start = Math.round(n.time * sr);
     const end = Math.min(len, start + buf.length);
     const bus = buses.get(n.voice);
@@ -84,6 +63,42 @@ export function mix(notes: TimedNote[], seconds: number, sr = 44100, opts: { tun
   let last = len - 1;
   while (last > seconds * sr && Math.abs(L[last]) < 1e-4 && Math.abs(R[last]) < 1e-4) last--;
   return [L.slice(0, last + 1), R.slice(0, last + 1)];
+}
+
+export interface NoteSources { tuningRef?: number; samples?: SampleLibrary; soundfont?: SoundFont | null }
+
+// One note's dry audio, or null when it goes to external gear or its sound is missing.
+// Shared by the offline mix and the streaming mixer, so both sound the same.
+export function noteBuffer(n: TimedNote, sr: number, opts: NoteSources, cache: Map<string, Float32Array>): Float32Array | null {
+  if (n.params.midi !== undefined || n.params.ccOut !== undefined || n.params.dirt !== undefined) return null; // routed to external gear
+  const inst = String(n.params.inst ?? "keys");
+  let buf: Float32Array;
+  if (inst.startsWith("sample:")) {
+    const name = opts.samples?.resolve(inst.slice(7), n.params.sampleN, n.params.drum);
+    const sm = name ? opts.samples!.get(name) : undefined;
+    if (!sm) return null;
+    buf = renderSample(sm, n, sr);
+  } else if (inst === "gm") {
+    const pre = opts.soundfont ? presetFor(opts.soundfont, n.params) : undefined;
+    if (!pre) return null;
+    const gain = Number(n.params.gain ?? 1), key = `gm|${pre.bank}:${pre.program}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${gain}|${opts.tuningRef ?? 440}`;
+    buf = cache.get(key)!;
+    if (!buf) { buf = renderSf(opts.soundfont!, pre, { semi: n.semi + 12 * Math.log2((opts.tuningRef ?? 440) / 440), vel: n.vel, durSec: n.durSec, gain }, sr); if (cache.size < 2000) cache.set(key, buf); }
+  } else {
+    const key = `${inst}|${n.semi.toFixed(4)}|${n.vel.toFixed(3)}|${n.durSec.toFixed(4)}|${JSON.stringify(n.params)}`;
+    buf = cache.get(key)!;
+    if (!buf) {
+      buf = renderNote({ inst, freq: freqOf(n.semi, opts.tuningRef), semi: n.semi, vel: n.vel, dur: n.durSec, params: n.params }, sr);
+      if (cache.size < 2000) cache.set(key, buf);
+    }
+  }
+  return buf;
+}
+
+// Equal-power pan gains and the reverb send level for a note.
+export function placement(params: Record<string, any>, inst = String(params.inst ?? "keys")): { gl: number; gr: number; send: number } {
+  const pan = Math.max(-1, Math.min(1, Number(params.pan ?? 0)));
+  return { gl: Math.cos((pan + 1) * Math.PI / 4), gr: Math.sin((pan + 1) * Math.PI / 4), send: Number(params.reverb ?? (inst === "pad" || inst === "bell" ? 0.35 : 0.12)) };
 }
 
 export function encodeWav(channels: Float32Array[], sr: number): Uint8Array {

@@ -25,3 +25,4 @@ export * from "./chart";
 export * from "./page";
 export * from "./chartsvg";
 export * from "./notation";
+export * from "./stream";

@@ -134,6 +134,7 @@ export class Interp {
     const relocate = (e: TineError) => {
       const where = e.span ? ` line ${lineCol(src, e.span.start).line + 1}` : "";
       const out = new TineError(e.kind, `in ${st.path}${where}: ${e.message}`, st.span, e.hint);
+      out.origin = e.origin ?? { file: path, span: e.span, message: e.message };
       return out;
     };
     const before = this.scene.errors.length;
