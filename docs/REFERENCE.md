@@ -56,6 +56,7 @@ A line that starts with `.` continues the line above, for long method chains.
 | `<a b c>` | one per bar, in turn (each advances only when it plays) |
 | `a\|b\|c` | seeded random choice, once per bar (or per step when sped up) |
 | `x?` `x?0.3` | seeded chance to play (50%, 30%) |
+| `x~` | slur: x joins the next note as one sound, with no new attack (add `.glide` to slide between them) |
 | `x@maj7` | chord on x |
 | `(expr)` | any expression inside a phrase |
 | `name` | variables (including drums and other phrases) can appear directly |
@@ -384,7 +385,9 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `detune(p, cents)` | Spread of the unison voices, in cents either side. |
 | `unison(p, n)` | How many detuned oscillators sound together (1 to 16). |
 | `sub(p, level)` | A sine one octave below, 0 to 1. |
-| `glide(p, seconds)` | Slide into each note from the one before it in the voice. |
+| `glide(p, seconds)` | Slide into each note from the one before it in the voice. On a note slurred into (c4~ d4), the slide joins the two into one sound. |
+| `slur(p)` | Play p's notes as one connected sound, without a new attack on each, up to the last note in each bar. Scores draw a slur. For one pair, write c4~ d4 in the phrase. |
+| `gliss(p, amount: 1)` | Glissando: each note slides to the next across the last `amount` of its length (1 = all of it), up to the last note in each bar. amount may be a pattern: .gliss([1 0]). |
 | `fenv(p, octaves, attack: .001, decay: .2)` | Filter envelope: the cutoff jumps up by this many octaves and falls back over decay seconds. The acid squelch. |
 | `fm(p, index, ratio: 2, decay: .4)` | Frequency modulation (switches the synth to the fm wave): index is brightness, ratio the modulator's pitch, decay how fast the brightness fades. |
 | `vibrato(p, rate: 5, depth: .3)` | Pitch wobble, rate in Hz, depth in semitones. |

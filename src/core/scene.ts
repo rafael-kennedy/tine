@@ -134,22 +134,28 @@ function withSlurs(notes: Note[], v: VoiceDef, ctx: Ctx): Note[] {
   };
   const span = (x: Note, y: Note) => y.start.sub(x.start).toNumber();
   const block = (x: Note) => Math.floor(x.start.toNumber() / RUN_BLOCK);
+  const linkTo = (cur: Note, next: Note, from: Note) => {
+    const gl = cur.params.gliss !== undefined && cur.params.gliss !== false ? Math.min(1, Math.max(0, Number(cur.params.gliss))) : 0;
+    return { at: span(from, next), semi: next.semi - from.semi, glide: next.params.glide !== undefined ? Number(next.params.glide) || 0 : 0, gliss: gl };
+  };
   return notes.map(n => {
+    // every linked note says how it joins the next, for MIDI (see slideBends)
+    const after = linked(n) ? near(n, 1) : undefined;
+    const p: Record<string, any> = after ? { ...n.params, join: linkTo(n, after, n) } : n.params;
     const prev = near(n, -1);
-    if (prev && linked(prev) && block(prev) === block(n)) return { ...n, params: { ...n.params, slurIn: true } };
-    if (!linked(n)) return n;
-    const links: { at: number; semi: number; glide: number; gliss: number }[] = [];
+    if (prev && linked(prev) && block(prev) === block(n)) return { ...n, params: { ...p, slurIn: true } };
+    if (!after) return p === n.params ? n : { ...n, params: p };
+    const links: ReturnType<typeof linkTo>[] = [];
     let cur = n, end = n.dur.toNumber();
     for (;;) {
       const next = near(cur, 1);
       if (!next || block(next) !== block(n)) break;
-      const gl = cur.params.gliss !== undefined && cur.params.gliss !== false ? Math.min(1, Math.max(0, Number(cur.params.gliss))) : 0;
-      links.push({ at: span(n, next), semi: next.semi - n.semi, glide: next.params.glide !== undefined ? Number(next.params.glide) || 0 : 0, gliss: gl });
+      links.push(linkTo(cur, next, n));
       end = span(n, next) + next.dur.toNumber();
       if (!linked(next)) break;
       cur = next;
     }
-    return links.length ? { ...n, params: { ...n.params, run: { links, end } } } : n;
+    return { ...n, params: links.length ? { ...p, run: { links, end } } : p };
   });
 }
 
@@ -182,6 +188,7 @@ function finish(scene: Scene, n: Note, offsetBar: number, offsetSec: number, tem
   if (params.fm !== undefined && params.wave === undefined && (params.inst === undefined || params.inst === "synth")) { params.wave = "fm"; params.inst = "synth"; }
   if (params.duckRelease !== undefined) { params.duckSec = Number(params.duckRelease instanceof R ? params.duckRelease.toNumber() : params.duckRelease) * bs; delete params.duckRelease; }
   if (params.run !== undefined) { params.curve = runCurve(params.run, bs); params.runSec = params.run.end * bs; delete params.run; }
+  if (params.join !== undefined) params.join = { ...params.join, at: params.join.at * bs }; // seconds to the next note
   if (params.delayTime !== undefined) { params.delaySec = Number(params.delayTime instanceof R ? params.delayTime.toNumber() : params.delayTime) * bs; delete params.delayTime; }
   const written = n.written ? { written: { bar: offsetBar + n.written.start.toNumber(), bars: n.params.durBeats !== undefined ? bars : n.written.dur.toNumber() } } : {};
   return { voice: n.voice, bar: offsetBar + local, bars, time: offsetSec + local * bs, durSec: bars * bs, semi: n.semi, vel: n.vel, params, section, ...written };

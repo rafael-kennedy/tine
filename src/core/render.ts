@@ -141,11 +141,47 @@ function vlq(n: number): number[] {
 
 export interface MidiEvent { tick: number; data: number[]; order: number }
 
-// Split a fractional pitch into a MIDI note and a 14-bit pitch bend (+-2 semitones).
-export function bendFor(semi: number): { note: number; bend: number } {
+// Split a fractional pitch into a MIDI note and a 14-bit pitch bend
+// (+-2 semitones, or +-SLIDE_RANGE on a voice that slides).
+export function bendFor(semi: number, range = 2): { note: number; bend: number } {
   const note = Math.round(semi);
-  const bend = Math.max(0, Math.min(16383, Math.round(8192 + ((semi - note) / 2) * 8192)));
-  return { note: Math.max(0, Math.min(127, note)), bend };
+  return { note: Math.max(0, Math.min(127, note)), bend: bendValue(semi - note, range) };
+}
+const bendValue = (off: number, range: number) => Math.max(0, Math.min(16383, Math.round(8192 + (off / range) * 8192)));
+
+// Slides in MIDI are pitch bend, so a voice that slides gets a wider bend
+// range than the General MIDI default of 2. Wider than an octave and a slide
+// jumps at the end of its ramp.
+export const SLIDE_RANGE = 12;
+export const slides = (p: Record<string, any>) => (Number(p.glide) > 0 && p.glideFrom !== undefined) || (p.join !== undefined && p.join.gliss > 0);
+
+// The pitch bends that play a note's slides, in seconds from its start:
+// a glide starts at the note before and bends home; a glissando bends this
+// note to the next one's pitch, and the next note's own bend resets it.
+const BEND_STEP = 0.01;
+export function slideBends(n: { semi: number; params: Record<string, any> }, ch: number, range = SLIDE_RANGE): { sec: number; data: number[] }[] {
+  const p = n.params, out: { sec: number; data: number[] }[] = [];
+  const micro = n.semi - Math.round(n.semi);
+  const ramp = (t0: number, t1: number, a: number, b: number) => {
+    const steps = Math.max(1, Math.ceil((t1 - t0) / BEND_STEP));
+    for (let k = 0; k <= steps; k++) {
+      const v = bendValue(micro + a + (b - a) * k / steps, range);
+      out.push({ sec: t0 + (t1 - t0) * k / steps, data: [0xe0 | ch, v & 0x7f, v >> 7] });
+    }
+  };
+  if (Number(p.glide) > 0 && p.glideFrom !== undefined) ramp(0, Number(p.glide), Number(p.glideFrom) - n.semi, 0);
+  if (p.join !== undefined && p.join.gliss > 0) ramp(p.join.at * (1 - p.join.gliss), p.join.at, 0, p.join.semi);
+  return out;
+}
+
+// A note slurred to the next one is held until just after it starts, which
+// a mono synth hears as legato. Where the two slide, the bend is shared by
+// the channel, so the first note ends as the second starts instead.
+export const LEGATO_OVERLAP = 0.02;
+export function heldSec(n: { durSec: number; params: Record<string, any> }): number {
+  const j = n.params.join;
+  if (j === undefined) return n.durSec;
+  return j.gliss > 0 || j.glide > 0 ? j.at : Math.max(n.durSec, j.at + LEGATO_OVERLAP);
 }
 
 // The MIDI messages one Tine note becomes, in send order. Shared by the live
@@ -153,7 +189,7 @@ export function bendFor(semi: number): { note: number; bend: number } {
 // `chans` remembers each channel's program and pitch bend, so a program change
 // is sent once and a bend is reset after a microtonal note.
 export type ChannelState = Map<number, { program?: number; bend: number }>;
-export function noteMessages(n: { semi: number; vel: number; params: Record<string, any> }, ch: number, chans: ChannelState, opts: { bend?: boolean } = {}): { on: number[][]; off: number[] | null } {
+export function noteMessages(n: { semi: number; vel: number; params: Record<string, any> }, ch: number, chans: ChannelState, opts: { bend?: boolean; range?: number } = {}): { on: number[][]; off: number[] | null } {
   const on: number[][] = [];
   const p = n.params;
   let st = chans.get(ch);
@@ -161,7 +197,7 @@ export function noteMessages(n: { semi: number; vel: number; params: Record<stri
   if (p.program !== undefined && st.program !== p.program) { st.program = p.program; on.push([0xc0 | ch, p.program - 1]); }
   if (p.ctl) for (const [k, v] of Object.entries(p.ctl)) on.push([0xb0 | ch, Number(k), Math.round(Number(v) * 127)]);
   if (p.ccOut !== undefined) { on.push([0xb0 | ch, p.ccOut, Math.round(Number(p.ccValue) * 127)]); return { on, off: null }; }
-  const { note, bend } = bendFor(n.semi);
+  const { note, bend } = bendFor(n.semi, opts.range);
   const v = Math.max(1, Math.min(127, Math.round(n.vel * 127)));
   if (opts.bend !== false && (opts.bend || bend !== st.bend)) { st.bend = bend; on.push([0xe0 | ch, bend & 0x7f, bend >> 7]); }
   on.push([0x90 | ch, note, v]);
@@ -213,15 +249,25 @@ export function toMidiFile(scene: Scene, notes: TimedNote[]): Uint8Array {
     const base = chans.get(voice)! - 1;
     let rot = 0;
     const programs: ChannelState = new Map();
-    // bend range = 2 semitones (the General MIDI default), set explicitly
+    // bend range: 2 semitones (the General MIDI default), or SLIDE_RANGE
+    // for a voice that slides; set explicitly
+    const range = ns.some(n => slides(n.params)) ? SLIDE_RANGE : 2;
     const used = new Set<number>();
     for (const n of ns) {
       let ch = base;
       if (n.params.mpe) { ch = 1 + (rot++ % 15); }
-      if (!used.has(ch)) { used.add(ch); evs.push(...[[0x65, 0], [0x64, 0], [0x06, 2], [0x26, 0]].map(([c, v]) => ({ tick: 0, data: [0xb0 | ch, c, v], order: 0 }))); }
-      const t0 = tickOf(n.bar), t1 = Math.max(t0 + 1, tickOf(n.bar + n.bars));
-      const m = noteMessages(n, ch, programs, ch === 9 ? { bend: false } : {});
+      if (!used.has(ch)) { used.add(ch); evs.push(...[[0x65, 0], [0x64, 0], [0x06, range], [0x26, 0]].map(([c, v]) => ({ tick: 0, data: [0xb0 | ch, c, v], order: 0 }))); }
+      // seconds within this note to ticks
+      const perSec = n.durSec > 0 ? n.bars / n.durSec : 0, tickAt = (sec: number) => tickOf(n.bar + sec * perSec);
+      const t0 = tickOf(n.bar), t1 = Math.max(t0 + 1, tickAt(heldSec(n)));
+      const bends = ch === 9 ? [] : slideBends(n, ch, range);
+      const glidesIn = bends.length > 0 && bends[0].sec === 0;
+      const m = noteMessages(n, ch, programs, ch === 9 || glidesIn ? { bend: false, range } : { range });
+      // a glide's first bend goes before the note-on, so the note starts at the pitch before
+      if (glidesIn) evs.push({ tick: t0, data: bends.shift()!.data, order: 1 });
       for (const data of m.on) evs.push({ tick: t0, data, order: 1 });
+      for (const b of bends) evs.push({ tick: tickAt(b.sec), data: b.data, order: 1 });
+      if (bends.length && ch !== 9) { const last = bends[bends.length - 1].data; programs.get(ch)!.bend = last[1] | (last[2] << 7); }
       if (m.off) evs.push({ tick: t1, data: m.off, order: 0 });
     }
     tracks.push(encodeTrack(evs, voice));

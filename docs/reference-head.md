@@ -56,6 +56,7 @@ A line that starts with `.` continues the line above, for long method chains.
 | `<a b c>` | one per bar, in turn (each advances only when it plays) |
 | `a\|b\|c` | seeded random choice, once per bar (or per step when sped up) |
 | `x?` `x?0.3` | seeded chance to play (50%, 30%) |
+| `x~` | slur: x joins the next note as one sound, with no new attack (add `.glide` to slide between them) |
 | `x@maj7` | chord on x |
 | `(expr)` | any expression inside a phrase |
 | `name` | variables (including drums and other phrases) can appear directly |

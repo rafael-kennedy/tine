@@ -76,6 +76,8 @@ detune
 unison
 sub
 glide
+slur
+gliss
 fenv
 fm
 vibrato

@@ -1,7 +1,7 @@
 // Browser audio + MIDI engine. Notes are rendered with the same pure DSP
 // code the command line uses (src/core/synth.ts), one AudioBuffer per note,
 // so the DAW, the tutorial and exported WAVs sound alike.
-import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx, renderSample, presetFor, renderSf, performed } from "../core";
+import { renderNote, freqOf, noteMessages, ChannelState, hasFx, fxOf, driveGains, DRIVE_RANGE, MAX_DELAY_SEC, Fx, renderSample, presetFor, renderSf, performed, slides, slideBends, heldSec, SLIDE_RANGE } from "../core";
 import { library, loadBundled, request, once, decodeBytes, soundfont, fontPending } from "./samples";
 
 // Parameters can be exact rationals (class R). A structured clone to the
@@ -48,6 +48,7 @@ export class Engine {
   tuningRef = 440;
   private mpeRot = 0;
   private chans = new Map<string, ChannelState>(); // output id -> channel -> program and bend
+  private wideBend = new Set<string>(); // output|channel whose bend range is SLIDE_RANGE
   onRealtime: ((status: number, t: number) => void) | null = null; // MIDI clock, start, continue, stop
   private thruNodes = new Map<number, { src: AudioBufferSourceNode; g: GainNode }>();
 
@@ -388,10 +389,24 @@ export class Engine {
     const semi = n.semi + 12 * Math.log2(this.tuningRef / 440);
     const key = out.id;
     if (!this.chans.has(key)) this.chans.set(key, new Map());
-    const m = noteMessages({ semi, vel: n.vel, params: n.params }, ch, this.chans.get(key)!, n.params.mpe ? { bend: true } : {});
+    const chans = this.chans.get(key)!;
+    // a sliding note widens its channel's bend range (once), as the MIDI file does
+    const sliding = n.params.ccOut === undefined && slides(n.params);
+    const wide = sliding || this.wideBend.has(`${key}|${ch}`);
+    if (sliding && !this.wideBend.has(`${key}|${ch}`)) {
+      this.wideBend.add(`${key}|${ch}`);
+      for (const [c, v] of [[0x65, 0], [0x64, 0], [0x06, SLIDE_RANGE], [0x26, 0]]) out.send([0xb0 | ch, c, v], this.toPerf(when));
+    }
+    const range = wide ? SLIDE_RANGE : 2;
+    const bends = sliding ? slideBends({ semi, params: n.params }, ch, range) : [];
+    const glidesIn = bends.length > 0 && bends[0].sec === 0;
+    const m = noteMessages({ semi, vel: n.vel, params: n.params }, ch, chans, glidesIn ? { bend: false, range } : n.params.mpe ? { bend: true, range } : { range });
     const t0 = this.toPerf(when);
+    if (glidesIn) out.send(bends.shift()!.data, t0);
     for (const msg of m.on) out.send(msg, t0);
-    if (m.off) out.send(m.off, this.toPerf(when + Math.max(0.01, n.durSec)));
+    for (const b of bends) out.send(b.data, this.toPerf(when + b.sec));
+    if (bends.length) { const last = bends[bends.length - 1].data; chans.get(ch)!.bend = last[1] | (last[2] << 7); }
+    if (m.off) out.send(m.off, this.toPerf(when + Math.max(0.01, heldSec(n))));
   }
 
   // ---------- SuperDirt (see core/dirt.ts) ----------
@@ -413,7 +428,7 @@ export class Engine {
 
   sendClock(when: number) { const out = this.output(); out?.send([0xf8], this.toPerf(when)); }
   sendStartStop(start: boolean) { const out = this.output(); out?.send([start ? 0xfa : 0xfc]); }
-  panic() { this.chans.clear(); for (const o of this.outputs()) for (let c = 0; c < 16; c++) o.send([0xb0 | c, 123, 0]); }
+  panic() { this.chans.clear(); this.wideBend.clear(); for (const o of this.outputs()) for (let c = 0; c < 16; c++) o.send([0xb0 | c, 123, 0]); }
 
   async loadSample(name: string, data: ArrayBuffer, bank?: string) {
     library.add(name, await decodeBytes(new Uint8Array(data)), bank);
