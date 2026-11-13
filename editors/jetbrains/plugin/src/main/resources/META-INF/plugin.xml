@@ -71,6 +71,12 @@
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta ENTER"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta ENTER"/>
         </action>
+        <action id="Tine.Engine.Audition" class="tine.intellij.engine.TineAuditionAction" text="Play This File Alone"
+                description="Hear this file on its own, even when it is a part of a bigger piece">
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift ENTER"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift ENTER"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift ENTER"/>
+        </action>
         <action id="Tine.Engine.Stop" class="tine.intellij.engine.TineStopAction" text="Stop Tine"
                 description="Stop the music; reverb and delay tails ring out" icon="AllIcons.Actions.Suspend">
             <keyboard-shortcut keymap="$default" first-keystroke="control PERIOD"/>
@@ -88,6 +94,7 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <reference ref="Tine.Engine.Evaluate"/>
+            <reference ref="Tine.Engine.Audition"/>
             <reference ref="Tine.Engine.Stop"/>
             <separator/>
             <action id="Tine.Daw" class="tine.intellij.actions.TineDawAction" text="Open in DAW (Live)"

@@ -77,6 +77,17 @@ class TineEvaluateAction : AnAction(), DumbAware, TineEngineAction {
     }
 }
 
+/** Cmd+Shift+Enter: hear this file on its own, even when it is a part of a bigger piece. */
+class TineAuditionAction : AnAction(), DumbAware, TineEngineAction {
+    override fun getActionUpdateThread() = ActionUpdateThread.BGT
+    override fun update(e: AnActionEvent) { e.presentation.isEnabledAndVisible = tineFile(e) != null }
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val file = tineFile(e) ?: return
+        pooled { TineEngine.get(project).auditionAlone(file) }
+    }
+}
+
 class TinePlayStopAction : AnAction(), DumbAware, TineEngineAction {
     override fun getActionUpdateThread() = ActionUpdateThread.BGT
     override fun update(e: AnActionEvent) {

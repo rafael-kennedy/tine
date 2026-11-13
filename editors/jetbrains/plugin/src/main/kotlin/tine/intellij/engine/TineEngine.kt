@@ -151,7 +151,45 @@ class TineEngine(private val project: Project) : Disposable {
     }
 
     /** The piece a file belongs to: the playing piece if the file is part of it, else the file itself. */
-    fun mainFor(file: VirtualFile): String = if (state.main != null && file.path in state.files) state.main!! else file.path
+    /**
+     * The piece a file belongs to. The playing piece if the file is part of it;
+     * otherwise the file at the top of the use graph that reaches this file
+     * (so Cmd+Enter in parts/drums.tine plays the song, not the drums alone);
+     * otherwise the file itself.
+     */
+    fun mainFor(file: VirtualFile): String {
+        if (state.main != null && file.path in state.files) return state.main!!
+        return rootsOf(file).let { roots -> roots.firstOrNull { it == state.main } ?: roots.firstOrNull() } ?: file.path
+    }
+
+    /** Tine files in the project that use `file`, directly or through other files, and are used by none. */
+    private fun rootsOf(file: VirtualFile): List<String> = runReadAction {
+        val all = com.intellij.psi.search.FilenameIndex.getAllFilesByExt(project, "tine", com.intellij.psi.search.GlobalSearchScope.projectScope(project))
+        val fdm = FileDocumentManager.getInstance()
+        val uses = HashMap<String, List<String>>()   // file -> files it uses
+        for (f in all) {
+            val text = fdm.getDocument(f)?.text ?: continue
+            uses[f.path] = USE.findAll(text).map { File(f.parent.path, it.groupValues[1]).normalize().path }.toList()
+        }
+        val usedBy = HashMap<String, MutableList<String>>()
+        for ((from, tos) in uses) for (to in tos) usedBy.getOrPut(to) { mutableListOf() } += from
+        // walk up from the file to every ancestor that nothing uses
+        val roots = LinkedHashSet<String>(); val seen = HashSet<String>(); val todo = ArrayDeque(listOf(file.path))
+        while (todo.isNotEmpty()) {
+            val f = todo.removeFirst()
+            if (!seen.add(f)) continue
+            val parents = usedBy[f].orEmpty()
+            if (parents.isEmpty()) { if (f != file.path) roots += f } else todo.addAll(parents)
+        }
+        roots.sorted()
+    }
+
+    /** Cmd+Shift+Enter: play this file on its own, even when it is part of a bigger piece. */
+    fun auditionAlone(file: VirtualFile): CompletableFuture<Boolean> {
+        val c = ensureRunning() ?: return CompletableFuture.completedFuture(false)
+        if (state.playing) c.request("stop").get()
+        return play(file.path, file)
+    }
 
     fun isPartOfPiece(file: VirtualFile) = file.path in state.files
 
@@ -316,6 +354,7 @@ class TineEngine(private val project: Project) : Disposable {
     }
 
     companion object {
+        private val USE = Regex("""(?m)^\s*use\s+"([^"]+)"""")
         fun get(project: Project): TineEngine = project.getService(TineEngine::class.java)
     }
 }
