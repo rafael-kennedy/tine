@@ -3,16 +3,18 @@
 // evaluator itself has no notion of real time; schedulers query the Scene.
 
 import { parse, Node, Stmt, Program } from "./parser";
-import { TineError, Span, suggest } from "./errors";
+import { TineError, Span, suggest, lineCol } from "./errors";
 import { R, ONE, ZERO } from "./rational";
 import { Pitch, Degree, Key, Scale, parseNote, parseDegree, SCALES, DRUMS, DEFAULT_KEY } from "./pitch";
 import { Pat, Chord, REST, Rest, toPat, seq, stack, alt, fast, choice, degrade, silence, mapV, sampleAt, setParam, Ctx, makeCtx } from "./pattern";
 import { hashStr, Stream, rand01 } from "./rng";
-import { Env, Closure, Builtin, Rec, typeName, show, num, isNum, truthy } from "./values";
+import { Env, Closure, Builtin, Rec, Namespace, typeName, show, num, isNum, truthy } from "./values";
 import { makeChord, registerBuiltins } from "./builtins";
 
-export interface VoiceDef { name: string; pat: Pat; span: Span; section?: string; active?: boolean }
-export interface SectionDef { name: string; bars: number; voices: Map<string, VoiceDef>; tempo?: number; key?: Key; span: Span }
+// file is set for voices and sections that come from a used file: span is then
+// inside that file, and at is the `use` line in the main file that brought it in.
+export interface VoiceDef { name: string; pat: Pat; span: Span; section?: string; active?: boolean; file?: string; at?: Span }
+export interface SectionDef { name: string; bars: number; voices: Map<string, VoiceDef>; tempo?: number; key?: Key; span: Span; file?: string; at?: Span }
 
 export interface Scene {
   tempo: number;
@@ -53,6 +55,12 @@ export class Interp {
   opts: EvalOptions;
   sectionStack: SectionDef[] = [];
   queryCtx: Ctx | null = null;
+  // Set when this Interp runs a used file. file is its path relative to the main
+  // file; prefix is "drums." under `use ... as drums`; at is the main file's use line.
+  file = "";
+  prefix = "";
+  at: Span | undefined;
+  using: string[] = [];
 
   constructor(opts: EvalOptions = {}) {
     this.opts = opts;
@@ -87,7 +95,7 @@ export class Interp {
     let prog: Program;
     prog = parse(src);
     // seed first, so randomness anywhere in the file uses it
-    for (const st of prog.stmts) if (st.t === "directive" && st.name === "seed") {
+    if (!this.prefix) for (const st of prog.stmts) if (st.t === "directive" && st.name === "seed") {
       this.scene.seed = Math.floor(num(this.eval(st.args[0], this.env)));
       this.scene.seedExplicit = true;
     }
@@ -99,6 +107,41 @@ export class Interp {
       }
     }
     return this.scene;
+  }
+
+  // `use "path"` runs the file here, sharing names. `use "path" as name` runs it
+  // in its own scope and binds name to its lets; its voices and sections are
+  // named name.voice and name.section. Paths are relative to the using file.
+  use(st: Extract<Stmt, { t: "use" }>, env: Env): null {
+    if (!this.opts.readFile) throw new TineError("runtime", "'use' is not available here", st.span);
+    const path = joinPath(dirOf(this.file), st.path);
+    if (path === this.file || this.using.includes(path)) {
+      const chain = [...this.using, this.file, path].filter(Boolean).join(" uses ");
+      throw new TineError("runtime", `'${st.path}' would use itself: ${chain}`, st.pathSpan, "files cannot use each other in a circle");
+    }
+    let src: string;
+    try { src = this.opts.readFile(path); }
+    catch { throw new TineError("runtime", `cannot read '${st.path}'`, st.pathSpan, path !== st.path ? `looked for ${path}` : undefined); }
+    const scope = st.as ? new Env(Interp.rootEnv()) : env;
+    const sub = new Interp({ ...this.opts, globals: scope, seed: this.scene.seed });
+    sub.scene = this.scene;
+    sub.sectionStack = st.as ? [] : this.sectionStack;
+    sub.file = path;
+    sub.prefix = st.as ? `${this.prefix}${st.as}.` : this.prefix;
+    sub.at = this.at ?? st.span;
+    sub.using = [...this.using, ...(this.file ? [this.file] : [])];
+    // Errors inside the used file are reported on this use line, with the file and line.
+    const relocate = (e: TineError) => {
+      const where = e.span ? ` line ${lineCol(src, e.span.start).line + 1}` : "";
+      const out = new TineError(e.kind, `in ${st.path}${where}: ${e.message}`, st.span, e.hint);
+      return out;
+    };
+    const before = this.scene.errors.length;
+    try { sub.run(src, path); }
+    catch (e) { throw relocate(sub.wrap(e, { start: 0, end: 1 })); }
+    for (let i = before; i < this.scene.errors.length; i++) this.scene.errors[i] = relocate(this.scene.errors[i]);
+    if (st.as) env.set(st.as, new Namespace(st.as, st.path, Object.fromEntries(scope.vars)));
+    return null;
   }
 
   wrap(e: unknown, span: Span): TineError {
@@ -119,7 +162,7 @@ export class Interp {
     const sec = this.sectionStack[this.sectionStack.length - 1];
     switch (st.t) {
       case "let": {
-        this.beginStatement(`let:${st.name}`);
+        this.beginStatement(`let:${this.prefix}${st.name}`);
         if (st.params) {
           const c = new Closure(st.name, st.params, st.value, env);
           env.set(st.name, c);
@@ -130,14 +173,19 @@ export class Interp {
         return v;
       }
       case "voice": {
-        this.beginStatement(`voice:${st.name}`);
+        const name = this.prefix + st.name;
+        this.beginStatement(`voice:${name}`);
         const v = this.eval(st.value, env);
         const pat = this.asPattern(v, st.value.span);
-        const def: VoiceDef = { name: st.name, pat, span: st.span, section: sec?.name, active: st.active };
-        (sec ? sec.voices : this.scene.voices).set(st.name, def);
+        const def: VoiceDef = { name, pat, span: st.span, section: sec?.name, active: st.active };
+        if (this.file) { def.file = this.file; def.at = this.at; }
+        (sec ? sec.voices : this.scene.voices).set(name, def);
         return pat;
       }
       case "directive": {
+        // A file used under a name is a part, not the piece: its top-level tempo,
+        // key, meter, seed and tuning are for playing it alone, so they are skipped here.
+        if (this.prefix && !sec) return null;
         this.beginStatement(`directive:${st.name}`);
         const args = st.args.map(a => this.eval(a, env));
         if (st.name === "tempo") {
@@ -160,8 +208,9 @@ export class Interp {
       }
       case "section": {
         const bars = num(this.eval(st.bars, env));
-        const def: SectionDef = { name: st.name, bars, voices: new Map(), span: st.span };
-        this.scene.sections.set(st.name, def);
+        const def: SectionDef = { name: this.prefix + st.name, bars, voices: new Map(), span: st.span };
+        if (this.file) { def.file = this.file; def.at = this.at; }
+        this.scene.sections.set(def.name, def);
         this.sectionStack.push(def);
         const inner = new Env(env);
         try { for (const s of st.body) this.stmt(s, inner); }
@@ -169,20 +218,14 @@ export class Interp {
         return null;
       }
       case "form": {
+        if (this.prefix) return null;   // the used file's own arrangement; the main file's form decides
         this.scene.form = st.items.map(i => ({ name: i.name, times: i.times }));
         for (const i of st.items) if (!this.scene.sections.has(i.name)) {
           throw new TineError("name", `there is no section named '${i.name}'`, i.span, (() => { const s = suggest(i.name, this.scene.sections.keys()); return s ? `did you mean '${s}'?` : "define it with: section name bars"; })());
         }
         return null;
       }
-      case "use": {
-        if (!this.opts.readFile) throw new TineError("runtime", "'use' is not available here", st.span);
-        const src = this.opts.readFile(st.path);
-        const sub = new Interp({ ...this.opts, globals: env, seed: this.scene.seed });
-        sub.scene = this.scene;
-        sub.run(src, st.path);
-        return null;
-      }
+      case "use": return this.use(st, env);
       case "expr": {
         this.beginStatement(`expr:${st.span.start}`);
         const v = this.eval(st.e, env);
@@ -277,6 +320,17 @@ export class Interp {
       }
       case "method": {
         const obj = this.eval(n.obj, env);
+        if (obj instanceof Namespace) {
+          if (!Object.hasOwn(obj.fields, n.name)) {
+            const s = suggest(n.name, Object.keys(obj.fields));
+            throw new TineError("name", `${obj.path} has no '${n.name}'`, n.nameSpan, s ? `did you mean '${obj.name}.${s}'?` : `it defines: ${Object.keys(obj.fields).join(", ") || "nothing with let"}`);
+          }
+          const fv = obj.fields[n.name];
+          if (n.args === null) return fv;
+          const named: Record<string, any> = {};
+          for (const x of n.named) named[x.name] = this.eval(x.value, env);
+          return this.call(fv, n.args.map(a => this.eval(a, env)), named, n.span, `${obj.name}.${n.name}`);
+        }
         if (obj instanceof Rec && n.name in obj.fields) {
           const fv = obj.fields[n.name];
           if (n.args === null) return fv;
@@ -498,4 +552,16 @@ function rangeSeq(l: any, r: any, span: Span): Pat {
 export function evaluate(src: string, opts: EvalOptions = {}): Scene {
   const it = new Interp(opts);
   return it.run(src);
+}
+
+// Paths in `use` are relative to the file that says it. Plain string work, so the core stays free of node:path.
+function dirOf(p: string): string { const i = p.lastIndexOf("/"); return i < 0 ? "" : p.slice(0, i + 1); }
+function joinPath(dir: string, p: string): string {
+  if (p.startsWith("/") || /^[A-Za-z]:[\\/]/.test(p) || !dir) return p;
+  const out: string[] = [];
+  for (const part of (dir + p).split("/")) {
+    if (part === "." || part === "") continue;
+    if (part === ".." && out.length && out[out.length - 1] !== "..") out.pop(); else out.push(part);
+  }
+  return (dir.startsWith("/") ? "/" : "") + out.join("/");
 }

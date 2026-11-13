@@ -29,5 +29,5 @@ export const KEYWORD_DOCS: Record<string, string> = {
   seed: "seed n\nFreeze all randomness so the piece replays exactly.",
   meter: "meter 7/8\nBeats per bar and beat unit.",
   tuning: "tuning 432\nFrequency of A4 in Hz.",
-  use: "use \"other.tine\"\nRun another file here (its lets and voices become available).",
+  use: "use \"other.tine\"  /  use \"other.tine\" as name\nRun another file here (its lets and voices become available). With `as name`, the file keeps its own scope: read its lets as name.x, and its voices and sections become name.voice and name.section. Paths are relative to the using file.",
 };
