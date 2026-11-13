@@ -85,6 +85,29 @@ export function harmonyXml(notes: TimedNote[], flats: boolean): { sym: string; x
   return { sym: `${id.root}${id.sym}/${slash ? bassPc : ""}`, xml };
 }
 
+// Slurs and glissando lines run from a chord to the next one in its layer
+// (a run of chords that do not overlap). A slur is drawn from the first note
+// marked to the note after the last; a glissando, or a glide where two notes
+// are joined (c4~ d4 with .glide), is a line from one note to the next.
+export type SlurMarks = { slurStart?: boolean; slurStop?: boolean; line?: "gliss" | "slide"; lineStop?: boolean };
+export function slurMarks<C extends { notes: TimedNote[] }>(layers: C[][]): Map<C, SlurMarks> {
+  const marks = new Map<C, SlurMarks>();
+  const mark = (c: C) => marks.get(c) ?? (marks.set(c, {}), marks.get(c)!);
+  const slurs = (c: C) => c.notes.some(n => !!n.params.slur);
+  for (const layer of layers) layer.forEach((c, i) => {
+    const prev = layer[i - 1], next = layer[i + 1];
+    if (next && slurs(c) && !(prev && slurs(prev))) mark(c).slurStart = true;
+    if (prev && slurs(prev) && !slurs(c)) mark(c).slurStop = true;
+    if (!next) return;
+    if (c.notes.some(n => Number(n.params.gliss) > 0)) mark(c).line = "gliss";
+    // a glide only gets a line where it joins two notes; otherwise every
+    // note of a gliding bass line would carry one
+    else if (slurs(c) && next.notes.some(n => Number(n.params.glide) > 0)) mark(c).line = "slide";
+    if (mark(c).line) mark(next).lineStop = true;
+  });
+  return marks;
+}
+
 // A score writes the note as composed: legato and humanize are performance.
 export const asWritten = (n: TimedNote): TimedNote => n.written ? { ...n, bar: n.written.bar, bars: n.written.bars } : n;
 
@@ -135,6 +158,7 @@ export function toMusicXml(scene: Scene, notes: TimedNote[], bars: number, title
       if (l) l.push(c); else layers.push([c]);
     }
     if (!layers.length) layers.push([]);
+    const marks = slurMarks(layers);
     const mean = mine.reduce((a, x) => a + x.n.semi, 0) / Math.max(1, mine.length);
     const clef = drums ? `<clef><sign>percussion</sign></clef>` : mean < 55 ? `<clef><sign>F</sign><line>4</line></clef>` : `<clef><sign>G</sign><line>2</line></clef>`;
 
@@ -163,7 +187,7 @@ export function toMusicXml(scene: Scene, notes: TimedNote[], bars: number, title
             const h = harmonyXml(c.notes, flats);
             if (h && h.sym !== lastSym) { body += h.xml; lastSym = h.sym; }
           }
-          body += pieces(c, s, e, li, c.start < m0, c.end > m1);
+          body += pieces(c, s, e, li, c.start < m0, c.end > m1, marks.get(c));
           cur = e;
         }
         if (cur < m1) body += rests(cur, m1, li);
@@ -189,10 +213,16 @@ export function toMusicXml(scene: Scene, notes: TimedNote[], bars: number, title
   function rests(a: number, b: number, li: number) {
     return split(a, b).map(p => `<note><rest/><duration>${p.len}</duration><voice>${li + 1}</voice>${typeXml(p.v)}</note>`).join("");
   }
-  function pieces(c: Chord, a: number, b: number, li: number, tiedIn: boolean, tiedOut: boolean) {
+  function pieces(c: Chord, a: number, b: number, li: number, tiedIn: boolean, tiedOut: boolean, mk?: SlurMarks) {
     const ps = split(a, b);
     let x = "";
     ps.forEach((p, pi) => {
+      const first = pi === 0 && !tiedIn, last = pi === ps.length - 1 && !tiedOut;
+      let marked = "";
+      if (mk && first && mk.slurStop) marked += `<slur type="stop" number="1"/>`;
+      if (mk && first && mk.lineStop) marked += `<slide type="stop" number="1"/>`;
+      if (mk && first && mk.slurStart) marked += `<slur type="start" number="1"/>`;
+      if (mk && last && mk.line) marked += `<slide type="start" number="1" line-type="solid">${mk.line === "gliss" ? "gliss." : ""}</slide>`;
       const tStop = tiedIn || pi > 0, tStart = tiedOut || pi < ps.length - 1;
       c.notes.forEach((n, ni) => {
         const sp = spell(n.semi, flats);
@@ -200,7 +230,7 @@ export function toMusicXml(scene: Scene, notes: TimedNote[], bars: number, title
         const ties = (tStop ? `<tie type="stop"/>` : "") + (tStart ? `<tie type="start"/>` : "");
         const tied = (tStop ? `<tied type="stop"/>` : "") + (tStart ? `<tied type="start"/>` : "");
         const dyn = Math.round(n.vel * 127 / 90 * 10000) / 100;
-        x += `<note dynamics="${dyn}">${ni ? "<chord/>" : ""}${pitch}<duration>${p.len}</duration>${ties}<voice>${li + 1}</voice>${typeXml(p.v)}${tied ? `<notations>${tied}</notations>` : ""}</note>`;
+        x += `<note dynamics="${dyn}">${ni ? "<chord/>" : ""}${pitch}<duration>${p.len}</duration>${ties}<voice>${li + 1}</voice>${typeXml(p.v)}${tied || (marked && !ni) ? `<notations>${tied}${ni ? "" : marked}</notations>` : ""}</note>`;
       });
     });
     return x;
