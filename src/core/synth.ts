@@ -128,6 +128,31 @@ function defaultsFor(inst: string) {
   }
 }
 
+// ---------- slurs and glissandos ----------
+// Audio plays a slurred run as its first note, held for the whole run (see
+// withSlurs in scene.ts); the other notes of the run are not played.
+export function performed<T extends { durSec: number; params: Record<string, any> }>(n: T): T | null {
+  if (n.params.slurIn) return null;
+  return n.params.runSec !== undefined ? { ...n, durSec: Number(n.params.runSec) } : n;
+}
+
+// A run's pitch path, [time, semitones, time, semitones, ...] joined by
+// straight lines, as a frequency ratio at sample i. Asked in order of i.
+export function bender(curve: unknown, sr: number): ((i: number) => number) | null {
+  if (!Array.isArray(curve) || curve.length < 2) return null;
+  const c = curve.map(Number);
+  let k = 0;
+  return (i: number) => {
+    const t = i / sr;
+    while (k < c.length && c[k] <= t) k += 2;
+    let semi: number;
+    if (k === 0) semi = 0;
+    else if (k >= c.length) semi = c[c.length - 1];
+    else { const t0 = c[k - 2], s0 = c[k - 1], t1 = c[k], s1 = c[k + 1]; semi = t1 > t0 ? s0 + (s1 - s0) * (t - t0) / (t1 - t0) : s1; }
+    return Math.pow(2, semi / 12);
+  };
+}
+
 export function renderNote(spec: NoteSpec, sr: number): Float32Array {
   if (PRESETS[spec.inst]) spec = { ...spec, inst: "synth", params: { ...PRESETS[spec.inst], ...spec.params } };
   const len = Math.max(1, Math.ceil(noteLength(spec) * sr));
@@ -140,7 +165,8 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
   const d = defaultsFor(spec.inst);
   const a = Number(p.attack ?? d.a), dc = Number(p.decay ?? d.d), s = Number(p.sustain ?? d.s), r = Number(p.release ?? d.r);
   const held = Math.max(0.005, spec.dur);
-  const f = spec.freq, dt = f / sr;
+  const f = spec.freq, dt0 = f / sr, bend = bender(p.curve, sr);
+  let dt = dt0;
   const lp = new LP();
   const res = Number(p.res ?? 0.1);
   switch (spec.inst) {
@@ -169,6 +195,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       const tine = spec.inst === "keys" ? 14 : 0; // the bright metallic "tine" partial
       let pc = 0, pm = 0, pt = 0;
       for (let i = 0; i < len; i++) {
+        if (bend) dt = dt0 * bend(i);
         const t = i / sr;
         const e = spec.inst === "bell" ? Math.exp(-t / 2.2) * (t > held + 2.5 ? 0 : 1) : env(i, sr, a, dc, s, r, held);
         const index = idx0 * Math.exp(-t / decayT);
@@ -184,6 +211,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       const draw = [1, 0.6, 0.4, 0.25, 0.15];
       let ph = 0;
       for (let i = 0; i < len; i++) {
+        if (bend) dt = dt0 * bend(i);
         let v = 0; for (let h = 0; h < draw.length; h++) v += draw[h] * Math.sin(2 * Math.PI * ph * (h + 1));
         out[i] = v * 0.4 * env(i, sr, a, dc, s, r, held) * amp; ph = (ph + dt) % 1;
       }
@@ -193,6 +221,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       const det = [1, 1.0059, 0.9941]; const ph = [0, 0.33, 0.66];
       const cutoff = Number(p.cutoff ?? 1800);
       for (let i = 0; i < len; i++) {
+        if (bend) dt = dt0 * bend(i);
         let v = 0; for (let k = 0; k < 3; k++) { v += osc("saw", ph[k], dt * det[k]); ph[k] = (ph[k] + dt * det[k]) % 1; }
         const e = env(i, sr, a, dc, s, r, held);
         out[i] = lp.run(v / 3, cutoff * (0.6 + 0.4 * e), res, sr) * e * amp * 1.2;
@@ -203,6 +232,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       let ph = 0, ps = 0;
       const cutoff = Number(p.cutoff ?? 900);
       for (let i = 0; i < len; i++) {
+        if (bend) dt = dt0 * bend(i);
         const t = i / sr;
         const e = env(i, sr, a, dc, s, r, held);
         const fe = Math.exp(-t / 0.12);
@@ -217,6 +247,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       let ph = 0;
       const cutoff = Number(p.cutoff ?? 1400);
       for (let i = 0; i < len; i++) {
+        if (bend) dt = dt0 * bend(i);
         const t = i / sr;
         const rel = t > held ? Math.max(0, 1 - (t - held) / Math.max(0.03, r)) : 1;
         const e = Math.exp(-t / dc) * Math.min(1, t / 0.003) * rel;
@@ -232,6 +263,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       let ph = 0;
       const rate = Number(p.tremolo ?? 5.5);
       for (let i = 0; i < len; i++) {
+        if (bend) dt = dt0 * bend(i);
         const t = i / sr;
         const rel = t > held ? Math.max(0, 1 - (t - held) / Math.max(0.05, r)) : 1;
         const trem = 1 - 0.3 * (0.5 - 0.5 * Math.cos(2 * Math.PI * rate * t));
@@ -246,6 +278,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       let p1 = 0, p2 = 0.5;
       const cutoff = Number(p.cutoff ?? 3200);
       for (let i = 0; i < len; i++) {
+        if (bend) dt = dt0 * bend(i);
         const e = env(i, sr, a, dc, s, r, held);
         const v = 0.5 * osc("square", p1, dt) + 0.5 * osc("saw", p2, dt * 1.004);
         out[i] = lp.run(v, cutoff, res, sr) * e * amp * 0.9;
@@ -259,6 +292,7 @@ export function renderNote(spec: NoteSpec, sr: number): Float32Array {
       const cutoff = Number(p.cutoff ?? (kind === "saw" || kind === "square" ? 4000 : 18000));
       let ph = 0;
       for (let i = 0; i < len; i++) {
+        if (bend) dt = dt0 * bend(i);
         let v = osc(kind, ph, dt);
         if (kind === "saw" || kind === "square" || p.cutoff !== undefined) v = lp.run(v, cutoff, res, sr);
         out[i] = v * env(i, sr, a, dc, s, r, held) * amp * (kind === "sine" || kind === "tri" ? 1.1 : 0.7);
@@ -366,6 +400,7 @@ function renderSynth(spec: NoteSpec, sr: number, out: Float32Array, amp: number,
   const vib = num(p.vibrato, 0), vibD = num(p.vibratoDepth, 0.3), vibDelay = num(p.vibratoDelay, 0);
   const wob = num(p.wobbleHz, 0), wobD = num(p.wobbleDepth, 2);
   const glide = num(p.glide, 0), from = p.glideFrom !== undefined ? num(p.glideFrom, spec.semi) - spec.semi : 0;
+  const bend = bender(p.curve, sr);
   const fmI = num(p.fm, 0), fmR = num(p.fmRatio, 2), fmD = Math.max(1e-4, num(p.fmDecay, 0.4));
   const filtered = p.cutoff !== undefined || fenv !== 0 || wob > 0 || wave === "noise" || cutoff < 18000;
   // unison voices spread evenly over +-detune cents, with fixed starting phases
@@ -379,7 +414,7 @@ function renderSynth(spec: NoteSpec, sr: number, out: Float32Array, amp: number,
     let semis = 0;
     if (glide > 0 && from !== 0 && t < glide) semis += from * (1 - t / glide);
     if (vib > 0 && t > vibDelay) semis += vibD * Math.sin(2 * Math.PI * vib * (t - vibDelay)) * Math.min(1, (t - vibDelay) / 0.2);
-    const f = spec.freq * (semis ? Math.pow(2, semis / 12) : 1), dt = f / sr;
+    const f = spec.freq * (semis ? Math.pow(2, semis / 12) : 1) * (bend ? bend(i) : 1), dt = f / sr;
     let v = 0;
     if (wave === "noise") v = noise();
     else if (wave === "fm") {

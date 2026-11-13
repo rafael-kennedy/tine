@@ -9,6 +9,7 @@
 // sample("bd:3") its fourth, wrapping around. On a drum phrase, sample() with
 // no name plays the drum names through the bundled kit.
 import { decodeAdpcm, encodeAdpcm } from "./adpcm";
+import { bender } from "./synth";
 
 export interface SampleData { channels: Float32Array[]; sr: number }
 
@@ -219,7 +220,8 @@ export function renderSample(sm: SampleData, n: SampleNote, sr: number): Float32
   const cut = p.cutSec !== undefined ? Math.max(0, num(p.cutSec, 0)) : Infinity;
   if (cut < MAX_SEC) maxLen = Math.floor(cut * sr);
   // length: integrate the speed until the play head leaves the part
-  const out = new Float32Array(Math.min(maxLen, accel === 0 ? Math.ceil((s1 - s0) / Math.max(1e-6, step0 * Math.abs(speed))) + 1 : maxLen));
+  const bend = bender(p.curve, sr);
+  const out = new Float32Array(Math.min(maxLen, accel === 0 && !bend ? Math.ceil((s1 - s0) / Math.max(1e-6, step0 * Math.abs(speed))) + 1 : maxLen));
   let pos = speed < 0 ? s1 : s0, i = 0;
   const dt = 1 / sr;
   for (; i < out.length; i++) {
@@ -227,9 +229,9 @@ export function renderSample(sm: SampleData, n: SampleNote, sr: number): Float32
     const k = Math.floor(pos), f = pos - k;
     out[i] = (src[k] * (1 - f) + (src[k + 1] ?? src[k]) * f) * g;
     const sp = speed + accel * i * dt;
-    pos += step0 * sp;
+    pos += step0 * sp * (bend ? bend(i) : 1);
   }
-  const res = i < out.length ? out.subarray(0, i) : out;
+  const res = i < out.length ? (bend ? out.slice(0, i) : out.subarray(0, i)) : out;
   // short fades where the sound is cut mid-flight, so slices and cuts do not click
   const fin = b > 0 || (speed < 0 && e < 1) ? Math.min(res.length, Math.round(0.002 * sr)) : 0;
   for (let j = 0; j < fin; j++) res[j] *= j / fin;

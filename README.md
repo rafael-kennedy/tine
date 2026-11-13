@@ -89,7 +89,10 @@ voice a5 = [c4 (c4 + 50c) (c4 + 5\31) (c4 * 7/4) 432hz]
 let fill(p) = p.fast(2).vel(.6)
 voice a6 = [kick . snare .].every(4, fill)
 voice a7 = per_bar(n => [c e g].transpose(n % 4 * 2))
--- composing: sections and form
+-- slurs and glissandos: one connected sound, drawn in the score
+voice a8 = [e4~ f4~ g4 c5]
+voice a9 = [c4 g4].gliss
+-- composing: sections and form (use "drums.tine" as drums brings in another file)
 section verse 8
   voice bass = [^1 . ^5 .].octave(-2).inst(bass)
 form verse verse

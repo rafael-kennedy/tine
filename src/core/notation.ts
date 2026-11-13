@@ -12,7 +12,7 @@ import { R } from "./rational";
 import { Scene } from "./interp";
 import { TimedNote, renderNotes, timeline } from "./scene";
 import { keyFifths, Key } from "./pitch";
-import { spell, noteValues } from "./musicxml";
+import { spell, noteValues, asWritten, slurMarks } from "./musicxml";
 import { GLYPHS } from "./glyphs.gen";
 import { chordBars, harmonyVoices, ChartBar, keyLabel, SymbolStyle, chordSpelling } from "./chart";
 import { symbol as chordSymbol, symbolWidth, crotchet } from "./chartsvg";
@@ -37,7 +37,11 @@ const DRUM_POS: Record<number, [number, boolean]> = {
 };
 
 interface Head { semi: number; pos: number; alter: number; acc?: string; cents?: number; cross?: boolean; tieStart: boolean; tieStop: boolean }
-interface Ev { t: number; len: number; type: string; dots: number; tuplet?: [number, number]; rest: boolean; heads: Head[]; layer: number; whole?: boolean }
+interface Ev {
+  t: number; len: number; type: string; dots: number; tuplet?: [number, number]; rest: boolean; heads: Head[]; layer: number; whole?: boolean;
+  slurStart?: boolean; slurStop?: boolean;   // a slur from this note to the note that stops it
+  line?: "gliss" | "slide"; lineStop?: boolean; // a straight line to the next note
+}
 interface PMeasure { evs: Ev[]; layers: number }
 interface Part { name: string; clef: Clef; drums: boolean; measures: PMeasure[] }
 
@@ -141,6 +145,7 @@ function buildPart(name: string, notes: TimedNote[], plan: MeasureInfo[], div: n
     if (l) l.push(c); else layers.push([c]);
   }
   if (!layers.length) layers.push([]);
+  const marks = slurMarks(layers);
 
   // where to cut a span so the beat stays visible
   const cuts = (a: number, b: number, rest: boolean): [number, number][] => {
@@ -205,7 +210,12 @@ function buildPart(name: string, notes: TimedNote[], plan: MeasureInfo[], div: n
             if (!heads.some(x => x.pos === h.pos && x.alter === h.alter)) heads.push(h);
           }
           heads.sort((a, b) => a.pos - b.pos);
-          evs.push({ t: p.t, len: p.len, type: p.v.type, dots: p.v.dots, tuplet: p.v.tuplet, rest: false, heads, layer: L });
+          const mk = marks.get(c), firstPiece = pi === 0 && !(c.s < m0), lastPiece = pi === pieces.length - 1 && !(c.e > m1);
+          evs.push({
+            t: p.t, len: p.len, type: p.v.type, dots: p.v.dots, tuplet: p.v.tuplet, rest: false, heads, layer: L,
+            ...(mk && firstPiece ? { slurStart: mk.slurStart, slurStop: mk.slurStop, lineStop: mk.lineStop } : {}),
+            ...(mk && lastPiece && mk.line ? { line: mk.line } : {}),
+          });
         });
         cur = e;
       }
@@ -305,7 +315,7 @@ export function buildScore(scene: Scene, title: string, kind: "lead" | "score", 
   const beats = scene.meter[0];
   const r = renderNotes(scene, timeline(scene).segments.length ? undefined : opts.bars ?? 8);
   // a strummed chord is written as the chord: each note back where the strum began
-  const notes = r.notes.filter(pitched).map(n => n.params.strum === undefined ? n : { ...n, bar: n.bar - num(n.params.strum), bars: n.bars + num(n.params.strum) });
+  const notes = r.notes.filter(pitched).map(asWritten).map(n => n.params.strum === undefined ? n : { ...n, bar: n.bar - num(n.params.strum), bars: n.bars + num(n.params.strum) });
   const harmony = opts.chordVoices ?? harmonyVoices(r.notes.filter(n => n.params.ccOut === undefined), beats);
   const melody = lead ? opts.melody ?? guessMelody(notes, harmony) : undefined;
   // chord symbols read what sounds, echoes included, as the chord chart does
@@ -430,6 +440,9 @@ export function scorePages(score: Score, opts: ScoreDrawOptions = {}): string[] 
 
   // ties waiting for their second note, per staff
   const pending: Map<string, { x: number; y: number; down: boolean }>[] = score.parts.map(() => new Map());
+  // slurs and glissando lines waiting for their last note, per staff and layer
+  const slurOpen: Map<number, { x: number; y: number; below: boolean }>[] = score.parts.map(() => new Map());
+  const lineOpen: Map<number, { x: number; y: number; kind: "gliss" | "slide" }>[] = score.parts.map(() => new Map());
 
   systems.forEach((sys, si) => {
     const first = si === 0;
@@ -524,10 +537,18 @@ export function scorePages(score: Score, opts: ScoreDrawOptions = {}): string[] 
           out += tuplets(evs, (t: number) => xAt(k, t), multi && L > 0, ext);
         }
       });
-      // ties that run past the end of the line
+      // ties, slurs and lines that run past the end of the line
       for (const [key, p] of pending[pi]) {
         out += tie(p.x, sysEnd - 0.4 * sp, p.y, p.down);
         pending[pi].set(key, { ...p, x: contentX - 1.2 * sp });
+      }
+      for (const [key, p] of slurOpen[pi]) {
+        out += slur(p.x, p.y, sysEnd - 0.4 * sp, p.y, p.below);
+        slurOpen[pi].set(key, { ...p, x: contentX - 1.2 * sp });
+      }
+      for (const [key, p] of lineOpen[pi]) {
+        out += gline(p.x, p.y, sysEnd - 0.4 * sp, p.y, p.kind);
+        lineOpen[pi].set(key, { ...p, x: contentX - 1.2 * sp });
       }
       return { out, top, bot, part };
     });
@@ -669,6 +690,21 @@ export function scorePages(score: Score, opts: ScoreDrawOptions = {}): string[] 
           if (h.tieStop) { const p = pending[pi].get(key); if (p) { s += tie(p.x, hx(h) - 0.15 * sp, p.y, p.down); pending[pi].delete(key); } }
           if (h.tieStart) pending[pi].set(key, { x: hx(h) + g.hw + 0.15 * sp, y: y(h.pos), down: !down });
         }
+        // slurs: from the outer head on the side away from the stems
+        const below = !down, edge = below ? e.heads[0] : e.heads[e.heads.length - 1];
+        if (e.slurStop && edge) {
+          const o = slurOpen[pi].get(e.layer);
+          if (o) { s += slur(o.x, o.y, hx(edge) + g.hw / 2, y(edge.pos), o.below); slurOpen[pi].delete(e.layer); }
+        }
+        if (e.slurStart && edge) slurOpen[pi].set(e.layer, { x: hx(edge) + g.hw / 2, y: y(edge.pos), below });
+        if ((e.slurStart || e.slurStop) && edge) ext(y(edge.pos) + (below ? 3 : -3) * sp);
+        // glissando and slide lines: from the top head to the top head
+        const topHead = e.heads[e.heads.length - 1];
+        if (e.lineStop && topHead) {
+          const o = lineOpen[pi].get(e.layer);
+          if (o) { s += gline(o.x, o.y, hx(topHead) - 0.3 * sp - (topHead.acc ? 1.2 * sp : 0), y(topHead.pos), o.kind); lineOpen[pi].delete(e.layer); }
+        }
+        if (e.line && topHead) lineOpen[pi].set(e.layer, { x: hx(topHead) + g.hw + 0.3 * sp, y: y(topHead.pos), kind: e.line });
       });
       void part;
       return s;
@@ -679,6 +715,26 @@ export function scorePages(score: Score, opts: ScoreDrawOptions = {}): string[] 
       const d = below ? 1 : -1, y0 = yy + d * 0.55 * sp, h = Math.min(1.1 * sp, 0.25 * sp + (x2 - x1) * 0.08) * d;
       const mx = (x1 + x2) / 2;
       return `<path d="M${fmt(x1)} ${fmt(y0)} Q${fmt(mx)} ${fmt(y0 + h * 1.35)} ${fmt(x2)} ${fmt(y0)} Q${fmt(mx)} ${fmt(y0 + h * 1.0)} ${fmt(x1)} ${fmt(y0)}Z" fill="${INK}"/>`;
+    }
+
+    // a slur: a thin crescent like a tie, between two heads at any heights
+    function slur(x1: number, y1: number, x2: number, y2: number, below: boolean) {
+      if (x2 - x1 < 0.5 * sp) x2 = x1 + 0.5 * sp;
+      const d = below ? 1 : -1, a = y1 + d * 0.8 * sp, b = y2 + d * 0.8 * sp;
+      const h = Math.min(2 * sp, 0.6 * sp + (x2 - x1) * 0.06) * d, mx = (x1 + x2) / 2;
+      const peak = (below ? Math.max(a, b) : Math.min(a, b)) + h;
+      return `<path d="M${fmt(x1)} ${fmt(a)} Q${fmt(mx)} ${fmt(peak + 0.35 * h)} ${fmt(x2)} ${fmt(b)} Q${fmt(mx)} ${fmt(peak)} ${fmt(x1)} ${fmt(a)}Z" fill="${INK}"/>`;
+    }
+
+    // a glissando: a straight line marked gliss. when there is room; a slide: the line alone
+    function gline(x1: number, y1: number, x2: number, y2: number, kind: "gliss" | "slide") {
+      if (x2 - x1 < 0.4 * sp) x2 = x1 + 0.4 * sp;
+      let s = `<line x1="${fmt(x1)}" y1="${fmt(y1)}" x2="${fmt(x2)}" y2="${fmt(y2)}" stroke="${INK}" stroke-width="${fmt(LW * 1.4)}"/>`;
+      if (kind === "gliss" && x2 - x1 > 3.5 * sp) {
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - 0.5 * sp, ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        s += `<text x="${fmt(mx)}" y="${fmt(my)}" font-size="${fmt(1.3 * sp)}" font-style="italic" text-anchor="middle" fill="${INK}" transform="rotate(${fmt(ang)} ${fmt(mx)} ${fmt(my)})">gliss.</text>`;
+      }
+      return s;
     }
 
     function tuplets(evs: Ev[], X: (t: number) => number, below: boolean, ext: (a: number, b?: number) => void) {

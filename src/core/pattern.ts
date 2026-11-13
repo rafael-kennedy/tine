@@ -337,6 +337,9 @@ export interface Note {
   semi: number;  // fractional MIDI note number
   vel: number;   // 0..1
   params: Params;
+  // what a score writes, when it differs from what sounds: legato and
+  // humanize change the performance, not the written note
+  written?: { start: R; dur: R };
 }
 
 export function valueToSemis(v: any, key: Key): number[] {
@@ -368,13 +371,16 @@ export function resolveNotes(voice: string, evs: Ev[], ctx: Ctx): Note[] {
     if (ev.v instanceof Pitch && ev.v.drum && typeof params.inst === "string" && (params.inst.startsWith("sample:") || params.inst === "gm")) params.drum = ev.v.drum;
     // a string in a phrase is a sample name, played as recorded: ["bd_haus" . "sn_dolf" .]
     if (typeof ev.v === "string") { if (params.inst === undefined || params.inst === "sample:") params.inst = `sample:${ev.v}`; params.hit = true; }
-    delete params.key; delete params.vel; delete params.legato; delete params.dur;
+    const nudge: R | undefined = params.nudge;
+    delete params.key; delete params.vel; delete params.legato; delete params.dur; delete params.nudge;
+    const wdur = ev.p.dur !== undefined ? dur : ev.e.sub(ev.s);
+    const written = nudge || !wdur.eq(dur) ? { start: nudge ? ev.s.sub(nudge) : ev.s, dur: wdur } : undefined;
     // a chord symbol's root travels with its notes, so exports can name the chord (MusicXML harmony)
     if (ev.v instanceof Chord && ev.v.root !== undefined) { const r = valueToSemis(ev.v.root, key)[0]; if (r !== undefined) params.chordRoot = r; }
     if (params.chordRel !== undefined) { if (semis.length === 1) params.chordRoot = semis[0] + Number(params.chordRel); delete params.chordRel; }
     if (params.chordBassRel !== undefined) { if (semis.length === 1) params.chordBass = semis[0] + Number(params.chordBassRel); delete params.chordBassRel; }
     if (ev.v instanceof Chord && ev.v.bass !== undefined) { const b = valueToSemis(ev.v.bass, key)[0]; if (b !== undefined) params.chordBass = b; }
-    for (const semi of semis) out.push({ voice, start: ev.s, dur, semi, vel: Math.max(0, Math.min(1, vel)), params });
+    for (const semi of semis) out.push({ voice, start: ev.s, dur, semi, vel: Math.max(0, Math.min(1, vel)), params, ...(written ? { written } : {}) });
   }
   return out;
 }
