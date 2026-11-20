@@ -61,7 +61,7 @@ An error inside a used file is reported on the `use` line, with the file and lin
 | `[a b c]` | three steps dividing one bar equally |
 | `.` | rest |
 | `_` | hold the previous step one step longer |
-| `x:3` | x takes 3 steps' worth of time |
+| `x:3` `x:3/2` | x takes 3 (or one and a half) steps' worth of time |
 | `[a [b c]]` | nested brackets subdivide one step |
 | `x*3` | x three times within its step |
 | `x!3` | x repeated as three steps |
@@ -96,6 +96,38 @@ Degrees add in scale steps: `^1 + 2` is `^3`.
 ## Time
 
 Time is measured in bars and is exact. A phrase fills one bar; `slow(2)` spreads it over two. `every(n, f)` applies f on the last bar of each group of n (use `at: 0` for the first). Inside a section, time restarts at the section's first bar.
+
+## Rhythm
+
+Two ways to write when notes happen, beside the plain phrase that divides a bar.
+
+**Lengths in beats.** `.beats` measures a phrase's steps in beats instead of dividing one bar. Each step is a beat unless `:` says otherwise; nested brackets still divide their own span. The line lasts as long as its steps add up to, crosses bar lines, and rests to the end of its last bar before it loops. A beat is the meter's denominator (as for `tempo`); `.beats(1/16)` measures in sixteenths instead.
+
+```tine
+voice tune = [c4:3/2 d4:1/2 [e4 f4 g4]:2 a4:3 g4:1/2 f4:1/2 e4:4].beats   -- three bars
+```
+
+**Rhythm and notes as separate layers.** `x` is a hit, `X` an accented hit and `o` a ghost note, so a rhythm is written like drum tab. Any pattern can be taken apart: `p.rhythm` keeps its timing and drops its pitches, `p.notes` keeps its pitches in order and drops its timing. `notes.on(rhythm)` pours them back together, one note per hit. The two loop independently, counted from the start of the section, so seven notes on a five-hit rhythm come round together every seven bars. In the notes, `.` leaves a hit silent and `_` holds a note through the next hit. `rhythm + value` still samples by time, which suits chord changes.
+
+```tine
+let riff  = [^1 ^3 ^5 ^4 ^3 ^2 ^1]
+let clave = [X . . x . . X . . . x . X . . .]
+voice lead  = riff.on(clave)
+voice turn  = riff.on(clave.every(4, r => r.rotate(3)))
+voice drift = riff.on(clave.mutate(.15))
+voice bass  = clave + c2
+```
+
+| Code | What it does |
+| --- | --- |
+| `rotate(n)` | start n steps later in the rhythm, wrapping round |
+| `displace(t)` | move every hit t bars later, wrapping inside the loop |
+| `flip` | hits become rests and rests become hits |
+| `thin(n)`, `fill(n)` | remove or add n hits each loop (seeded; thin keeps the downbeat) |
+| `union(a, b)`, `intersect(a, b)`, `minus(a, b)` | combine two rhythms hit by hit |
+| `mutate(rate)` | each loop, about rate of the hits move a step, and stay moved |
+
+Steps are the phrase's own grid: `[x . . x]` turns by quarters, `[x:2 x x]` by quarters too, a `.beats` line by its smallest length.
 
 ## Randomness
 
@@ -323,6 +355,18 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `arrange(p1, bars1, p2, bars2, ...)` | Chain patterns, each lasting the given number of bars, and loop the whole. |
 | `poly(p, steps)` | Polymeter: step through p's elements at `steps` per bar, whatever its length. |
 | `euclid(p, hits, steps, rot: 0)` | Spread `hits` events as evenly as possible over `steps` (Euclidean rhythm). |
+| `beats(p, unit)` | Measure a phrase's steps in beats instead of dividing a bar: [c:3/2 d:1/2 e:2].beats lasts four beats. The line crosses bar lines and rests to the end of its last bar. unit is a note value (1/16) and defaults to the meter's beat. |
+| `rhythm(p)` | The rhythm of p: its timing, lengths and settings, with each note replaced by a hit (x). Pour notes back in with on. |
+| `notes(p, bars: 1)` | The notes of p in the order they play, without their timing, as a list. Notes that start together become a chord. |
+| `on(notes, rhythm, reset: 0)` | Play the notes one per hit of the rhythm. They loop independently, so 7 notes on a 5-hit rhythm come round together every 7 bars. In the notes, _ holds a note through the next hit and . leaves a hit silent. reset: n starts the notes again every n bars. |
+| `displace(p, t)` | Move every hit t bars later, wrapping round inside the rhythm's loop. |
+| `flip(p)` | Hits become rests and rests become hits, on the rhythm's grid. |
+| `thin(p, n: 1)` | Remove n hits from each loop of a rhythm, never the downbeat (seeded). |
+| `fill(p, n: 1)` | Add n hits on empty steps of each loop of a rhythm (seeded). |
+| `union(a, b)` | Every hit of either rhythm (one hit where both have one). |
+| `intersect(a, b)` | The hits of a that b also has. |
+| `minus(a, b)` | The hits of a that b does not have. |
+| `mutate(p, rate: 0.1)` | Each loop, about rate of the hits move one step left or right, and stay moved: the rhythm wanders. Seeded and replayable, counted from the section's start. |
 | `trunc(p, fraction)` | Play only the first fraction of each bar. |
 | `per_bar(bar => pattern)` | Build each bar from a function of the bar number. Randomness inside is keyed to the bar. |
 | `evolve(start, (state, bar) => next, (state, bar) => pattern)` | Carry state from bar to bar. Bar 0 plays view(start); each later bar's state is step(previous state, bar). Replayable: states are always computed forward from bar 0. |
@@ -471,7 +515,7 @@ Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. 
 | `repeat(x, n)` | A list of n copies of x. |
 | `take(list, n)` | The first n elements. |
 | `drop(list, n)` | All but the first n elements. |
-| `rotate(list, n)` | Rotate a list left by n places. |
+| `rotate(p, n)` | Start a list or rhythm n steps later in itself, wrapping round: [a b c d].rotate(1) is [b c d a]. A phrase with held or weighted steps, or a .beats line, turns by steps of its grid. |
 | `sum(list)` | Add up the elements. |
 
 ### Math

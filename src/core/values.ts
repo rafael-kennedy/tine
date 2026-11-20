@@ -1,6 +1,6 @@
 import { R } from "./rational";
 import { Pitch, Degree, Key, Scale } from "./pitch";
-import { Pat, Chord, Rest } from "./pattern";
+import { Pat, Chord, Rest, Hit } from "./pattern";
 import type { Node } from "./parser";
 
 export class Rec {
@@ -63,6 +63,7 @@ export function typeName(v: any): string {
   if (v instanceof Rec) return "record";
   if (v instanceof Namespace) return "namespace";
   if (v instanceof Rest) return "rest";
+  if (v instanceof Hit) return "hit";
   if (v === null || v === undefined) return "nothing";
   return typeof v;
 }

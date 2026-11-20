@@ -6,7 +6,8 @@ import { parse, Node, Stmt, Program } from "./parser";
 import { TineError, Span, suggest, lineCol } from "./errors";
 import { R, ONE, ZERO } from "./rational";
 import { Pitch, Degree, Key, Scale, parseNote, parseDegree, SCALES, DRUMS, DEFAULT_KEY } from "./pitch";
-import { Pat, Chord, REST, Rest, toPat, seq, stack, alt, fast, choice, degrade, silence, mapV, sampleAt, setParam, Ctx, makeCtx } from "./pattern";
+import { Pat, Chord, REST, Rest, toPat, seq, stack, alt, fast, choice, degrade, silence, mapV, mapEv, sampleAt, setParam, Ctx, makeCtx, Hit, HITS } from "./pattern";
+import { hitWith } from "./rhythm";
 import { hashStr, Stream, rand01 } from "./rng";
 import { Env, Closure, Builtin, Rec, Namespace, typeName, show, num, isNum, truthy } from "./values";
 import { makeChord, registerBuiltins } from "./builtins";
@@ -82,6 +83,7 @@ export class Interp {
     for (const [k, n] of Object.entries(DRUMS)) env.set(k, new Pitch(n, k));
     for (const i of INSTRUMENTS) env.set(i, i);
     env.set("silence", silence);
+    for (const [k, h] of Object.entries(HITS)) env.set(k, h);
     env.set("rest", REST);
     env.set("pi", Math.PI);
     registerBuiltins(env);
@@ -523,7 +525,7 @@ function opWord(op: string) {
 export function binop(op: string, l: any, r: any, span?: Span): any {
   if (l instanceof Pat && r instanceof Pat) {
     // structure comes from the left; the right is sampled at each onset
-    const np = new Pat((a, b, ctx) => l.query(a, b, ctx).map(ev => ({ ...ev, v: scalar(op, ev.v, sampleAt(r, ev.s, ctx), span) })));
+    const np = new Pat((a, b, ctx) => l.query(a, b, ctx).map(ev => (ev.v instanceof Hit && op === "+" ? hitWith(ev, sampleAt(r, ev.s, ctx)) : { ...ev, v: scalar(op, ev.v, sampleAt(r, ev.s, ctx), span) })));
     return np;
   }
   // pattern * n repeats it n times per bar, as x*n does inside a phrase;
@@ -533,6 +535,7 @@ export function binop(op: string, l: any, r: any, span?: Span): any {
     if (k.n === 0) throw new TineError("runtime", op === "*" ? "a pattern repeated 0 times is silence; use silence instead" : "division by zero", span);
     return fast(op === "*" ? k : ONE.div(k), l);
   }
+  if (l instanceof Pat && op === "+") return mapEv(l, ev => (ev.v instanceof Hit ? hitWith(ev, r) : { ...ev, v: scalar(op, ev.v, r, span) }));
   if (l instanceof Pat) return mapV(l, x => scalar(op, x, r, span));
   if (r instanceof Pat) return mapV(r, x => scalar(op, l, x, span));
   return scalar(op, l, r, span);
