@@ -5,7 +5,7 @@ import { CSS, LOGO_SVG } from "./theme";
 import { h, store, makeCell, makeExercise, makeQuiz, stopAll, CELL_CSS } from "./cells";
 import { TOUCH_CSS, setupMobile, keyBar, focusedEditor } from "./mobile";
 import { UNITS, COURSE_LESSONS } from "./course/index";
-import { makeAsk, ASK_CSS } from "./ask";
+import { makeTutor, TUTOR_CSS } from "./tutor/panel";
 
 const COURSE_CSS = `
 body{min-height:100vh}
@@ -157,10 +157,14 @@ function renderPage() {
     else article.append(makeCell(part, { seed: seedOf }));
   }
   const LEVEL: Record<string, string> = { "Theory 100": "an absolute beginner who may never have read music or written code", "Theory 101": "a first-semester college theory student", "Theory 102": "a second-semester college theory student", "Theory 201": "a second-year college theory student", "Theory 202": "an advanced second-year student" };
-  const askBox: HTMLElement = makeAsk({
-    lessonTitle: `${lesson.label}. ${lesson.title}`, unit: `${lesson.unit.code}, ${lesson.unit.title}`, level: LEVEL[lesson.unit.code] ?? "a theory student", seed: seedOf,
-    lessonText: () => [...article.children].filter(el => el !== askBox).map(el => (el as HTMLElement).innerText).join("\n\n"),
-    pageCode: () => [...article.querySelectorAll(".cell")].filter(el => !askBox.contains(el)).map(el => (el as any).view?.().state.doc.toString() ?? ""),
+  const cells = () => [...article.querySelectorAll(".cell")].filter(el => !askBox.contains(el)) as (HTMLElement & { view?: () => any })[];
+  const askBox: HTMLElement = makeTutor({
+    title: "Ask about this lesson", seed: seedOf,
+    where: `The learner is in Tine Theory, a music theory course taught through Tine, on lesson "${lesson.label}. ${lesson.title}" (${lesson.unit.code}, ${lesson.unit.title}). Each code box on the page is an editor they can change and play.`,
+    audience: LEVEL[lesson.unit.code] ?? "a theory student",
+    editors: () => cells().filter(c => c.view).map((c, i) => ({ label: `box ${i + 1}`, view: c.view!() })),
+    page: () => [...article.children].filter(el => el !== askBox).map(el => (el as HTMLElement).innerText).join("\n\n").slice(0, 14000),
+    quick: ["Explain this another way", "Give me a hint", "Let me hear an example"],
   });
   article.append(askBox);
   const prev = COURSE_LESSONS[idx - 1], next = COURSE_LESSONS[idx + 1];
@@ -170,7 +174,7 @@ function renderPage() {
 }
 
 function main() {
-  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + COURSE_CSS + ASK_CSS + TOUCH_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + COURSE_CSS + TUTOR_CSS + TOUCH_CSS; document.head.append(style);
   setupMobile();
   const logo = h("a", { class: "logo", href: "#home" }); logo.innerHTML = LOGO_SVG + "tine";
   const toggle = h("button", { class: "small toggle", onclick: () => nav.classList.toggle("open") }, "lessons");
