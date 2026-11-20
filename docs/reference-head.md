@@ -61,7 +61,7 @@ An error inside a used file is reported on the `use` line, with the file and lin
 | `[a b c]` | three steps dividing one bar equally |
 | `.` | rest |
 | `_` | hold the previous step one step longer |
-| `x:3` | x takes 3 steps' worth of time |
+| `x:3` `x:3/2` | x takes 3 (or one and a half) steps' worth of time |
 | `[a [b c]]` | nested brackets subdivide one step |
 | `x*3` | x three times within its step |
 | `x!3` | x repeated as three steps |
@@ -96,6 +96,38 @@ Degrees add in scale steps: `^1 + 2` is `^3`.
 ## Time
 
 Time is measured in bars and is exact. A phrase fills one bar; `slow(2)` spreads it over two. `every(n, f)` applies f on the last bar of each group of n (use `at: 0` for the first). Inside a section, time restarts at the section's first bar.
+
+## Rhythm
+
+Two ways to write when notes happen, beside the plain phrase that divides a bar.
+
+**Lengths in beats.** `.beats` measures a phrase's steps in beats instead of dividing one bar. Each step is a beat unless `:` says otherwise; nested brackets still divide their own span. The line lasts as long as its steps add up to, crosses bar lines, and rests to the end of its last bar before it loops. A beat is the meter's denominator (as for `tempo`); `.beats(1/16)` measures in sixteenths instead.
+
+```tine
+voice tune = [c4:3/2 d4:1/2 [e4 f4 g4]:2 a4:3 g4:1/2 f4:1/2 e4:4].beats   -- three bars
+```
+
+**Rhythm and notes as separate layers.** `x` is a hit, `X` an accented hit and `o` a ghost note, so a rhythm is written like drum tab. Any pattern can be taken apart: `p.rhythm` keeps its timing and drops its pitches, `p.notes` keeps its pitches in order and drops its timing. `notes.on(rhythm)` pours them back together, one note per hit. The two loop independently, counted from the start of the section, so seven notes on a five-hit rhythm come round together every seven bars. In the notes, `.` leaves a hit silent and `_` holds a note through the next hit. `rhythm + value` still samples by time, which suits chord changes.
+
+```tine
+let riff  = [^1 ^3 ^5 ^4 ^3 ^2 ^1]
+let clave = [X . . x . . X . . . x . X . . .]
+voice lead  = riff.on(clave)
+voice turn  = riff.on(clave.every(4, r => r.rotate(3)))
+voice drift = riff.on(clave.mutate(.15))
+voice bass  = clave + c2
+```
+
+| Code | What it does |
+| --- | --- |
+| `rotate(n)` | start n steps later in the rhythm, wrapping round |
+| `displace(t)` | move every hit t bars later, wrapping inside the loop |
+| `flip` | hits become rests and rests become hits |
+| `thin(n)`, `fill(n)` | remove or add n hits each loop (seeded; thin keeps the downbeat) |
+| `union(a, b)`, `intersect(a, b)`, `minus(a, b)` | combine two rhythms hit by hit |
+| `mutate(rate)` | each loop, about rate of the hits move a step, and stay moved |
+
+Steps are the phrase's own grid: `[x . . x]` turns by quarters, `[x:2 x x]` by quarters too, a `.beats` line by its smallest length.
 
 ## Randomness
 

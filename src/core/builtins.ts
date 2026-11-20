@@ -11,6 +11,7 @@ import {
   setParam, signal, segment, sampleAt, perBar, perBarSelect, evolve, filterEv, evRand, withCtx, arrange, silence, Ev, Ctx,
 } from "./pattern";
 import { rand01, hashStr } from "./rng";
+import * as Rh from "./rhythm";
 import { Env, Builtin, Closure, Rec, typeName, show, num, isNum, truthy, CallInfo } from "./values";
 import { TineError } from "./errors";
 
@@ -159,6 +160,31 @@ def("poly", "poly(p, steps)", "Polymeter: step through p's elements at `steps` p
 });
 def("euclid", "euclid(p, hits, steps, rot: 0)", "Spread `hits` events as evenly as possible over `steps` (Euclidean rhythm).", cat.time, ([p, k, n, rot], named) =>
   euclid(P(p), Math.round(N(k)), Math.round(N(n)), Math.round(N(named.rot ?? rot, 0))));
+// ===== rhythm =====
+// Rhythm as its own layer: take a pattern apart into rhythm and notes,
+// change them separately, pour notes back into a rhythm with on.
+const beatUnit = (call: CallInfo, unit: any): R => {
+  const [num_, den] = call.interp.scene.meter as [number, number];
+  const u = unit === undefined ? new R(1, den) : RR(unit);   // a note value: 1/4 is a quarter note
+  return u.div(new R(num_, den));                             // in bars
+};
+def("beats", "beats(p, unit)", "Measure a phrase's steps in beats instead of dividing a bar: [c:3/2 d:1/2 e:2].beats lasts four beats. The line crosses bar lines and rests to the end of its last bar. unit is a note value (1/16) and defaults to the meter's beat.", cat.time, ([p, unit], named, call) =>
+  Rh.beats(P(p), beatUnit(call, named.unit ?? unit)));
+def("rhythm", "rhythm(p)", "The rhythm of p: its timing, lengths and settings, with each note replaced by a hit (x). Pour notes back in with on.", cat.time, ([p]) => Rh.rhythmOf(P(p)));
+def("notes", "notes(p, bars: 1)", "The notes of p in the order they play, without their timing, as a list. Notes that start together become a chord.", cat.time, ([p, bars], named, call) =>
+  list(Rh.notesOf(P(p), Math.round(N(named.bars ?? bars, 1)), call.interp.scene.seed)));
+def("on", "on(notes, rhythm, reset: 0)", "Play the notes one per hit of the rhythm. They loop independently, so 7 notes on a 5-hit rhythm come round together every 7 bars. In the notes, _ holds a note through the next hit and . leaves a hit silent. reset: n starts the notes again every n bars.", cat.time, ([n, r], named, call) =>
+  Rh.on(Rh.noteEntries(n, call.interp.scene.seed), P(r), Math.round(N(named.reset, 0))));
+def("displace", "displace(p, t)", "Move every hit t bars later, wrapping round inside the rhythm's loop.", cat.time, ([p, t]) => Rh.displace(P(p), RR(t)));
+def("flip", "flip(p)", "Hits become rests and rests become hits, on the rhythm's grid.", cat.time, ([p]) => Rh.flip(P(p)));
+def("thin", "thin(p, n: 1)", "Remove n hits from each loop of a rhythm, never the downbeat (seeded).", cat.time, ([p, n], named, call) => Rh.thin(P(p), Math.round(N(named.n ?? n, 1)), call.interp.salt()));
+def("fill", "fill(p, n: 1)", "Add n hits on empty steps of each loop of a rhythm (seeded).", cat.time, ([p, n], named, call) => Rh.fill(P(p), Math.round(N(named.n ?? n, 1)), call.interp.salt()));
+def("union", "union(a, b)", "Every hit of either rhythm (one hit where both have one).", cat.time, ([a, b]) => Rh.union(P(a), P(b)));
+def("intersect", "intersect(a, b)", "The hits of a that b also has.", cat.time, ([a, b]) => Rh.intersect(P(a), P(b), true));
+def("minus", "minus(a, b)", "The hits of a that b does not have.", cat.time, ([a, b]) => Rh.intersect(P(a), P(b), false));
+def("mutate", "mutate(p, rate: 0.1)", "Each loop, about rate of the hits move one step left or right, and stay moved: the rhythm wanders. Seeded and replayable, counted from the section's start.", cat.time, ([p, rate], named, call) =>
+  Rh.mutate(P(p), N(named.rate ?? rate, 0.1), call.interp.salt()));
+
 def("trunc", "trunc(p, fraction)", "Play only the first fraction of each bar.", cat.time, ([p, f]) => {
   const fr = RR(f); return filterEv(P(p), ev => ev.s.cyclePos().lt(fr));
 });
@@ -615,7 +641,11 @@ def("concat", "concat(a, b, ...)", "Join lists into one longer list (one bar, mo
 def("repeat", "repeat(x, n)", "A list of n copies of x.", cat.list, ([x, n]) => list(Array.from({ length: Math.max(0, Math.round(N(n))) }, () => x)));
 def("take", "take(list, n)", "The first n elements.", cat.list, ([l, n]) => list(items(l).slice(0, Math.round(N(n)))));
 def("drop", "drop(list, n)", "All but the first n elements.", cat.list, ([l, n]) => list(items(l).slice(Math.round(N(n)))));
-def("rotate", "rotate(list, n)", "Rotate a list left by n places.", cat.list, ([l, n]) => { const xs = items(l), k = ((Math.round(N(n)) % xs.length) + xs.length) % xs.length; return list([...xs.slice(k), ...xs.slice(0, k)]); });
+def("rotate", "rotate(p, n)", "Start a list or rhythm n steps later in itself, wrapping round: [a b c d].rotate(1) is [b c d a]. A phrase with held or weighted steps, or a .beats line, turns by steps of its grid.", cat.list, ([l, n]) => {
+  const evenList = Array.isArray(l) || (l instanceof Pat && l.items && !l.period && (!l.weights || l.weights.every(w => w.eq(l.weights![0]))));
+  if (evenList) { const xs = items(l); if (!xs.length) return list([]); const k = ((Math.round(N(n)) % xs.length) + xs.length) % xs.length; return list([...xs.slice(k), ...xs.slice(0, k)]); }
+  return Rh.rotate(P(l), Math.round(N(n)));
+});
 def("sum", "sum(list)", "Add up the elements.", cat.list, ([l]) => items(l).reduce((a, x) => (a instanceof R && x instanceof R ? a.add(x) : num(a) + num(x)), new R(0)));
 
 // ===== math =====
