@@ -7,14 +7,14 @@
 //   bun run check          sync --check, then the whole test suite
 //
 // The single sources: src/core (builtins.ts, docs.ts, lexer.ts KEYWORDS, pitch.ts
-// SCALES and DRUMS, interp.ts INSTRUMENTS, synth.ts INSTRUMENT_DOCS) for words and
-// docs, and package.json for the version. Everything below is derived from them.
+// SCALES and DRUMS, interp.ts INSTRUMENTS, synth.ts INSTRUMENT_DOCS, guide/ for the
+// function guide) for words and docs, and package.json for the version. Everything below is derived from them.
 // To add a derived file, add a step here and a freshness test in tests/sync.test.ts.
 import { readFileSync, writeFileSync, existsSync, mkdtempSync, cpSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync, execFileSync } from "node:child_process";
-import { referenceMarkdown } from "./gen-reference";
+import { referenceMarkdown, functionsMarkdown } from "./gen-reference";
 import { textmateGrammar } from "./grammar";
 import { vimSyntax, emacsMode } from "./gen-editors";
 
@@ -46,6 +46,7 @@ export function derivedFiles(): Record<string, string> {
   const grammar = textmateGrammar();
   const out: Record<string, string> = {
     "docs/REFERENCE.md": referenceMarkdown(),
+    "docs/FUNCTIONS.md": functionsMarkdown(),
     "editors/textmate/tine.tmLanguage.json": grammar,
     "editors/vscode/syntaxes/tine.tmLanguage.json": grammar,
     "editors/vim/syntax/tine.vim": vimSyntax(),

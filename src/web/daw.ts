@@ -1,7 +1,7 @@
 // Tine DAW: a live-coding workstation in the browser.
 import { EditorView } from "@codemirror/view";
 import {
-  evaluate, Scene, VoiceDef, TineError, formatError, makeCtx, R, hashStr, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, builtinList, parseSf2, buildChart, chartPages, buildScore, scorePages, htmlDocument,
+  evaluate, Scene, VoiceDef, TineError, formatError, makeCtx, R, hashStr, randomSeed, renderNotes, mix, encodeWav, toMidiFile, lineCol, VERSION, timeline, INSTRUMENT_DOCS, parseSf2, buildChart, chartPages, buildScore, scorePages, htmlDocument,
 } from "../core";
 import { Engine } from "./engine";
 import { library, loadBundled, ensure as ensureSamples, onWarn, nameOf, bankOfPath, setSoundfont, soundfont, loadSoundfont } from "./samples";
@@ -12,6 +12,8 @@ import { Roll } from "./roll";
 import { CSS, LOGO_SVG } from "./theme";
 import { captureToCode, Captured } from "./capture";
 import { TOUCH_CSS, setupMobile, keyBar } from "./mobile";
+import { functionHelp, exampleForPiece, HELP_CSS } from "./help";
+import { CELL_CSS, onCellStart, stopAll as stopCells } from "./cells";
 
 const DEFAULT_CODE = `-- Welcome to the Tine DAW.
 -- Ctrl/Cmd+Enter evaluates (changes land on the next bar). Ctrl/Cmd+. stops.
@@ -65,6 +67,8 @@ header .sep{flex:1}
 .pos{font-family:var(--mono);font-size:18px;min-width:70px;text-align:center;color:var(--brass2)}
 .seed{font-family:var(--mono);color:var(--brass2)}
 main{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:0}
+main.wide{grid-template-columns:minmax(0,1fr) min(560px,45vw)}
+main.wide + footer{grid-template-columns:minmax(0,1fr) min(560px,45vw)}
 #ed{min-height:0;padding:10px;overflow:hidden}
 #ed .cm-editor{height:100%}
 aside{border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -103,14 +107,14 @@ body.dragging .drop{border-color:var(--brass);color:var(--text)}
 .kb td{padding:2px 8px 2px 0;vertical-align:top}
 .ccbox{font-family:var(--mono);background:var(--ink2);border-radius:8px;padding:8px;margin:6px 0}
 @media (max-width: 860px){
-  main{grid-template-columns:1fr} aside{border-left:none;border-top:1px solid var(--line);max-height:42vh}
+  main,main.wide{grid-template-columns:1fr} main.wide + footer{grid-template-columns:1fr} aside{border-left:none;border-top:1px solid var(--line);max-height:42vh}
   #app{grid-template-rows:auto 1fr 110px} footer{grid-template-columns:1fr} #console{display:none}
   body{overflow:auto;height:auto} #app{height:auto;min-height:100vh} #ed{height:55vh}
 }
 `;
 
 export async function startDaw() {
-  const style = document.createElement("style"); style.textContent = CSS + DAW_CSS + TOUCH_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + DAW_CSS + TOUCH_CSS + CELL_CSS + HELP_CSS; document.head.append(style);
   setupMobile();
   const engine = new Engine();
   const transport = new Transport(engine);
@@ -162,6 +166,8 @@ export async function startDaw() {
   const selectTab = (t: string) => {
     for (const b of tabBar.querySelectorAll("button")) b.classList.toggle("act", (b as HTMLElement).dataset.tab === t);
     for (const [k, p] of Object.entries(panels)) p.classList.toggle("act", k === t);
+    // the help's examples are code, so its panel is wider
+    aside.parentElement?.classList.toggle("wide", t === "Help");
     store.set("tine.tab", t);
     if (t === "Sheet") setTimeout(() => { try { renderSheet(); } catch { /* not set up yet: drawn after the first evaluation */ } }, 0);
   };
@@ -262,6 +268,7 @@ export async function startDaw() {
   }
 
   async function play() {
+    stopCells();
     if (!lastScene) { const s = compile(); if (!s) return; lastScene = s; transport.load(s); renderTracks(); renderScenes(); renderSheet(); }
     await engine.resume();
     transport.mode = modeSel.value as any;
@@ -721,8 +728,17 @@ export async function startDaw() {
     h("h4", {}, "learn"),
     h("p", {}, h("a", { href: fileInfo ? "/learn" : "#", target: "_blank" }, "Open the interactive tutorial"), h("span", { class: "dim" }, " (run 'tine learn' if this is a standalone page)")),
     h("h4", {}, "functions"),
-    ...builtinList().map(b => h("div", { class: "dest", title: b.doc }, b.sig)),
+    h("p", { class: "dim" }, "Open a function for examples you can play, edit and add to your piece."),
+    functionHelp({
+      addToPiece: (ex, name) => {
+        const doc = code();
+        view.dispatch({ changes: { from: doc.length, insert: (doc.endsWith("\n") ? "" : "\n") + exampleForPiece(ex, name) } });
+        log(`added the ${name} example to the end of your piece; evaluate to hear it`, "i");
+      },
+    }),
   );
+  // an example playing in the help stops the piece, so the two do not clash
+  onCellStart(() => { if (transport.playing) stop(); });
 
   // ---------- visuals ----------
   const roll = new Roll(canvas);
