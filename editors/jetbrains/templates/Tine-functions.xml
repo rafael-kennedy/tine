@@ -517,6 +517,328 @@
         <option name="OC_SOURCE" value="false" />
       </context>
     </template>
+    <template name="beats" value="beats($UNIT$)$END$" description="beats(p, unit)  [time]  Method: p.beats(...). Measure a phrase's steps in beats instead of dividing a bar: [c:3/2 d:1/2 e:2].beats lasts four beats. The line crosses bar lines and rests to the end of its last bar. unit is a note value (1/16) and defaults to the meter's beat." toReformat="false" toShortenFQNames="false">
+      <variable name="UNIT" expression="" defaultValue="&quot;unit&quot;" alwaysStopAt="true" />
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="rhythm" value="rhythm$END$" description="rhythm(p)  [time]  Method: p.rhythm. The rhythm of p: its timing, lengths and settings, with each note replaced by a hit (x). Pour notes back in with on." toReformat="false" toShortenFQNames="false">
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="notes" value="notes$END$" description="notes(p, bars: 1)  [time]  Method: p.notes. The notes of p in the order they play, without their timing, as a list. Notes that start together become a chord." toReformat="false" toShortenFQNames="false">
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="on" value="on($NOTES$, $RHYTHM$)$END$" description="on(notes, rhythm, reset: 0)  [time]  Play the notes one per hit of the rhythm. They loop independently, so 7 notes on a 5-hit rhythm come round together every 7 bars. In the notes, _ holds a note through the next hit and . leaves a hit silent. reset: n starts the notes again every n bars." toReformat="false" toShortenFQNames="false">
+      <variable name="NOTES" expression="" defaultValue="&quot;notes&quot;" alwaysStopAt="true" />
+      <variable name="RHYTHM" expression="" defaultValue="&quot;rhythm&quot;" alwaysStopAt="true" />
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="displace" value="displace($T$)$END$" description="displace(p, t)  [time]  Method: p.displace(...). Move every hit t bars later, wrapping round inside the rhythm's loop." toReformat="false" toShortenFQNames="false">
+      <variable name="T" expression="" defaultValue="&quot;t&quot;" alwaysStopAt="true" />
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="flip" value="flip$END$" description="flip(p)  [time]  Method: p.flip. Hits become rests and rests become hits, on the rhythm's grid." toReformat="false" toShortenFQNames="false">
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="thin" value="thin$END$" description="thin(p, n: 1)  [time]  Method: p.thin. Remove n hits from each loop of a rhythm, never the downbeat (seeded)." toReformat="false" toShortenFQNames="false">
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="fill" value="fill$END$" description="fill(p, n: 1)  [time]  Method: p.fill. Add n hits on empty steps of each loop of a rhythm (seeded)." toReformat="false" toShortenFQNames="false">
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="union" value="union($A$, $B$)$END$" description="union(a, b)  [time]  Every hit of either rhythm (one hit where both have one)." toReformat="false" toShortenFQNames="false">
+      <variable name="A" expression="" defaultValue="&quot;a&quot;" alwaysStopAt="true" />
+      <variable name="B" expression="" defaultValue="&quot;b&quot;" alwaysStopAt="true" />
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="intersect" value="intersect($A$, $B$)$END$" description="intersect(a, b)  [time]  The hits of a that b also has." toReformat="false" toShortenFQNames="false">
+      <variable name="A" expression="" defaultValue="&quot;a&quot;" alwaysStopAt="true" />
+      <variable name="B" expression="" defaultValue="&quot;b&quot;" alwaysStopAt="true" />
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="minus" value="minus($A$, $B$)$END$" description="minus(a, b)  [time]  The hits of a that b does not have." toReformat="false" toShortenFQNames="false">
+      <variable name="A" expression="" defaultValue="&quot;a&quot;" alwaysStopAt="true" />
+      <variable name="B" expression="" defaultValue="&quot;b&quot;" alwaysStopAt="true" />
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
+    <template name="mutate" value="mutate$END$" description="mutate(p, rate: 0.1)  [time]  Method: p.mutate. Each loop, about rate of the hits move one step left or right, and stay moved: the rhythm wanders. Seeded and replayable, counted from the section's start." toReformat="false" toShortenFQNames="false">
+      <context>
+        <option name="OTHER" value="true" />
+        <option name="JAVA_CODE" value="false" />
+        <option name="KOTLIN" value="false" />
+        <option name="GROOVY" value="false" />
+        <option name="SCALA" value="false" />
+        <option name="Python" value="false" />
+        <option name="JAVA_SCRIPT" value="false" />
+        <option name="TypeScript" value="false" />
+        <option name="HTML" value="false" />
+        <option name="XML" value="false" />
+        <option name="CSS" value="false" />
+        <option name="JSON" value="false" />
+        <option name="YAML" value="false" />
+        <option name="SQL" value="false" />
+        <option name="MARKDOWN" value="false" />
+        <option name="Properties" value="false" />
+        <option name="SHELL_SCRIPT" value="false" />
+        <option name="GO" value="false" />
+        <option name="RUST" value="false" />
+        <option name="PHP" value="false" />
+        <option name="RUBY" value="false" />
+        <option name="OC_SOURCE" value="false" />
+      </context>
+    </template>
     <template name="trunc" value="trunc($FRACTION$)$END$" description="trunc(p, fraction)  [time]  Method: p.trunc(...). Play only the first fraction of each bar." toReformat="false" toShortenFQNames="false">
       <variable name="FRACTION" expression="" defaultValue="&quot;fraction&quot;" alwaysStopAt="true" />
       <context>
@@ -3649,8 +3971,7 @@
         <option name="OC_SOURCE" value="false" />
       </context>
     </template>
-    <template name="rotate" value="rotate($LIST$, $N$)$END$" description="rotate(list, n)  [lists]  Rotate a list left by n places." toReformat="false" toShortenFQNames="false">
-      <variable name="LIST" expression="" defaultValue="&quot;list&quot;" alwaysStopAt="true" />
+    <template name="rotate" value="rotate($N$)$END$" description="rotate(p, n)  [lists]  Method: p.rotate(...). Start a list or rhythm n steps later in itself, wrapping round: [a b c d].rotate(1) is [b c d a]. A phrase with held or weighted steps, or a .beats line, turns by steps of its grid." toReformat="false" toShortenFQNames="false">
       <variable name="N" expression="" defaultValue="&quot;n&quot;" alwaysStopAt="true" />
       <context>
         <option name="OTHER" value="true" />

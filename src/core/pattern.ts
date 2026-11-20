@@ -40,12 +40,26 @@ export class Chord {
 }
 
 export class Rest { toString() { return "."; } }
+
+// A hit in a rhythm: when, without what. x is a plain hit, X an accent,
+// o a ghost note. Played alone a hit sounds as c4 (a sample as recorded);
+// poured into notes with .on, it lends them its timing and its accent.
+export class Hit {
+  constructor(public sym: string, public accent: number) {}
+  toString() { return this.sym; }
+}
+export const HITS: Record<string, Hit> = { x: new Hit("x", 1), X: new Hit("X", 1.25), o: new Hit("o", 0.45) };
 export const REST = new Rest();
 
 type Q = (a: R, b: R, ctx: Ctx) => Ev[];
 
 export class Pat {
   sig?: (t: number, ctx: Ctx) => any;
+  // How a phrase was written, kept for rhythm functions (.beats, rotate, on):
+  // the weight of each step, and the time grid its steps sit on.
+  weights?: R[];
+  grid?: R;       // the smallest step, in bars
+  period?: number; // bars before the rhythm repeats, when known (default 1)
   constructor(public query: Q, public items?: any[], public label?: string) {}
   toString() { return this.label ?? (this.items ? `[${this.items.map(String).join(" ")}]` : "<pattern>"); }
 }
@@ -89,7 +103,7 @@ export function seq(children: { pat: Pat; w: R }[], items?: any[]): Pat {
   if (total.n === 0) return silence;
   let acc = ZERO;
   const slots = children.map(ch => { const x0 = acc.div(total); acc = acc.add(ch.w); return { pat: ch.pat, x0, w: ch.w.div(total) }; });
-  return new Pat((a, b, ctx) => {
+  const sp = new Pat((a, b, ctx) => {
     const out: Ev[] = [];
     for (const { c, lo, hi } of bars(a, b)) {
       const C = new R(c);
@@ -106,6 +120,25 @@ export function seq(children: { pat: Pat; w: R }[], items?: any[]): Pat {
     }
     return out;
   }, items);
+  sp.weights = children.map(c => c.w);
+  sp.grid = children.reduce((g, c) => rgcd(g, c.w), ZERO).div(total);
+  return sp;
+}
+
+// greatest common divisor of two non-negative rationals (0 is the identity)
+export function rgcd(a: R, b: R): R {
+  if (a.n === 0) return b;
+  if (b.n === 0) return a;
+  const g = (x: number, y: number): number => { x = Math.abs(x); y = Math.abs(y); while (y) { const t = y; y = x % y; x = t; } return x; };
+  return new R(g(a.n * b.d, b.n * a.d), a.d * b.d);
+}
+
+// carry rhythm metadata across a transformation that keeps time as it was
+export function keepShape(from: Pat, to: Pat): Pat {
+  if (from.weights) to.weights = from.weights;
+  if (from.grid) to.grid = from.grid;
+  if (from.period) to.period = from.period;
+  return to;
 }
 
 export function stack(pats: Pat[]): Pat {
@@ -210,7 +243,7 @@ export function mapEv(p: Pat, f: (ev: Ev, ctx: Ctx) => Ev | null): Pat {
     for (const ev of p.query(a, b, ctx)) { const r = f(ev, ctx); if (r) out.push(r); }
     return out;
   });
-  return np;
+  return keepShape(p, np);
 }
 
 export function mapV(p: Pat, f: (v: any, ctx: Ctx) => any): Pat {
@@ -221,7 +254,7 @@ export function mapV(p: Pat, f: (v: any, ctx: Ctx) => any): Pat {
 }
 
 export function withCtx(p: Pat, f: (ctx: Ctx) => Ctx): Pat {
-  const np = new Pat((a, b, ctx) => p.query(a, b, f(ctx)), p.items);
+  const np = keepShape(p, new Pat((a, b, ctx) => p.query(a, b, f(ctx)), p.items));
   if (p.sig) { const s = p.sig; np.sig = (t, ctx) => s(t, f(ctx)); }
   return np;
 }
@@ -349,7 +382,7 @@ export function valueToSemis(v: any, key: Key): number[] {
   if (v instanceof R) return [v.toNumber()];
   if (typeof v === "number") return [v];
   if (v instanceof Chord) return v.notes.flatMap(n => valueToSemis(n, key));
-  if (v === true) return [60];
+  if (v === true || v instanceof Hit) return [60];
   if (typeof v === "string") return [60]; // a sample name: see resolveNotes
   if (typeof v === "object" && !(v instanceof Pat) && "note" in v) return valueToSemis(v.note, key);
   return [];
@@ -365,6 +398,7 @@ export function resolveNotes(voice: string, evs: Ev[], ctx: Ctx): Note[] {
     const dur = ev.p.dur !== undefined ? R.of(Number(ev.p.dur)) : ev.e.sub(ev.s).mul(R.of(legato));
     let vel = ev.p.vel !== undefined ? Number(ev.p.vel) : 0.8;
     if (typeof ev.v === "object" && ev.v && "vel" in ev.v) vel = Number(ev.v.vel);
+    if (ev.v instanceof Hit) vel *= ev.v.accent;
     const params = { ...ev.p };
     if (ev.v instanceof Pitch && ev.v.drum && params.inst === undefined) params.inst = "kit";
     // a drum name played through samples keeps its name, so it plays unpitched (and through the kit)

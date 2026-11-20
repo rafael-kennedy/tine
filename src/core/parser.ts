@@ -459,7 +459,16 @@ class Parser {
       const m = this.tok;
       if (m.spaceBefore) break;
       if (this.isOp("*")) { this.next(); const a = this.phraseNum(); node = { t: "mod", kind: "fast", e: node, arg: a, span: sp(node.span, a.span) }; continue; }
-      if (this.isOp(":")) { this.next(); const a = this.tok; if (a.type !== "num") this.err("expected a length after ':' like c:2"); this.next(); weight = a.num!.n / a.num!.d; continue; }
+      if (this.isOp(":")) {
+        this.next(); const a = this.tok; if (a.type !== "num") this.err("expected a length after ':' like c:2 or c:3/2"); this.next(); weight = a.num!.n / a.num!.d;
+        // a fraction: c:3/2
+        if (this.isOp("/") && !this.tok.spaceBefore && this.peek().type === "num" && !this.peek().spaceBefore) {
+          this.next(); const d = this.next(); const dv = d.num!.n / d.num!.d;
+          if (dv === 0) this.err("a length cannot be divided by zero", d);
+          weight /= dv;
+        }
+        continue;
+      }
       if (this.isOp("~")) { this.next(); node = { t: "mod", kind: "slur", e: node, arg: null, span: sp(node.span, this.spanOf(m)) }; continue; }
       if (this.isOp("!")) { this.next(); const a = this.phraseNum(); node = { t: "mod", kind: "rep", e: node, arg: a, span: sp(node.span, a.span) }; continue; }
       if (this.isOp("?")) {
