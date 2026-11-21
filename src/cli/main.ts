@@ -9,6 +9,7 @@ import { repl } from "./repl";
 import { renderToWav, playWav, openBrowser, loadSamples, bundledPack, fetchNeeded } from "./audio";
 import { dirtSender, dirtMode } from "./dirt";
 import { chooseFile, NoDialog, readRecent, pushRecent, sameOrigin } from "./dialog";
+import { tutorReady, proxyAnthropic } from "./tutor-proxy";
 import { roll } from "./roll";
 import * as assets from "./assets.gen";
 
@@ -49,6 +50,9 @@ options:
   --port N     port for daw/learn/theory (default 7357)
   --samples D  folder of sounds: files are sample names, subfolders are banks
   --dirt H:P   where SuperDirt listens (default 127.0.0.1:57120)
+
+The tutor in daw, learn and theory uses ANTHROPIC_API_KEY from the
+environment when it is set; the key stays in this process.
 
 chart and score options:
   --jazz       jazz chord symbols: C-7, CΔ7, Cø7, C°7
@@ -292,6 +296,8 @@ async function serve(kind: "daw" | "learn" | "theory", file: string | undefined,
         }
         return Response.json({ ...pieceInfo(), canOpen: true });
       }
+      if (url.pathname === "/api/tutor") return Response.json({ ready: tutorReady() });
+      if (url.pathname.startsWith("/api/anthropic/")) return proxyAnthropic(req, url);
       if (url.pathname === "/api/recent") return Response.json(readRecent().filter(p => existsSync(p)));
       if (url.pathname === "/api/open" && req.method === "POST") {
         const body = await req.text();

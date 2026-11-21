@@ -12,6 +12,7 @@ import { Roll } from "./roll";
 import { CSS, LOGO_SVG } from "./theme";
 import { captureToCode, Captured } from "./capture";
 import { TOUCH_CSS, setupMobile, keyBar } from "./mobile";
+import { makeTutor, TUTOR_CSS } from "./tutor/panel";
 import { functionHelp, exampleForPiece, HELP_CSS } from "./help";
 import { CELL_CSS, onCellStart, stopAll as stopCells } from "./cells";
 
@@ -114,7 +115,7 @@ body.dragging .drop{border-color:var(--brass);color:var(--text)}
 `;
 
 export async function startDaw() {
-  const style = document.createElement("style"); style.textContent = CSS + DAW_CSS + TOUCH_CSS + CELL_CSS + HELP_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + DAW_CSS + TOUCH_CSS + CELL_CSS + HELP_CSS + TUTOR_CSS; document.head.append(style);
   setupMobile();
   const engine = new Engine();
   const transport = new Transport(engine);
@@ -156,7 +157,7 @@ export async function startDaw() {
   );
 
   const edWrap = h("section", { id: "ed" });
-  const tabs = ["Tracks", "Scenes", "Sheet", "MIDI", "Takes", "Help"];
+  const tabs = ["Tracks", "Scenes", "Sheet", "MIDI", "Takes", "Tutor", "Help"];
   const tabBar = h("div", { class: "tabs" });
   const panels: Record<string, HTMLElement> = {};
   for (const t of tabs) {
@@ -195,6 +196,24 @@ export async function startDaw() {
   keyBar({ view: () => view, onRun: () => run(true), onStop: () => stop() });
   const code = () => view.state.doc.toString();
   const setCode = (s: string) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: s } });
+
+  // ---------- tutor ----------
+  panels.Tutor.append(makeTutor({
+    compact: true, title: "Ask the tutor",
+    where: "The learner is live coding in the Tine DAW: one editor holds the whole piece, and the console under it shows errors, print output and transport messages.",
+    editors: () => [{ label: fileInfo?.name ?? "editor", view }],
+    seed: () => lastScene?.seed ?? seed,
+    extra: () => {
+      const muted = [...transport.muted], soloed = [...transport.soloed];
+      const state = transport.playing
+        ? `Playing, bar ${Math.floor(transport.currentBar()) + 1}, mode ${modeSel.value}, swaps on ${quant.value}.`
+        : "Stopped.";
+      const lines = [...consoleEl.childNodes].slice(-25).map(n => n.textContent ?? "").join("\n");
+      return [`Transport: ${state} Seed ${lastScene?.seed ?? seed}.` + (muted.length ? ` Muted: ${muted.join(", ")}.` : "") + (soloed.length ? ` Soloed: ${soloed.join(", ")}.` : ""),
+        lines ? `Console (latest last):\n${lines}` : ""].filter(Boolean).join("\n");
+    },
+    quick: ["Explain this error", "What does my code play?", "Show me a feature I'm not using"],
+  }));
 
   // ---------- evaluation ----------
   const voiceNamesIn = (src: string) => [...src.matchAll(/^\s*(?:active\s+)?voice\s+([A-Za-z_][A-Za-z0-9_#]*)/gm)].map(m => m[1]);

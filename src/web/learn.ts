@@ -4,6 +4,7 @@ import { CSS, LOGO_SVG } from "./theme";
 import { LESSONS, Lesson, Cell, Exercise } from "./lessons";
 import { h, store, makeCell, makeExercise, stopAll, CELL_CSS } from "./cells";
 import { TOUCH_CSS, setupMobile, keyBar, focusedEditor } from "./mobile";
+import { makeTutor, TUTOR_CSS } from "./tutor/panel";
 
 const LEARN_CSS = `
 body{min-height:100vh}
@@ -99,6 +100,16 @@ function renderPage() {
     else if ("exercise" in part) article.append(exerciseOf(part.exercise, lesson.id, exIdx++));
     else article.append(cellOf(part));
   }
+  const cells = () => [...article.querySelectorAll(".cell")].filter(el => !askBox.contains(el)) as (HTMLElement & { view?: () => any })[];
+  const askBox: HTMLElement = makeTutor({
+    title: "Ask the tutor", seed: seedOf,
+    where: `The learner is in Learn Tine, the language tutorial, on lesson ${idx + 1} of ${LESSONS.length}, "${lesson.title}". Each code box on the page is an editor they can change and play.`,
+    audience: "a programmer who may know no music theory",
+    editors: () => cells().filter(c => c.view).map((c, i) => ({ label: `box ${i + 1}`, view: c.view!() })),
+    page: () => [...article.children].filter(el => el !== askBox).map(el => (el as HTMLElement).innerText).join("\n\n").slice(0, 14000),
+    quick: ["Explain this another way", "Give me a hint", "Let me hear an example"],
+  });
+  article.append(askBox);
   const prev = LESSONS[idx - 1], next = LESSONS[idx + 1];
   article.append(h("div", { class: "pager" },
     prev ? h("a", { href: `#${prev.id}` }, `← ${prev.title}`) : h("a", { href: "#intro" }, "← Start"),
@@ -106,7 +117,7 @@ function renderPage() {
 }
 
 function main() {
-  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + LEARN_CSS + TOUCH_CSS; document.head.append(style);
+  const style = document.createElement("style"); style.textContent = CSS + CELL_CSS + LEARN_CSS + TUTOR_CSS + TOUCH_CSS; document.head.append(style);
   setupMobile();
   const logo = h("a", { class: "logo", href: "#intro" }); logo.innerHTML = LOGO_SVG + "tine";
   const reroll = h("button", { class: "small", onclick: () => { seed = randomSeed(); seedLabel.textContent = String(seed); store.set("learn.seed", String(seed)); stopAll(); document.querySelectorAll(".cell").forEach(c => c.dispatchEvent(new Event("tine:recompile"))); } }, "🎲 new seed");
