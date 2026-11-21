@@ -331,236 +331,236 @@ tine lsp                  language server
 
 ## Built-in functions
 
-Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. With no other arguments the parentheses are optional: `p.rev`.
+Any function can be called as `f(x, y)` or, on its first argument, as `x.f(y)`. With no other arguments the parentheses are optional: `p.rev`. Each function links to its examples in [FUNCTIONS.md](FUNCTIONS.md).
 
 ### Time
 
 | Function | Description |
 | --- | --- |
-| `fast(p, n)` | Play p n times faster (n times per bar). |
-| `slow(p, n)` | Stretch p over n bars. |
-| `late(p, t)` | Delay p by t bars: in 4/4, 1/8 is an eighth note. |
-| `early(p, t)` | Shift p earlier by t bars. |
-| `rev(p)` | Reverse p within each bar. On a list, reverses the list. |
-| `every(p, n, f, at: n-1)` | Apply f on one bar out of every n (the last one by default, where fills belong). |
-| `palindrome(p)` | Play p forwards, then backwards, alternating bars. |
-| `iter(p, n)` | Rotate the start of p by 1/n each bar. |
-| `off(p, t, f)` | Layer p with a copy shifted by t bars and transformed by f. |
-| `echo(p, times: 3, time: 1/8, decay: 0.6)` | Repeat each event, quieter each time. |
-| `ply(p, n)` | Repeat each event n times within its own length. n may be a pattern. |
-| `swing(p, amount: 1/3, div: 8)` | Delay every second subdivision (eighths by default) by a fraction of a step. 1/3 gives triplet swing (long-short 2:1), 0.2 a lighter 3:2, 0 is straight. |
-| `stack(a, b, ...)` | Play patterns at the same time. |
-| `cat(a, b, ...)` | One pattern per bar, in turn. |
-| `seq(a, b, ...)` | Squeeze patterns one after another into a single bar. |
-| `arrange(p1, bars1, p2, bars2, ...)` | Chain patterns, each lasting the given number of bars, and loop the whole. |
-| `poly(p, steps)` | Polymeter: step through p's elements at `steps` per bar, whatever its length. |
-| `euclid(p, hits, steps, rot: 0)` | Spread `hits` events as evenly as possible over `steps` (Euclidean rhythm). |
-| `beats(p, unit)` | Measure a phrase's steps in beats instead of dividing a bar: [c:3/2 d:1/2 e:2].beats lasts four beats. The line crosses bar lines and rests to the end of its last bar. unit is a note value (1/16) and defaults to the meter's beat. |
-| `rhythm(p)` | The rhythm of p: its timing, lengths and settings, with each note replaced by a hit (x). Pour notes back in with on. |
-| `notes(p, bars: 1)` | The notes of p in the order they play, without their timing, as a list. Notes that start together become a chord. |
-| `on(notes, rhythm, reset: 0)` | Play the notes one per hit of the rhythm. They loop independently, so 7 notes on a 5-hit rhythm come round together every 7 bars. In the notes, _ holds a note through the next hit and . leaves a hit silent. reset: n starts the notes again every n bars. |
-| `displace(p, t)` | Move every hit t bars later, wrapping round inside the rhythm's loop. |
-| `flip(p)` | Hits become rests and rests become hits, on the rhythm's grid. |
-| `thin(p, n: 1)` | Remove n hits from each loop of a rhythm, never the downbeat (seeded). |
-| `fill(p, n: 1)` | Add n hits on empty steps of each loop of a rhythm (seeded). |
-| `union(a, b)` | Every hit of either rhythm (one hit where both have one). |
-| `intersect(a, b)` | The hits of a that b also has. |
-| `minus(a, b)` | The hits of a that b does not have. |
-| `mutate(p, rate: 0.1)` | Each loop, about rate of the hits move one step left or right, and stay moved: the rhythm wanders. Seeded and replayable, counted from the section's start. |
-| `trunc(p, fraction)` | Play only the first fraction of each bar. |
-| `per_bar(bar => pattern)` | Build each bar from a function of the bar number. Randomness inside is keyed to the bar. |
-| `evolve(start, (state, bar) => next, (state, bar) => pattern)` | Carry state from bar to bar. Bar 0 plays view(start); each later bar's state is step(previous state, bar). Replayable: states are always computed forward from bar 0. |
-| `loop(p, bars)` | Repeat the first `bars` bars of p forever. |
+| [`fast(p, n)`](FUNCTIONS.md#fast) | Play p n times faster (n times per bar). |
+| [`slow(p, n)`](FUNCTIONS.md#slow) | Stretch p over n bars. |
+| [`late(p, t)`](FUNCTIONS.md#late) | Delay p by t bars: in 4/4, 1/8 is an eighth note. |
+| [`early(p, t)`](FUNCTIONS.md#early) | Shift p earlier by t bars. |
+| [`rev(p)`](FUNCTIONS.md#rev) | Reverse p within each bar. On a list, reverses the list. |
+| [`every(p, n, f, at: n-1)`](FUNCTIONS.md#every) | Apply f on one bar out of every n (the last one by default, where fills belong). |
+| [`palindrome(p)`](FUNCTIONS.md#palindrome) | Play p forwards, then backwards, alternating bars. |
+| [`iter(p, n)`](FUNCTIONS.md#iter) | Rotate the start of p by 1/n each bar. |
+| [`off(p, t, f)`](FUNCTIONS.md#off) | Layer p with a copy shifted by t bars and transformed by f. |
+| [`echo(p, times: 3, time: 1/8, decay: 0.6)`](FUNCTIONS.md#echo) | Repeat each event, quieter each time. |
+| [`ply(p, n)`](FUNCTIONS.md#ply) | Repeat each event n times within its own length. n may be a pattern. |
+| [`swing(p, amount: 1/3, div: 8)`](FUNCTIONS.md#swing) | Delay every second subdivision (eighths by default) by a fraction of a step. 1/3 gives triplet swing (long-short 2:1), 0.2 a lighter 3:2, 0 is straight. |
+| [`stack(a, b, ...)`](FUNCTIONS.md#stack) | Play patterns at the same time. |
+| [`cat(a, b, ...)`](FUNCTIONS.md#cat) | One pattern per bar, in turn. |
+| [`seq(a, b, ...)`](FUNCTIONS.md#seq) | Squeeze patterns one after another into a single bar. |
+| [`arrange(p1, bars1, p2, bars2, ...)`](FUNCTIONS.md#arrange) | Chain patterns, each lasting the given number of bars, and loop the whole. |
+| [`poly(p, steps)`](FUNCTIONS.md#poly) | Polymeter: step through p's elements at `steps` per bar, whatever its length. |
+| [`euclid(p, hits, steps, rot: 0)`](FUNCTIONS.md#euclid) | Spread `hits` events as evenly as possible over `steps` (Euclidean rhythm). |
+| [`beats(p, unit)`](FUNCTIONS.md#beats) | Measure a phrase's steps in beats instead of dividing a bar: [c:3/2 d:1/2 e:2].beats lasts four beats. The line crosses bar lines and rests to the end of its last bar. unit is a note value (1/16) and defaults to the meter's beat. |
+| [`rhythm(p)`](FUNCTIONS.md#rhythm) | The rhythm of p: its timing, lengths and settings, with each note replaced by a hit (x). Pour notes back in with on. |
+| [`notes(p, bars: 1)`](FUNCTIONS.md#notes) | The notes of p in the order they play, without their timing, as a list. Notes that start together become a chord. |
+| [`on(notes, rhythm, reset: 0)`](FUNCTIONS.md#on) | Play the notes one per hit of the rhythm. They loop independently, so 7 notes on a 5-hit rhythm come round together every 7 bars. In the notes, _ holds a note through the next hit and . leaves a hit silent. reset: n starts the notes again every n bars. |
+| [`displace(p, t)`](FUNCTIONS.md#displace) | Move every hit t bars later, wrapping round inside the rhythm's loop. |
+| [`flip(p)`](FUNCTIONS.md#flip) | Hits become rests and rests become hits, on the rhythm's grid. |
+| [`thin(p, n: 1)`](FUNCTIONS.md#thin) | Remove n hits from each loop of a rhythm, never the downbeat (seeded). |
+| [`fill(p, n: 1)`](FUNCTIONS.md#fill) | Add n hits on empty steps of each loop of a rhythm (seeded). |
+| [`union(a, b)`](FUNCTIONS.md#union) | Every hit of either rhythm (one hit where both have one). |
+| [`intersect(a, b)`](FUNCTIONS.md#intersect) | The hits of a that b also has. |
+| [`minus(a, b)`](FUNCTIONS.md#minus) | The hits of a that b does not have. |
+| [`mutate(p, rate: 0.1)`](FUNCTIONS.md#mutate) | Each loop, about rate of the hits move one step left or right, and stay moved: the rhythm wanders. Seeded and replayable, counted from the section's start. |
+| [`trunc(p, fraction)`](FUNCTIONS.md#trunc) | Play only the first fraction of each bar. |
+| [`per_bar(bar => pattern)`](FUNCTIONS.md#per_bar) | Build each bar from a function of the bar number. Randomness inside is keyed to the bar. |
+| [`evolve(start, (state, bar) => next, (state, bar) => pattern)`](FUNCTIONS.md#evolve) | Carry state from bar to bar. Bar 0 plays view(start); each later bar's state is step(previous state, bar). Replayable: states are always computed forward from bar 0. |
+| [`loop(p, bars)`](FUNCTIONS.md#loop) | Repeat the first `bars` bars of p forever. |
 
 ### Chance
 
 | Function | Description |
 | --- | --- |
-| `humanize(p, time: 0.004, vel: 0.1)` | Seeded random drift in timing (bars) and velocity. Replayable like all randomness. |
-| `degrade(p, amount: 0.5)` | Randomly drop events (seeded). |
-| `sometimes(p, prob, f)` | Apply f to each event with the given probability (seeded). |
-| `often(p, f)` | Apply f to about 75% of events. |
-| `rarely(p, f)` | Apply f to about 25% of events. |
-| `maybe(p, prob, f)` | Apply f to whole bars with the given probability (seeded). |
-| `dice(list, steps: 1)` | A new seeded random pick from list on each of `steps` steps per bar. |
-| `walk(list, steps: 8, stride: 1)` | A seeded random walk through list: each step moves at most `stride` places. |
-| `scramble(p)` | Shuffle the elements of a phrase into a new seeded order each bar. |
-| `rand()` | A seeded random number in [0, 1). Same seed, same number. |
-| `rand_int(lo, hi)` | A seeded random whole number from lo to hi inclusive. |
-| `pick(list)` | One seeded random element of list. |
-| `weighted(list, weights)` | A seeded random element, chosen in proportion to weights. |
-| `shuffle(list)` | The list in a seeded random order (decided once). |
-| `chance(prob)` | true with the given probability (seeded). |
+| [`humanize(p, time: 0.004, vel: 0.1)`](FUNCTIONS.md#humanize) | Seeded random drift in timing (bars) and velocity. Replayable like all randomness. |
+| [`degrade(p, amount: 0.5)`](FUNCTIONS.md#degrade) | Randomly drop events (seeded). |
+| [`sometimes(p, prob, f)`](FUNCTIONS.md#sometimes) | Apply f to each event with the given probability (seeded). |
+| [`often(p, f)`](FUNCTIONS.md#often) | Apply f to about 75% of events. |
+| [`rarely(p, f)`](FUNCTIONS.md#rarely) | Apply f to about 25% of events. |
+| [`maybe(p, prob, f)`](FUNCTIONS.md#maybe) | Apply f to whole bars with the given probability (seeded). |
+| [`dice(list, steps: 1)`](FUNCTIONS.md#dice) | A new seeded random pick from list on each of `steps` steps per bar. |
+| [`walk(list, steps: 8, stride: 1)`](FUNCTIONS.md#walk) | A seeded random walk through list: each step moves at most `stride` places. |
+| [`scramble(p)`](FUNCTIONS.md#scramble) | Shuffle the elements of a phrase into a new seeded order each bar. |
+| [`rand()`](FUNCTIONS.md#rand) | A seeded random number in [0, 1). Same seed, same number. |
+| [`rand_int(lo, hi)`](FUNCTIONS.md#rand_int) | A seeded random whole number from lo to hi inclusive. |
+| [`pick(list)`](FUNCTIONS.md#pick) | One seeded random element of list. |
+| [`weighted(list, weights)`](FUNCTIONS.md#weighted) | A seeded random element, chosen in proportion to weights. |
+| [`shuffle(list)`](FUNCTIONS.md#shuffle) | The list in a seeded random order (decided once). |
+| [`chance(prob)`](FUNCTIONS.md#chance) | true with the given probability (seeded). |
 
 ### Pitch
 
 | Function | Description |
 | --- | --- |
-| `transpose(p, semitones)` | Move by semitones (fractions allowed: 0.5 is a quarter tone). Works on notes, degrees, chords and patterns. |
-| `octave(p, n)` | Move by n octaves (of the scale's period for degrees). |
-| `step(p, n)` | Move by n steps of the current scale (diatonic transposition). |
-| `degrees(p)` | Treat numbers as 0-based scale steps: [0 2 4].degrees is [^1 ^3 ^5]. |
-| `key(root, scale) or p.key(root, scale)` | Make a key, or play p in a key. Degrees like ^3 resolve against it. |
-| `chord(root, quality)` | A chord: chord(c4, "maj7") is the same as c4@maj7. With one text argument it reads a chord symbol: chord("Bb7#11"). |
-| `invert(p, n: 1)` | Chord inversion: move the lowest n notes up an octave. |
-| `arp(p, mode: "up")` | Spread each chord's notes across its length. Modes: up, down, updown, downup, out, random. |
-| `strum(p, spread: 1/48)` | Roll each chord's notes, low to high, `spread` bars apart. |
-| `hz(pitch)` | Frequency of a pitch in Hz (at the current tuning). |
-| `note_num(pitch)` | The (possibly fractional) MIDI note number of a pitch. |
-| `pitch(n)` | A pitch from a MIDI note number (fractions allowed). |
-| `ratio(r)` | The size of a frequency ratio in semitones: ratio(3/2) is about 7.02. |
-| `scale(semitones, period: 12)` | A scale from semitone offsets (fractions allowed). |
-| `just(ratios, period: 2)` | A just-intonation scale from frequency ratios, e.g. just([1 9/8 5/4 3/2 5/3]). |
-| `edo(n, steps)` | An n-tone equal division of the octave. With steps, a scale picked from it: edo(31, [0 5 10 13 18 23 28]). |
-| `cents(list, period: 1200)` | A scale from offsets in cents. |
-| `scala(text)` | A scale from the text of a Scala .scl file (the common microtonal tuning format). |
-| `scala_file(path)` | A scale loaded from a Scala .scl file next to your piece. |
-| `mode(scale, n)` | Rotate a scale to start on its n-th degree (1-based): mode(major, 2) is dorian. |
-| `within(p, lo, hi: lo + 12)` | Move each note or chord by whole octaves until it sits in lo..hi (a chord moves by its lowest note and keeps its shape). changes(...).bassnote.within(e1, e2) folds a bass line into one octave. |
+| [`transpose(p, semitones)`](FUNCTIONS.md#transpose) | Move by semitones (fractions allowed: 0.5 is a quarter tone). Works on notes, degrees, chords and patterns. |
+| [`octave(p, n)`](FUNCTIONS.md#octave) | Move by n octaves (of the scale's period for degrees). |
+| [`step(p, n)`](FUNCTIONS.md#step) | Move by n steps of the current scale (diatonic transposition). |
+| [`degrees(p)`](FUNCTIONS.md#degrees) | Treat numbers as 0-based scale steps: [0 2 4].degrees is [^1 ^3 ^5]. |
+| [`key(root, scale) or p.key(root, scale)`](FUNCTIONS.md#key) | Make a key, or play p in a key. Degrees like ^3 resolve against it. |
+| [`chord(root, quality)`](FUNCTIONS.md#chord) | A chord: chord(c4, "maj7") is the same as c4@maj7. With one text argument it reads a chord symbol: chord("Bb7#11"). |
+| [`invert(p, n: 1)`](FUNCTIONS.md#invert) | Chord inversion: move the lowest n notes up an octave. |
+| [`arp(p, mode: "up")`](FUNCTIONS.md#arp) | Spread each chord's notes across its length. Modes: up, down, updown, downup, out, random. |
+| [`strum(p, spread: 1/48)`](FUNCTIONS.md#strum) | Roll each chord's notes, low to high, `spread` bars apart. |
+| [`hz(pitch)`](FUNCTIONS.md#hz) | Frequency of a pitch in Hz (at the current tuning). |
+| [`note_num(pitch)`](FUNCTIONS.md#note_num) | The (possibly fractional) MIDI note number of a pitch. |
+| [`pitch(n)`](FUNCTIONS.md#pitch) | A pitch from a MIDI note number (fractions allowed). |
+| [`ratio(r)`](FUNCTIONS.md#ratio) | The size of a frequency ratio in semitones: ratio(3/2) is about 7.02. |
+| [`scale(semitones, period: 12)`](FUNCTIONS.md#scale) | A scale from semitone offsets (fractions allowed). |
+| [`just(ratios, period: 2)`](FUNCTIONS.md#just) | A just-intonation scale from frequency ratios, e.g. just([1 9/8 5/4 3/2 5/3]). |
+| [`edo(n, steps)`](FUNCTIONS.md#edo) | An n-tone equal division of the octave. With steps, a scale picked from it: edo(31, [0 5 10 13 18 23 28]). |
+| [`cents(list, period: 1200)`](FUNCTIONS.md#cents) | A scale from offsets in cents. |
+| [`scala(text)`](FUNCTIONS.md#scala) | A scale from the text of a Scala .scl file (the common microtonal tuning format). |
+| [`scala_file(path)`](FUNCTIONS.md#scala_file) | A scale loaded from a Scala .scl file next to your piece. |
+| [`mode(scale, n)`](FUNCTIONS.md#mode) | Rotate a scale to start on its n-th degree (1-based): mode(major, 2) is dorian. |
+| [`within(p, lo, hi: lo + 12)`](FUNCTIONS.md#within) | Move each note or chord by whole octaves until it sits in lo..hi (a chord moves by its lowest note and keeps its shape). changes(...).bassnote.within(e1, e2) folds a bass line into one octave. |
 
 ### Sound
 
 | Function | Description |
 | --- | --- |
-| `vel(p, v)` | Velocity 0 to 1. v may itself be a pattern: .vel([1 .5 .7 .5]). |
-| `legato(p, x)` | Note length as a fraction of its step (1 = full, 0.5 = staccato). |
-| `gain(p, x)` | Output level multiplier for the built-in synth. |
-| `pan(p, x)` | Stereo position from -1 (left) to 1 (right). |
-| `cutoff(p, hz)` | Filter cutoff for the built-in synth. |
-| `res(p, x)` | Filter resonance 0 to 1. |
-| `attack(p, seconds)` | Envelope attack time. |
-| `release(p, seconds)` | Envelope release time. |
-| `decay(p, seconds)` | Envelope decay time. |
-| `sustain(p, level)` | Envelope sustain level 0 to 1. |
-| `reverb(p, amount)` | Send to the built-in reverb, 0 to 1. |
-| `hpf(p, hz)` | High-pass filter on the whole voice: removes rumble below hz. Unlike cutoff, which shapes each note, this filters the voice's mix. |
-| `lpf(p, hz)` | Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep. |
-| `drive(p, amount)` | Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp. |
-| `delay(p, mix, time: 3/16, feedback: .4)` | An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats. |
-| `wave(p, name)` | Oscillator of the synth instrument (and its presets): saw, square, pulse, tri, sine, super, fm or noise. |
-| `pw(p, width)` | Pulse width of the pulse wave, 0 to 1 (.5 is square). May be a pattern or a signal. |
-| `detune(p, cents)` | Spread of the unison voices, in cents either side. |
-| `unison(p, n)` | How many detuned oscillators sound together (1 to 16). |
-| `sub(p, level)` | A sine one octave below, 0 to 1. |
-| `glide(p, seconds)` | Slide into each note from the one before it in the voice. On a note slurred into (c4~ d4), the slide joins the two into one sound. |
-| `slur(p)` | Play p's notes as one connected sound, without a new attack on each, up to the last note in each bar. Scores draw a slur. For one pair, write c4~ d4 in the phrase. |
-| `gliss(p, amount: 1)` | Glissando: each note slides to the next across the last `amount` of its length (1 = all of it), up to the last note in each bar. amount may be a pattern: .gliss([1 0]). |
-| `fenv(p, octaves, attack: .001, decay: .2)` | Filter envelope: the cutoff jumps up by this many octaves and falls back over decay seconds. The acid squelch. |
-| `fm(p, index, ratio: 2, decay: .4)` | Frequency modulation (switches the synth to the fm wave): index is brightness, ratio the modulator's pitch, decay how fast the brightness fades. |
-| `vibrato(p, rate: 5, depth: .3)` | Pitch wobble, rate in Hz, depth in semitones. |
-| `wobble(p, rate: 2, depth: 2)` | Filter wobble in time with the music: rate in cycles per bar, depth in octaves. |
-| `vowel(p, v)` | Formant filter: makes the voice say a vowel, "a" "e" "i" "o" or "u". v may be a pattern: .vowel(["a" "o"]). |
-| `crush(p, bits)` | Bit crusher: fewer bits (1 to 16) is rougher. .crush(4) is very lo-fi. |
-| `coarse(p, n)` | Sample-rate reduction: holds every nth sample, for aliasing and grit. 1 is off. |
-| `ring(p, hz, mix: 1)` | Ring modulation: multiplies the voice by a sine at hz, for metallic and bell-like tones. |
-| `chorus(p, mix: .5, rate: .8, depth: .5)` | Chorus: thickens the voice with slightly detuned, moving copies. rate in Hz. |
-| `phaser(p, mix: .5, rate: .5, depth: .7)` | Phaser: a sweeping notch, the classic swirl. rate in Hz. |
-| `compress(p, threshold: -18, ratio: 4)` | Compressor on the whole voice: levels above threshold (dB) are reduced by ratio, then made up. Evens out a part. |
-| `room(p, mix: .3, size: .5)` | A reverb on this voice alone, unlike reverb(), which sends to the shared room. size 0 to 1. |
-| `duck(p, voice, depth: .8, release: 1/8)` | Sidechain-style ducking: this voice dips each time the named voice plays a note, then recovers over release bars. .duck("kick") pumps a pad against the kick. |
-| `dur(p, beats)` | Fixed note length in beats, independent of the step length. |
-| `set(p, name, value)` | Attach any named parameter to events (it is passed through to MIDI CC maps and exports). |
-| `inst(p, name, ...options)` | Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name. |
-| `sample(p, name, n: 0, fit: false)` | Play a sound from the sample library: a full name ("bd_haus"), a bank ("bd", with n choosing among its sounds), or "bank:n". On a drum phrase with no name it plays the bundled kit. name and n may be patterns. With fit: true the sound is stretched to the note's length. |
-| `begin(p, x)` | Start playing a sample from this point, 0 (its start) to 1 (its end). |
-| `end(p, x)` | Stop playing a sample at this point, 0 to 1. |
-| `speed(p, x)` | Sample playback rate: 2 is an octave up and twice as fast, -1 plays it backwards. |
-| `accel(p, x)` | Change a sample's speed by x every second while it plays: speed(1).accel(-1) is a tape stop. |
-| `cut(p, group)` | Cut group: a sample in this group stops the one before it, in any voice. Choke an open hat with a closed one. |
-| `loopAt(p, bars)` | Make a sample last this many bars, whatever the tempo: the phrase is slowed to that length and the sample stretched to fit. Add chop to keep a long loop in time: ["loop_amen"].loopAt(2).chop(16). |
-| `slice(p, n, i)` | Cut the sample into n equal pieces and play piece i (from 0). i may be a pattern: .slice(8, [0 3 2 7]). |
-| `splice(p, n, i)` | Like slice, but each piece is stretched to fill its note, so a sliced loop stays in tempo. |
-| `chop(p, n)` | Split each note into n notes that play successive parts of its sample. With loopAt, a loop follows the tempo: loop_amen.loopAt(2).chop(16). |
-| `gm(p, program, bank: 0)` | Play notes on an instrument of the loaded SoundFont: a General MIDI program number from 1 (piano) to 128, or a name to search for, .gm("violin"). On drum names with no program it plays the drum kit. |
-| `dirt(p, sound: "", orbit: 0)` | Send to SuperDirt (TidalCycles' sound engine) instead of the built-in sound, over OSC from tine daw or tine dirt. sound is a SuperDirt sample bank or synth; without it, sample names, drum names and instruments are translated. |
-| `midi(p, channel: 1, port: "")` | Send to an external MIDI device instead of the built-in synth. |
-| `ctl(p, number, value)` | Send a MIDI control change (value 0 to 1) just before each note. value may be a pattern or signal: .ctl(74, sine(4)). |
-| `program(p, n)` | Choose an instrument on external gear with a MIDI program change (1 to 128, as printed in General MIDI lists). It is sent only when it changes. |
-| `as_cc(p, number, rate: 16)` | Turn a voice of numbers (0 to 1) into MIDI control changes instead of notes: voice sweep = sine(4).as_cc(74).midi(1). A signal is sampled `rate` times per bar. |
-| `mpe(p)` | Send each note on its own MIDI channel (2 to 16) so microtonal pitch bends do not collide. |
+| [`vel(p, v)`](FUNCTIONS.md#vel) | Velocity 0 to 1. v may itself be a pattern: .vel([1 .5 .7 .5]). |
+| [`legato(p, x)`](FUNCTIONS.md#legato) | Note length as a fraction of its step (1 = full, 0.5 = staccato). |
+| [`gain(p, x)`](FUNCTIONS.md#gain) | Output level multiplier for the built-in synth. |
+| [`pan(p, x)`](FUNCTIONS.md#pan) | Stereo position from -1 (left) to 1 (right). |
+| [`cutoff(p, hz)`](FUNCTIONS.md#cutoff) | Filter cutoff for the built-in synth. |
+| [`res(p, x)`](FUNCTIONS.md#res) | Filter resonance 0 to 1. |
+| [`attack(p, seconds)`](FUNCTIONS.md#attack) | Envelope attack time. |
+| [`release(p, seconds)`](FUNCTIONS.md#release) | Envelope release time. |
+| [`decay(p, seconds)`](FUNCTIONS.md#decay) | Envelope decay time. |
+| [`sustain(p, level)`](FUNCTIONS.md#sustain) | Envelope sustain level 0 to 1. |
+| [`reverb(p, amount)`](FUNCTIONS.md#reverb) | Send to the built-in reverb, 0 to 1. |
+| [`hpf(p, hz)`](FUNCTIONS.md#hpf) | High-pass filter on the whole voice: removes rumble below hz. Unlike cutoff, which shapes each note, this filters the voice's mix. |
+| [`lpf(p, hz)`](FUNCTIONS.md#lpf) | Low-pass filter on the whole voice: darkens everything above hz. Try .lpf(sine(8).range(400, 3400)) for a sweep. |
+| [`drive(p, amount)`](FUNCTIONS.md#drive) | Saturation on the whole voice, 0 (clean) to 1 (crushed). Chords distort together, like an amp. |
+| [`delay(p, mix, time: 3/16, feedback: .4)`](FUNCTIONS.md#delay) | An echo on the whole voice. mix 0 to 1; time in bars (3/16 is a dotted eighth in 4/4); feedback 0 to .95 sets how many repeats. |
+| [`wave(p, name)`](FUNCTIONS.md#wave) | Oscillator of the synth instrument (and its presets): saw, square, pulse, tri, sine, super, fm or noise. |
+| [`pw(p, width)`](FUNCTIONS.md#pw) | Pulse width of the pulse wave, 0 to 1 (.5 is square). May be a pattern or a signal. |
+| [`detune(p, cents)`](FUNCTIONS.md#detune) | Spread of the unison voices, in cents either side. |
+| [`unison(p, n)`](FUNCTIONS.md#unison) | How many detuned oscillators sound together (1 to 16). |
+| [`sub(p, level)`](FUNCTIONS.md#sub) | A sine one octave below, 0 to 1. |
+| [`glide(p, seconds)`](FUNCTIONS.md#glide) | Slide into each note from the one before it in the voice. On a note slurred into (c4~ d4), the slide joins the two into one sound. |
+| [`slur(p)`](FUNCTIONS.md#slur) | Play p's notes as one connected sound, without a new attack on each, up to the last note in each bar. Scores draw a slur. For one pair, write c4~ d4 in the phrase. |
+| [`gliss(p, amount: 1)`](FUNCTIONS.md#gliss) | Glissando: each note slides to the next across the last `amount` of its length (1 = all of it), up to the last note in each bar. amount may be a pattern: .gliss([1 0]). |
+| [`fenv(p, octaves, attack: .001, decay: .2)`](FUNCTIONS.md#fenv) | Filter envelope: the cutoff jumps up by this many octaves and falls back over decay seconds. The acid squelch. |
+| [`fm(p, index, ratio: 2, decay: .4)`](FUNCTIONS.md#fm) | Frequency modulation (switches the synth to the fm wave): index is brightness, ratio the modulator's pitch, decay how fast the brightness fades. |
+| [`vibrato(p, rate: 5, depth: .3)`](FUNCTIONS.md#vibrato) | Pitch wobble, rate in Hz, depth in semitones. |
+| [`wobble(p, rate: 2, depth: 2)`](FUNCTIONS.md#wobble) | Filter wobble in time with the music: rate in cycles per bar, depth in octaves. |
+| [`vowel(p, v)`](FUNCTIONS.md#vowel) | Formant filter: makes the voice say a vowel, "a" "e" "i" "o" or "u". v may be a pattern: .vowel(["a" "o"]). |
+| [`crush(p, bits)`](FUNCTIONS.md#crush) | Bit crusher: fewer bits (1 to 16) is rougher. .crush(4) is very lo-fi. |
+| [`coarse(p, n)`](FUNCTIONS.md#coarse) | Sample-rate reduction: holds every nth sample, for aliasing and grit. 1 is off. |
+| [`ring(p, hz, mix: 1)`](FUNCTIONS.md#ring) | Ring modulation: multiplies the voice by a sine at hz, for metallic and bell-like tones. |
+| [`chorus(p, mix: .5, rate: .8, depth: .5)`](FUNCTIONS.md#chorus) | Chorus: thickens the voice with slightly detuned, moving copies. rate in Hz. |
+| [`phaser(p, mix: .5, rate: .5, depth: .7)`](FUNCTIONS.md#phaser) | Phaser: a sweeping notch, the classic swirl. rate in Hz. |
+| [`compress(p, threshold: -18, ratio: 4)`](FUNCTIONS.md#compress) | Compressor on the whole voice: levels above threshold (dB) are reduced by ratio, then made up. Evens out a part. |
+| [`room(p, mix: .3, size: .5)`](FUNCTIONS.md#room) | A reverb on this voice alone, unlike reverb(), which sends to the shared room. size 0 to 1. |
+| [`duck(p, voice, depth: .8, release: 1/8)`](FUNCTIONS.md#duck) | Sidechain-style ducking: this voice dips each time the named voice plays a note, then recovers over release bars. .duck("kick") pumps a pad against the kick. |
+| [`dur(p, beats)`](FUNCTIONS.md#dur) | Fixed note length in beats, independent of the step length. |
+| [`set(p, name, value)`](FUNCTIONS.md#set) | Attach any named parameter to events (it is passed through to MIDI CC maps and exports). |
+| [`inst(p, name, ...options)`](FUNCTIONS.md#inst) | Choose a built-in instrument: keys, sine, tri, saw, square, pluck, bass, pad, bell, organ, kit, or a loaded sample name. |
+| [`sample(p, name, n: 0, fit: false)`](FUNCTIONS.md#sample) | Play a sound from the sample library: a full name ("bd_haus"), a bank ("bd", with n choosing among its sounds), or "bank:n". On a drum phrase with no name it plays the bundled kit. name and n may be patterns. With fit: true the sound is stretched to the note's length. |
+| [`begin(p, x)`](FUNCTIONS.md#begin) | Start playing a sample from this point, 0 (its start) to 1 (its end). |
+| [`end(p, x)`](FUNCTIONS.md#end) | Stop playing a sample at this point, 0 to 1. |
+| [`speed(p, x)`](FUNCTIONS.md#speed) | Sample playback rate: 2 is an octave up and twice as fast, -1 plays it backwards. |
+| [`accel(p, x)`](FUNCTIONS.md#accel) | Change a sample's speed by x every second while it plays: speed(1).accel(-1) is a tape stop. |
+| [`cut(p, group)`](FUNCTIONS.md#cut) | Cut group: a sample in this group stops the one before it, in any voice. Choke an open hat with a closed one. |
+| [`loopAt(p, bars)`](FUNCTIONS.md#loopat) | Make a sample last this many bars, whatever the tempo: the phrase is slowed to that length and the sample stretched to fit. Add chop to keep a long loop in time: ["loop_amen"].loopAt(2).chop(16). |
+| [`slice(p, n, i)`](FUNCTIONS.md#slice) | Cut the sample into n equal pieces and play piece i (from 0). i may be a pattern: .slice(8, [0 3 2 7]). |
+| [`splice(p, n, i)`](FUNCTIONS.md#splice) | Like slice, but each piece is stretched to fill its note, so a sliced loop stays in tempo. |
+| [`chop(p, n)`](FUNCTIONS.md#chop) | Split each note into n notes that play successive parts of its sample. With loopAt, a loop follows the tempo: loop_amen.loopAt(2).chop(16). |
+| [`gm(p, program, bank: 0)`](FUNCTIONS.md#gm) | Play notes on an instrument of the loaded SoundFont: a General MIDI program number from 1 (piano) to 128, or a name to search for, .gm("violin"). On drum names with no program it plays the drum kit. |
+| [`dirt(p, sound: "", orbit: 0)`](FUNCTIONS.md#dirt) | Send to SuperDirt (TidalCycles' sound engine) instead of the built-in sound, over OSC from tine daw or tine dirt. sound is a SuperDirt sample bank or synth; without it, sample names, drum names and instruments are translated. |
+| [`midi(p, channel: 1, port: "")`](FUNCTIONS.md#midi) | Send to an external MIDI device instead of the built-in synth. |
+| [`ctl(p, number, value)`](FUNCTIONS.md#ctl) | Send a MIDI control change (value 0 to 1) just before each note. value may be a pattern or signal: .ctl(74, sine(4)). |
+| [`program(p, n)`](FUNCTIONS.md#program) | Choose an instrument on external gear with a MIDI program change (1 to 128, as printed in General MIDI lists). It is sent only when it changes. |
+| [`as_cc(p, number, rate: 16)`](FUNCTIONS.md#as_cc) | Turn a voice of numbers (0 to 1) into MIDI control changes instead of notes: voice sweep = sine(4).as_cc(74).midi(1). A signal is sampled `rate` times per bar. |
+| [`mpe(p)`](FUNCTIONS.md#mpe) | Send each note on its own MIDI channel (2 to 16) so microtonal pitch bends do not collide. |
 
 ### Input
 
 | Function | Description |
 | --- | --- |
-| `soundfont(source)` | Load a SoundFont 2 (.sf2) bank, as a top-level line: a file next to the piece, a URL, or "github:user/repo/path.sf2". Then play its instruments with .gm(). General MIDI banks such as GeneralUser GS give all 128 standard instruments and the drum kits. |
-| `samples(source)` | Load a sample pack, as a top-level line: a folder (command line), a URL of a strudel.json sample map, or "github:user/repo" for that repository's strudel.json. Sounds load on first use. |
-| `cc(number, channel: any)` | A live signal (0 to 1) from a MIDI controller knob or fader. |
-| `held(steps: 1)` | The notes currently held on your MIDI keyboard, as a chord, sampled `steps` times per bar. Try held(4).arp. |
+| [`soundfont(source)`](FUNCTIONS.md#soundfont) | Load a SoundFont 2 (.sf2) bank, as a top-level line: a file next to the piece, a URL, or "github:user/repo/path.sf2". Then play its instruments with .gm(). General MIDI banks such as GeneralUser GS give all 128 standard instruments and the drum kits. |
+| [`samples(source)`](FUNCTIONS.md#samples) | Load a sample pack, as a top-level line: a folder (command line), a URL of a strudel.json sample map, or "github:user/repo" for that repository's strudel.json. Sounds load on first use. |
+| [`cc(number, channel: any)`](FUNCTIONS.md#cc) | A live signal (0 to 1) from a MIDI controller knob or fader. |
+| [`held(steps: 1)`](FUNCTIONS.md#held) | The notes currently held on your MIDI keyboard, as a chord, sampled `steps` times per bar. Try held(4).arp. |
 
 ### Generators
 
 | Function | Description |
 | --- | --- |
-| `sine(period: 1)` | A smooth signal from 0 to 1 and back, once per `period` bars. |
-| `tri(period: 1)` | A triangle signal, 0 up to 1 and back. |
-| `saw(period: 1)` | A ramp from 0 to 1 every `period` bars. |
-| `square(period: 1)` | Alternates between 0 and 1. |
-| `noise(rate: 16)` | A seeded random signal holding a new value `rate` times per bar. |
-| `drift(rate: 1)` | A smooth seeded random signal, wandering between 0 and 1. |
-| `range(signal, lo, hi)` | Rescale a 0..1 signal or pattern to lo..hi. |
-| `seg(signal, n)` | Sample a signal n times per bar, turning it into discrete events. |
-| `run(n)` | The phrase [0 1 2 ... n-1]. |
+| [`sine(period: 1)`](FUNCTIONS.md#sine) | A smooth signal from 0 to 1 and back, once per `period` bars. |
+| [`tri(period: 1)`](FUNCTIONS.md#tri) | A triangle signal, 0 up to 1 and back. |
+| [`saw(period: 1)`](FUNCTIONS.md#saw) | A ramp from 0 to 1 every `period` bars. |
+| [`square(period: 1)`](FUNCTIONS.md#square) | Alternates between 0 and 1. |
+| [`noise(rate: 16)`](FUNCTIONS.md#noise) | A seeded random signal holding a new value `rate` times per bar. |
+| [`drift(rate: 1)`](FUNCTIONS.md#drift) | A smooth seeded random signal, wandering between 0 and 1. |
+| [`range(signal, lo, hi)`](FUNCTIONS.md#range) | Rescale a 0..1 signal or pattern to lo..hi. |
+| [`seg(signal, n)`](FUNCTIONS.md#seg) | Sample a signal n times per bar, turning it into discrete events. |
+| [`run(n)`](FUNCTIONS.md#run) | The phrase [0 1 2 ... n-1]. |
 
 ### Lists
 
 | Function | Description |
 | --- | --- |
-| `len(list)` | Number of elements. |
-| `at(list, i)` | Element i (0-based; wraps around, so negative counts from the end). |
-| `map(p, f)` | Apply f to every element of a list, or every event of a pattern. |
-| `filter(list, f)` | Keep elements (or events) for which f is true. |
-| `fold(list, start, f)` | Combine elements left to right: fold([1 2 3], 0, (a, x) => a + x). |
-| `concat(a, b, ...)` | Join lists into one longer list (one bar, more steps). |
-| `repeat(x, n)` | A list of n copies of x. |
-| `take(list, n)` | The first n elements. |
-| `drop(list, n)` | All but the first n elements. |
-| `rotate(p, n)` | Start a list or rhythm n steps later in itself, wrapping round: [a b c d].rotate(1) is [b c d a]. A phrase with held or weighted steps, or a .beats line, turns by steps of its grid. |
-| `sum(list)` | Add up the elements. |
+| [`len(list)`](FUNCTIONS.md#len) | Number of elements. |
+| [`at(list, i)`](FUNCTIONS.md#at) | Element i (0-based; wraps around, so negative counts from the end). |
+| [`map(p, f)`](FUNCTIONS.md#map) | Apply f to every element of a list, or every event of a pattern. |
+| [`filter(list, f)`](FUNCTIONS.md#filter) | Keep elements (or events) for which f is true. |
+| [`fold(list, start, f)`](FUNCTIONS.md#fold) | Combine elements left to right: fold([1 2 3], 0, (a, x) => a + x). |
+| [`concat(a, b, ...)`](FUNCTIONS.md#concat) | Join lists into one longer list (one bar, more steps). |
+| [`repeat(x, n)`](FUNCTIONS.md#repeat) | A list of n copies of x. |
+| [`take(list, n)`](FUNCTIONS.md#take) | The first n elements. |
+| [`drop(list, n)`](FUNCTIONS.md#drop) | All but the first n elements. |
+| [`rotate(p, n)`](FUNCTIONS.md#rotate) | Start a list or rhythm n steps later in itself, wrapping round: [a b c d].rotate(1) is [b c d a]. A phrase with held or weighted steps, or a .beats line, turns by steps of its grid. |
+| [`sum(list)`](FUNCTIONS.md#sum) | Add up the elements. |
 
 ### Math
 
 | Function | Description |
 | --- | --- |
-| `floor(x)` | Round down. |
-| `ceil(x)` | Round up. |
-| `round(x)` | Round to nearest. |
-| `abs(x)` | Absolute value. |
-| `sqrt(x)` | Square root. |
-| `sin(x)` | Sine (radians). |
-| `cos(x)` | Cosine (radians). |
-| `log2(x)` | Base-2 logarithm. |
-| `exp(x)` | e to the power x. |
-| `min(a, b, ...)` | Smallest value. |
-| `max(a, b, ...)` | Largest value. |
-| `clamp(x, lo, hi)` | Limit x to the range lo..hi. |
-| `lerp(a, b, t)` | Linear blend from a to b. |
+| [`floor(x)`](FUNCTIONS.md#floor) | Round down. |
+| [`ceil(x)`](FUNCTIONS.md#ceil) | Round up. |
+| [`round(x)`](FUNCTIONS.md#round) | Round to nearest. |
+| [`abs(x)`](FUNCTIONS.md#abs) | Absolute value. |
+| [`sqrt(x)`](FUNCTIONS.md#sqrt) | Square root. |
+| [`sin(x)`](FUNCTIONS.md#sin) | Sine (radians). |
+| [`cos(x)`](FUNCTIONS.md#cos) | Cosine (radians). |
+| [`log2(x)`](FUNCTIONS.md#log2) | Base-2 logarithm. |
+| [`exp(x)`](FUNCTIONS.md#exp) | e to the power x. |
+| [`min(a, b, ...)`](FUNCTIONS.md#min) | Smallest value. |
+| [`max(a, b, ...)`](FUNCTIONS.md#max) | Largest value. |
+| [`clamp(x, lo, hi)`](FUNCTIONS.md#clamp) | Limit x to the range lo..hi. |
+| [`lerp(a, b, t)`](FUNCTIONS.md#lerp) | Linear blend from a to b. |
 
 ### Misc
 
 | Function | Description |
 | --- | --- |
-| `print(x, ...)` | Show values in the console. |
-| `str(x)` | Text form of a value. |
-| `type(x)` | The name of a value's type. |
+| [`print(x, ...)`](FUNCTIONS.md#print) | Show values in the console. |
+| [`str(x)`](FUNCTIONS.md#str) | Text form of a value. |
+| [`type(x)`](FUNCTIONS.md#type) | The name of a value's type. |
 
 ### Harmony
 
 | Function | Description |
 | --- | --- |
-| `changes(text, octave: 3)` | Chords from a lead sheet: changes("Dm7 G7 \| Cmaj7 %"). Bars are split by \|, chords in a bar share it, / holds a chord one more slot, % repeats the bar, N.C. is no chord. Loops over its bars. |
-| `root(p)` | The root of each chord (from its symbol, or named from its notes). Single notes pass through. Try changes(...).root.octave(-1) for a bass line. |
-| `bassnote(p)` | The bass note of each chord: the slash note of c@7/e, otherwise the root. |
-| `tones(chord)` | A chord's notes as a list, low to high. |
-| `name(x, bars: 1)` | Name a chord, or the chords of a pattern, as a chord symbol: name({e g c5}) is "C/E". |
-| `shell(p)` | Shell voicings: root, third and seventh, the bebop pianist's left hand. |
-| `guide(p)` | Guide tones: just the third and seventh of each chord. Add .voicelead to hear them move by step. |
-| `rootless(p, form: "a")` | Rootless voicings: four notes without the root (3-5-7-9, dominants use the 13th for the 5th). Form "a" starts on the third, "b" on the seventh. |
-| `drop2(p)` | Drop-2 voicings: close position, with the second voice from the top dropped an octave. |
-| `drop3(p)` | Drop-3 voicings: close position, with the third voice from the top dropped an octave. |
-| `drop24(p)` | Drop-2-and-4 voicings: the second and fourth voices from the top dropped an octave. |
-| `voicelead(p, around: e4)` | Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: built on evolve, so the chain is replayed from bar 0. |
-| `interval(a, b, long: false)` | The interval between two pitches by size: interval(c4, e4) is "M3"; with long: true, "major 3rd". Tine counts semitones, so C-F# and C-Gb are both TT (tritone). |
+| [`changes(text, octave: 3)`](FUNCTIONS.md#changes) | Chords from a lead sheet: changes("Dm7 G7 \| Cmaj7 %"). Bars are split by \|, chords in a bar share it, / holds a chord one more slot, % repeats the bar, N.C. is no chord. Loops over its bars. |
+| [`root(p)`](FUNCTIONS.md#root) | The root of each chord (from its symbol, or named from its notes). Single notes pass through. Try changes(...).root.octave(-1) for a bass line. |
+| [`bassnote(p)`](FUNCTIONS.md#bassnote) | The bass note of each chord: the slash note of c@7/e, otherwise the root. |
+| [`tones(chord)`](FUNCTIONS.md#tones) | A chord's notes as a list, low to high. |
+| [`name(x, bars: 1)`](FUNCTIONS.md#name) | Name a chord, or the chords of a pattern, as a chord symbol: name({e g c5}) is "C/E". |
+| [`shell(p)`](FUNCTIONS.md#shell) | Shell voicings: root, third and seventh, the bebop pianist's left hand. |
+| [`guide(p)`](FUNCTIONS.md#guide) | Guide tones: just the third and seventh of each chord. Add .voicelead to hear them move by step. |
+| [`rootless(p, form: "a")`](FUNCTIONS.md#rootless) | Rootless voicings: four notes without the root (3-5-7-9, dominants use the 13th for the 5th). Form "a" starts on the third, "b" on the seventh. |
+| [`drop2(p)`](FUNCTIONS.md#drop2) | Drop-2 voicings: close position, with the second voice from the top dropped an octave. |
+| [`drop3(p)`](FUNCTIONS.md#drop3) | Drop-3 voicings: close position, with the third voice from the top dropped an octave. |
+| [`drop24(p)`](FUNCTIONS.md#drop24) | Drop-2-and-4 voicings: the second and fourth voices from the top dropped an octave. |
+| [`voicelead(p, around: e4)`](FUNCTIONS.md#voicelead) | Voice leading: play each chord in the close-position inversion that moves least from the previous chord, staying near `around`. Deterministic: built on evolve, so the chain is replayed from bar 0. |
+| [`interval(a, b, long: false)`](FUNCTIONS.md#interval) | The interval between two pitches by size: interval(c4, e4) is "M3"; with long: true, "major 3rd". Tine counts semitones, so C-F# and C-Gb are both TT (tritone). |
 
 ## Scales
 

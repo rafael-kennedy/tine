@@ -63,6 +63,11 @@ class Parser {
   spanOf(t: Token): Span { return { start: t.start, end: t.end }; }
   err(msg: string, t: Token = this.tok, hint?: string): never {
     const span = t.type === "eof" || t.type === "newline" ? { start: Math.max(0, t.start - 1), end: t.start } : this.spanOf(t);
+    // `//` from other languages: say what a comment looks like here
+    if (t.type === "op" && t.text === "/" && (this.src[t.end] === "/" || this.src[t.start - 1] === "/")) {
+      const start = this.src[t.start - 1] === "/" ? t.start - 1 : t.start;
+      throw new TineError("syntax", "comments in Tine start with --, not //", { start, end: start + 2 }, "change // to --");
+    }
     throw new TineError("syntax", msg, span, hint);
   }
   expectOp(text: string, hint?: string) {

@@ -192,6 +192,11 @@ describe("errors", () => {
     const e = err("voice tune = [c4 e4 g4 c5\nvoice bass = [c3]");
     expect(e.message).toContain("unclosed '['"); expect(e.span?.start).toBe(13); expect(e.hint).toContain("']'");
   });
+  test("a // comment says comments start with --", () => {
+    const src = "let r = [x x .]   // three steps\nvoice a = [c e].on(r)";
+    const e = err(src);
+    expect(e.message).toContain("start with --"); expect(src.slice(e.span!.start, e.span!.end)).toBe("//");
+  });
   test("note names cannot be variables", () => { expect(err("let a = 1").message).toContain("note name"); });
   test("type errors are readable", () => { expect(err("voice a = c4 + \"x\"").message).toContain("cannot add"); });
   test("keepGoing collects errors per statement", () => {

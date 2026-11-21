@@ -72,11 +72,15 @@ function audio() {
   return { engine: engine!, transport: transport! };
 }
 export function stopAll() { if (current) { const c = current; current = null; c.stop(); } }
+// A page with its own player (the DAW) stops it when a cell starts playing.
+let startHook: (() => void) | null = null;
+export function onCellStart(f: () => void) { startHook = f; }
 
 async function playScene(s: Scene, owner: unknown, onStop: () => void, onTick?: (bar: number) => void) {
   const { transport } = audio();
   const mine = current?.owner === owner && transport.playing;
   if (!mine) stopAll();
+  startHook?.();
   transport.mode = s.form ? "form" : "live";
   transport.loopForm = true;
   transport.load(s);

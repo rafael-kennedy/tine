@@ -30,7 +30,7 @@ voice tune  = [^5 ^3|^4 . ^1 ^2 _ ^3|^7 .]
 | **Packaging** | standalone `tine` binaries for Linux, macOS and Windows; `tine pack` turns one piece into a single-file HTML player or its own executable |
 | **Editors** | a language server (`tine lsp`), a VS Code extension, and support files for Neovim, Vim, Helix, Emacs, Sublime, JetBrains and Zed (`editors/`) |
 | **Brand** | logo, icons and palette in `brand/` |
-| **Docs** | `docs/REFERENCE.md` (the whole language), `docs/DESIGN-DECISIONS.md` (why it is the way it is) |
+| **Docs** | `docs/REFERENCE.md` (the whole language), `docs/FUNCTIONS.md` (every function, with examples), `docs/DESIGN-DECISIONS.md` (why it is the way it is) |
 | **Examples** | `examples/`: a groove, a song with form, microtonal tunings, polyrhythm, generative music, a live MIDI set |
 
 ## Install
@@ -99,7 +99,7 @@ section verse 8
 form verse verse
 ```
 
-See the [reference](docs/REFERENCE.md) for everything, and [design decisions](docs/DESIGN-DECISIONS.md) for the reasoning.
+See the [reference](docs/REFERENCE.md) for everything, [functions](docs/FUNCTIONS.md) for examples of each function, and [design decisions](docs/DESIGN-DECISIONS.md) for the reasoning.
 
 ## License
 

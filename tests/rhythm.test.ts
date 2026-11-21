@@ -125,3 +125,14 @@ describe("rhythm operators", () => {
     expect(pitches("voice a = [c d e].on([x . x x].rotate(1))")).toEqual([60, 62, 64]);
   });
 });
+
+describe("phasing with on", () => {
+  test("12 notes on 11 hits drift a note each bar and meet again after 12 bars", () => {
+    const src = "voice a = [c4 d4 eb4 g4 f4 ab4 g4 bb4 c5 g4 f4 d4].on([X x x X x x X x x X x])";
+    const all = pitches(src, 13);
+    expect(all.length).toBe(143);
+    const bar = (k: number) => all.slice(k * 11, k * 11 + 11);
+    expect(bar(1)[0]).toBe(all[11]); expect(bar(1)).not.toEqual(bar(0));
+    expect(bar(12)).toEqual(bar(0));
+  });
+});
