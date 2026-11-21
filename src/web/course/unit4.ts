@@ -10,7 +10,7 @@ const rel = (root: number, offs: number[]) => offs.map(o => root + o);
 
 export const UNIT4: Unit = {
   id: "u4", code: "Theory 202", title: "Jazz harmony and beyond",
-  blurb: "Tensions and avoid notes, chord-scale theory from the major and melodic minor modes, piano voicings, the bebop vocabulary, modal jazz, Coltrane changes, reharmonization, and post-tonal basics.",
+  blurb: "Tensions and avoid notes, chord-scale theory from the major and melodic minor modes, piano voicings, the bebop vocabulary, modal jazz, Coltrane changes, reharmonization, post-tonal basics, and rhythm cycles from clave to phasing.",
   lessons: [
     // ------------------------------------------------------------------
     {
@@ -443,6 +443,58 @@ export const UNIT4: Unit = {
           { q: "What is the inversion of pitch class 4?", options: ["4", "8", "16", "-4"], answer: 1, explain: "12 minus 4." },
           { q: "Which transformation plays a row backwards?", options: ["Inversion", "Retrograde", "Transposition", "Prime"], answer: 1 },
           { q: "From the Coltrane lesson: which interval divides the octave into three equal parts?", options: ["Minor 3rd", "Major 3rd", "Whole step", "Tritone"], answer: 1 },
+        ] },
+      ],
+    },
+    // ------------------------------------------------------------------
+    {
+      id: "rhythmcycles", title: "Rhythm cycles: clave, three over four, and phasing",
+      parts: [
+        `<p>A Latin jazz groove. Listen for the high wooden click, then keep hearing it in your head when it stops.</p>`,
+        { code: `tempo 100\n-- Put -- in front of the clave line. The bass and the chords still lean on where it was.\nlet son = [X . . x . . X . . . x . X . . .]\nvoice clave = son + clave\nvoice bass  = [. . . . . . c3 . . . . . g2 . . .].inst(upright)\nvoice comp  = [. . c4@m7 . . c4@m7 . . . . c4@m7 . . c4@m7 . .].vel(.5)`, bars: 2 },
+        `<p>The click is the <b>clave</b> (Spanish for "key"), named after the two hardwood sticks it is played on. This one is the <b>son clave</b>: five hits over two halves of the bar, three in the first half and two in the second. Every other part of a Cuban band is placed against it. The bass here is a <b>tumbao</b>: it skips beat 1 and lands on the "and" of 2 and on beat 4, and in a tune with chord changes that beat-4 note is already the next chord's. In 1947 Dizzy Gillespie brought the Cuban conga player Chano Pozo into his big band, and records like "Manteca" put this rhythm inside jazz. Latin jazz grew from that meeting.</p>
+         <p>In Tine, <code>x</code> is a hit, <code>X</code> an accented hit and <code>o</code> a ghost note, so a rhythm is written like drum tab. <code>son + clave</code> plays the clave sound on each hit.</p>`,
+        { code: `-- Bar 1: three hits first. Bar 2: the same rhythm started half a bar later.\n-- Change rotate(8) to rotate(0) and both bars match.\nlet son = [X . . x . . X . . . x . X . . .]\nvoice clave = <son son.rotate(8)> + clave\nvoice kick  = [kick . kick .].vel(.5)`, bars: 2 },
+        `<p>Bar 1 is the <b>3-2 clave</b>. Bar 2 starts the same five hits from the middle, so the two hits come first: the <b>2-3 clave</b>. Musicians call this the clave's direction, and a tune is written in one or the other. A melody that accents the wrong side sounds "crossed" to a Cuban player, even when every note is in time. <code>rotate(n)</code> starts a rhythm n of its own steps later, wrapping round, and eight sixteenth-note steps is half a bar.</p>`,
+        `<p>Swing has its own cross-rhythm. Count four beats with the ride, and listen to where the vibes figure starts each bar.</p>`,
+        { code: `tempo 160\n-- Three notes in swung eighth notes, against a bar of four beats.\n-- Add a fourth note, e4, to the figure: it fits the bar twice and starts on c5 every bar.\nvoice line = [c5 a4 g4].on([x*8]).swing.inst(vibes)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)\nvoice bass = [c3 e3 g3 a3].inst(upright)`, bars: 3 },
+        `<p>Eight eighth notes in a bar, grouped in threes. The figure starts on c5 in bar 1, on g4 in bar 2, on a4 in bar 3, and lines up with the bar again after three bars, when 24 eighth notes have held it eight times. Two groupings of the same pulse at once make a <b>cross-rhythm</b>, and this one is called <b>three over four</b>. Jazz players use it to pull against the bar line for a while and then land together. Tine's <code>notes.on(rhythm)</code> plays the notes one per hit and keeps counting across bar lines, which is how the figure keeps its place.</p>`,
+        `<p>The idea is old. In the fourteenth century, French composers such as Philippe de Vitry and Guillaume de Machaut built the lowest voice of a motet from two loops: a series of pitches, the <b>color</b>, and a rhythm, the <b>talea</b>. When the two have different lengths they drift against each other. Twentieth-century scholars named this <b>isorhythm</b>.</p>`,
+        { code: `-- A color of five pitches on a talea of three notes and a rest.\n-- The two meet again after five bars. Change the color to four pitches (delete c4): four bars.\nlet color = [d4 f4 e4 d4 c4]\nlet talea = [x:3 x x:2 .:2]\nvoice tenor = color.on(talea).inst(organ)`, bars: 5 },
+        `<p>Five pitches on three hits per bar. They meet again after five bars, when fifteen hits have used the color three times. In general the cycle lasts until the number of hits is a multiple of both lengths. When the two counts share no factor but 1 they are <b>coprime</b>, and the cycle is as long as it can be.</p>`,
+        { code: `-- The row from the last lesson, twelve notes, on a rhythm with eleven hits.\n-- Turn the dot on step 2 of beat into an x: twelve hits, and the row fits every bar.\nlet row  = [0 11 7 8 3 1 2 10 6 5 4 9].map(x => pitch(60 + x))\nlet beat = [X . x x X . x . X . x x X x . x]\nvoice phase = row.on(beat).inst(vibes)\nvoice pulse = [kick . . . kick . . .].vel(.6)`, bars: 3 },
+        `<p>Twelve and eleven are coprime, so the row slides one note against the rhythm every bar and comes round after twelve bars. A slow, steady slide of one pattern against another is <b>phasing</b>. Steve Reich built pieces on it in the 1960s. In <i>Piano Phase</i> (1967) two pianists play the same twelve-note pattern, and one slowly speeds up until it is one note ahead, then holds there, so the pattern passes through every alignment with itself. The next example does it in steps, one note per bar.</p>`,
+        { code: `-- Two players, one twelve-note pattern. The second is one note further ahead each bar.\n-- Change rotate(n) to rotate(6): it stays half a pattern ahead and the shifting stops.\nlet pat = [e4 a4 b4 d5 e5 b4 a4 d5 b4 a4 e5 d5]\nvoice one = pat.inst(keys).pan(-.6)\nvoice two = per_bar(n => pat.rotate(n)).inst(vibes).pan(.6)`, bars: 4 },
+        { code: `-- Partly done: seven notes on the son clave, so the melody starts on a new note every bar.\n-- Put it on the 2-3 side: change son to son.rotate(8) inside .on().\nlet son = [X . . x . . X . . . x . X . . .]\nvoice lead  = [c5 d5 eb5 g5 f5 eb5 d5].on(son).inst(vibes)\nvoice clave = son + clave`, bars: 4 },
+        { exercise: {
+          task: `<p>Write <code>voice line</code>: a three-over-four figure. Play the three notes C5, A4, G4, in that order, as eighth notes (straight or swung), so that the figure carries on across the bar line and lines up with the bar again after three bars.</p>`,
+          starter: `voice line = [c5 a4 g4 c5 a4 g4 c5 a4]`,
+          solution: `voice line = [c5 a4 g4].on([x*8])`,
+          hint: `Pour the three notes onto a rhythm of eight hits with <code>.on</code>, so they keep counting from bar to bar.`,
+          bars: 3,
+          check: (_s, n) => {
+            const m = need(n, "line"); if (m) return m;
+            const t = of(n, "line").sort((a, b) => a.bar - b.bar);
+            const want = [72, 69, 67];
+            for (let b = 0; b < 3; b++) {
+              const bar = inBar(t, b);
+              if (bar.length !== 8) return `Bar ${b + 1} has ${bar.length} note${bar.length === 1 ? "" : "s"}. Eighth notes in 4/4 make eight per bar.`;
+              // straight eighths sit on a 1/8 grid; swung ones put every second note two thirds of the way through its beat
+              const ok = bar.every((x, i) => { const p = (x.bar - b) * 4 - Math.floor(i / 2); return i % 2 === 0 ? Math.abs(p) < 0.01 : Math.abs(p - 0.5) < 0.01 || Math.abs(p - 2 / 3) < 0.01 || Math.abs(p - 0.7) < 0.06; });
+              if (!ok) return `The notes in bar ${b + 1} are not on the eighth notes.`;
+            }
+            const got = t.slice(0, 24).map(x => Math.round(x.semi));
+            if (got.slice(8, 11).join() === "72,69,67") return `Bar 2 starts on ${nm(got[8])} again. The figure should carry on from bar 1, so bar 2 starts on ${nm(want[8 % 3])}.`;
+            const bad = got.findIndex((x, i) => x !== want[i % 3]);
+            return bad < 0 ? null : `Note ${bad + 1} is ${pitchName(got[bad])}. The figure repeats C5, A4, G4, so that note should be ${pitchName(want[bad % 3])}.`;
+          },
+        } },
+        { quiz: [
+          { q: "Listen. The kick plays beats 1 and 3. Is the clave 3-2 or 2-3?", listen: `tempo 100\nlet son = [X . . x . . X . . . x . X . . .]\nvoice clave = son.rotate(8) + clave\nvoice kick = [kick . kick .].vel(.5)`, bars: 2, options: ["3-2", "2-3"], answer: 1, explain: "Two hits in the first half of the bar, then three." },
+          { q: "Listen and count four with the ride. Does the vibes figure group the eighth notes in threes or in fours?", listen: `tempo 150\nvoice line = [e5 d5 b4].on([x*8]).swing.inst(vibes)\nvoice ride = [ride [ride ride] ride [ride ride]].swing.vel(.4)`, bars: 3, options: ["Threes", "Fours"], answer: 0, explain: "Three notes repeating against eight per bar: it starts on a different note each bar." },
+          { q: "Seven notes on a rhythm with five hits per bar. After how many bars does the first note fall on the first hit again?", options: ["5", "7", "12", "35"], answer: 1, explain: "35 hits is a multiple of both 5 and 7, and 35 hits is 7 bars." },
+          { q: "In an isorhythmic motet, the repeating rhythm is called the...", options: ["color", "talea", "cantus firmus", "clave"], answer: 1, explain: "The color is the repeating series of pitches." },
+          { q: "From the meter lesson: where does the Charleston's second hit fall?", options: ["Beat 2", "The \"and\" of 2", "Beat 3", "The \"and\" of 4"], answer: 1 },
         ] },
       ],
     },

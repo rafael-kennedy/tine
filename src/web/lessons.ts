@@ -457,7 +457,7 @@ export const LESSONS: Lesson[] = [
       `<p><code>.loopAt(1)</code> stretches or squeezes the loop to last exactly one bar. <code>.chop(8)</code> cuts it into eight pieces, each of which starts on time. Change the tempo to 100 and the drummer slows down with you, and sounds lower, because changing a recording's speed changes its pitch. The pieces are now notes like any others, so pattern functions work on them: add <code>.rev</code> to the end and the eight pieces play in reverse order.</p>`,
       { code: `tempo 140\nvoice amen = ["loop_amen"].loopAt(1).chop(8).every(2, x => x.rev)\nvoice back = ["loop_amen"].loopAt(1).chop(8).speed(-1).gain(.4)`, bars: 4 },
       `<p>The first voice reverses the order of its pieces every second bar. The second plays each piece backwards underneath, and <code>.gain(.4)</code> turns its volume down. <code>.speed(x)</code> sets playback rate: 2 is twice as fast and an octave up, and a negative speed plays backwards. More controls, all in the Reference: <code>.begin</code> and <code>.end</code> play part of a sound, <code>.slice(n, i)</code> plays piece i of n, and <code>.cut(group)</code> makes each sound stop the one before it.</p>`,
-      `<p>Two ways to bring your own sounds. Drop audio files on Tine's full editor, the DAW (lesson 17), and they become samples named by file name. For recorded pianos, strings and the like, load a <b>SoundFont</b>, a single file holding a whole set of instruments, with a <code>soundfont("GeneralUser-GS.sf2")</code> line. Then <code>.gm(1)</code> to <code>.gm(128)</code> picks an instrument by its standard number, or <code>.gm("violin")</code> by name.</p>`,
+      `<p>Two ways to bring your own sounds. Drop audio files on Tine's full editor, the DAW (lesson 19), and they become samples named by file name. For recorded pianos, strings and the like, load a <b>SoundFont</b>, a single file holding a whole set of instruments, with a <code>soundfont("GeneralUser-GS.sf2")</code> line. Then <code>.gm(1)</code> to <code>.gm(128)</code> picks an instrument by its standard number, or <code>.gm("violin")</code> by name.</p>`,
       { exercise: {
         task: "Write <code>voice beat</code> as four evenly spaced sounds in the bar: the sample <code>\"bd_haus\"</code> first and third, and <code>\"sn_dolf\"</code> second and fourth.",
         starter: `voice beat = ["bd_haus"]`, solution: `voice beat = ["bd_haus" "sn_dolf" "bd_haus" "sn_dolf"]`,
@@ -515,7 +515,88 @@ export const LESSONS: Lesson[] = [
   },
   // ------------------------------------------------------------------
   {
-    id: "micro", title: "14. Beyond twelve notes",
+    id: "layers", title: "14. Rhythm and notes, apart",
+    parts: [
+      { code: `voice hand = [X o o X o o X o] + snare\nvoice kick = [kick . . . kick . . .]` },
+      `<p>Eight hits on the snare, and they do not sound alike. In a phrase, <code>x</code> is a <b>hit</b>, <code>X</code> is an <b>accented</b> hit (louder), and <code>o</code> is a <b>ghost note</b>, a hit played so quietly it is felt more than heard. A phrase of hits is a <b>rhythm</b>: it says when, and how hard, but not what. <code>+ snare</code> gives every hit a sound. The rhythm comes from the left and the sound from the right. The accents fall on steps 1, 4 and 7, the tresillo from lesson 13. Change the second <code>X</code> to <code>o</code> and the tresillo loses its middle.</p>`,
+      { code: `let son = [X . . x . . X . . . x . X . . .]\nvoice clave = son + clave\nvoice lead  = [c5 d5 e5 g5 a5].on(son).inst(pluck)`, bars: 4 },
+      `<p><code>son</code> is the <b>son clave</b>, a five-hit rhythm that Cuban music and a great deal of Latin jazz are built on. Its first half is the tresillo again. <code>let</code> names it so two voices can share it, and <code>clave</code> is a drum name for the wooden sticks it is played on. <code>notes.on(rhythm)</code> plays the notes one per hit, in order. Five notes on five hits, so every bar sounds the same.</p>`,
+      `<p>Add two notes, <code>c6 a5</code>, to the end of the list. Now seven notes share five hits. Bar 1 plays the first five, bar 2 starts on the sixth, and the tune starts on a different note every bar until the two come round together after seven bars. The notes and the rhythm loop separately. This is not like lesson 2, where each note was its own step, or like <code>+</code>, which reads the value at each hit's time.</p>`,
+      { code: `-- 12 notes on a rhythm with 11 hits\nlet row  = [c4 d4 eb4 g4 f4 ab4 g4 bb4 c5 g4 f4 d4]\nlet beat = [X . x x X . x . X . x x X x . x]\nvoice phase = row.on(beat).inst(pluck)\nvoice pulse = [kick . . . kick . . .]`, bars: 3 },
+      `<p>Twelve notes on eleven hits. Each bar uses eleven notes, so each bar begins one note further into the list than the bar before, and the tune slides one place against the rhythm every bar. Musicians call this <b>phasing</b>. The two line up again after twelve bars, when 132 hits have used the list exactly eleven times. Two counts with no common factor but 1 are <b>coprime</b>, and coprime counts take as long as possible to meet: the product of the two, in hits. Turn the dot on step 2 of <code>beat</code> into an <code>x</code>. With twelve hits the list fits each bar exactly and the phasing stops.</p>`,
+      `<p><code>.on</code> counts hits from the start of the piece, or of its section once you have sections (lesson 17), so the note sequence carries on across every bar line. It works the count out rather than remembering it, so bar 9 plays the same whether you play from the start or jump straight there.</p>`,
+      { code: `voice lead = [c5 . e5 _ g5].on([x x x x x x x x]).inst(pluck)`, bars: 2 },
+      `<p>Inside the notes, <code>.</code> and <code>_</code> mean what they meant in lesson 2, counted in hits instead of steps. The <code>.</code> leaves a hit silent and the <code>_</code> holds <code>e5</code> through the next hit. Five entries on eight hits, so this phases too. Change the <code>_</code> to <code>.</code> and <code>e5</code> is cut short.</p>`,
+      { code: `let tune = [c5:3 a4 g4:2 e4:2]\nvoice back = tune.notes.rev.on(tune.rhythm).inst(pluck)\nvoice bass = tune.rhythm + c3`, bars: 2 },
+      `<p>Any pattern comes apart. <code>.rhythm</code> keeps when and how long and drops the pitches. <code>.notes</code> keeps the pitches in order and drops the timing. The first voice plays the tune backwards in its own rhythm. The second plays <code>c3</code> on every hit of the tune's rhythm. Change <code>+ c3</code> to <code>+ &lt;c3 f2&gt;</code>: because <code>+</code> reads by time, the bass changes note each bar while its rhythm stays put.</p>`,
+      `<p>To start the notes over at a regular point, give <code>.on</code> a reset: <code>row.on(beat, reset: 4)</code> starts the list again every four bars.</p>`,
+      { exercise: {
+        task: "Write <code>voice line</code>: the four notes C4, E4, G4, B4 played one per hit on the rhythm <code>[x . . x . . x .]</code>, carrying on across the bar line, so bar 2 starts on B4.",
+        starter: "voice line = [c4 . . e4 . . g4 .]", solution: "voice line = [c4 e4 g4 b4].on([x . . x . . x .])", bars: 4,
+        hint: "Put the notes in one phrase and the rhythm in another, and join them with <code>.on</code>.",
+        alsoRight: ["voice line = [c e g b].on([x . . x . . x .])", "let r = [x . . x . . x .]\nvoice line = [c4 e4 g4 b4].on(r)", "voice line = [c4 e4 g4 b4].notes.on([x:3 x:3 x:2])", "voice line = <[c4 . . e4 . . g4 .] [b4 . . c4 . . e4 .] [g4 . . b4 . . c4 .] [e4 . . g4 . . b4 .]>"],
+        wrong: ["voice line = [x . . x . . x .] + [c4 e4 g4 b4]", "voice line = [c4 e4 g4].on([x . . x . . x .])", "voice line = [c4 e4 g4 b4].on([x . x . x . x .])", "voice line = [c4 e4 g4 b4].on([x . . x . . x .], reset: 1)", "voice line = [c5 e5 g5 b5].on([x . . x . . x .])", "voice tune = [c4 e4 g4 b4].on([x . . x . . x .])"],
+        check: (_s, n) => {
+          const t = voiceNotes(n, "line");
+          if (!t.length) return "There is no voice named line yet.";
+          const starts = t.map(x => round(x.bar));
+          const want = [0, 3 / 8, 6 / 8].flatMap(p => [0, 1, 2, 3].map(b => b + p)).sort((a, b) => a - b).map(round);
+          if (!same(starts, want)) {
+            const b1 = firstBar(n, "line");
+            return `In bar 1 the notes start at ${b1.map(x => place(x.bar, 8)).join(", ")}. The rhythm has hits on steps 1, 4 and 7 of 8 in every bar.`;
+          }
+          const want12 = [60, 64, 67, 71, 60, 64, 67, 71, 60, 64, 67, 71];
+          const got = t.map(x => x.semi);
+          if (same(got, want12)) return null;
+          if (same(got.slice(0, 3), [60, 64, 67]) && same(got.slice(3, 6), [60, 64, 67])) return `Bar 2 starts over on ${noteName(got[3])}. The notes should carry on from bar 1, so bar 2 starts on b4: let .on count the hits.`;
+          if (same(got.map(x => ((x % 12) + 12) % 12), want12.map(x => x % 12))) return `Right letters, wrong octave: I hear ${names(t.slice(0, 4))}. They should be c4 e4 g4 b4.`;
+          return `The rhythm is right, but the first four bars play ${names(t)}. They should cycle c4 e4 g4 b4.`;
+        },
+      } },
+    ],
+  },
+  // ------------------------------------------------------------------
+  {
+    id: "reshape", title: "15. Reshaping rhythms",
+    parts: [
+      { code: `let tres = [X . . x . . x .]\nvoice kick = tres.rotate(3) + kick\nvoice hats = [hat*8].vel(.4)` },
+      `<p>The tresillo again, started three steps in. <code>rotate(n)</code> starts n steps later in a rhythm and wraps the steps it skipped round to the end, so the accent that opened the bar now lands on step 6. Rhythm functions count in the steps the phrase was written in, here eighth notes. Change the 3 to 0 to hear the tresillo as written.</p>`,
+      { code: `let kicks  = [x . . x . . x .]\nlet snares = [. . x . . . x .]\nvoice kick  = kicks.minus(snares) + kick\nvoice snare = snares + snare\nvoice hats  = kicks.union(snares).flip + hat` },
+      `<p>Rhythms combine hit by hit. <code>a.union(b)</code> has a hit wherever either has one. <code>a.intersect(b)</code> keeps the hits they share. <code>a.minus(b)</code> keeps the hits of a that b does not have, so the kick here drops out on step 7, where the snare plays. <code>flip</code> turns hits into rests and rests into hits, so the hats fill exactly the steps where neither drum plays. Change <code>minus</code> to <code>intersect</code> in the kick line and only the kick on step 7 is left.</p>`,
+      { code: `voice kick = [x . . . x . . .].displace(1/16) + kick\nvoice hats = [hat*8].vel(.4)` },
+      `<p><code>displace(t)</code> moves every hit t of a bar later, wrapping inside the loop. Where <code>rotate</code> counts in the rhythm's own steps, <code>displace</code> takes any fraction, so it can land between them. Each kick here is a sixteenth note late, between two hats. Change <code>1/16</code> to <code>1/8</code> and the kicks land on hats again.</p>`,
+      { code: `let son = [X . . x . . X . . . x . X . . .]\nvoice clave = son.mutate(.2) + clave\nvoice hats  = [x*16].thin(6) + hat`, bars: 4 },
+      `<p>Three functions use chance, seeded like everything in lesson 8. <code>mutate(rate)</code> moves about that share of the hits one step each loop, and they stay moved, so the clave wanders further from where it began bar by bar. <code>thin(n)</code> removes n hits each loop but never one on the first step, and <code>fill(n)</code> adds n hits on empty steps. Change <code>.2</code> to <code>.5</code> and the clave loses its shape within a few bars.</p>`,
+      { code: `let son = [X . . x . . X . . . x . X . . .]\nvoice lead  = [c5 d5 e5 g5 a5].on(son.every(4, r => r.rotate(3))).inst(pluck)\nvoice clave = son + clave`, bars: 4 },
+      `<p>A reshaped rhythm goes anywhere a rhythm goes, including into <code>.on</code>. Here <code>every</code> from lesson 4 turns the rhythm under the tune in the last bar of each four. That is a fill, as in lesson 4: the tune's hits move while the clave keeps its place.</p>`,
+      { code: `voice tune  = [e5:3/2 d5:1/2 c5:2 g4:3 a4:1/2 b4:1/2 c5:4].beats.inst(pluck)\nvoice drums = {[kick . snare .] [hat*8]}`, bars: 3 },
+      `<p>Last, a way to write long lines. A weight after <code>:</code> can be a fraction. <code>.beats</code> measures each step in beats instead of dividing one bar: a step lasts its weight in beats, or one beat with no weight. This line adds up to twelve beats, so it lasts three bars, its notes cross the bar lines, and then it loops. Change <code>c5:4</code> to <code>c5:2</code>. The line is now ten beats, and it rests to the end of its third bar before it starts again. A beat is the meter's beat, so in 6/8 it is an eighth note, and <code>.beats(1/16)</code> measures in sixteenths instead.</p>`,
+      { exercise: {
+        task: "The son clave is a <b>3-2 clave</b>: three hits in the first half of the bar, two in the second. Musicians also play it the other way round, two hits first, and call that the <b>2-3 clave</b>. Turn <code>son</code> into the 2-3 clave in <code>voice two</code>, still played on <code>clave</code>.",
+        starter: "let son = [X . . x . . X . . . x . X . . .]\nvoice two = son + clave",
+        solution: "let son = [X . . x . . X . . . x . X . . .]\nvoice two = son.rotate(8) + clave",
+        hint: "The bar has sixteen steps, so half a bar is eight of them.",
+        alsoRight: ["let son = [X . . x . . X . . . x . X . . .]\nvoice two = son.rotate(-8) + clave", "let son = [X . . x . . X . . . x . X . . .]\nvoice two = son.displace(1/2) + clave", "voice two = [. . x . x . . . X . . x . . X .] + clave"],
+        wrong: ["let son = [X . . x . . X . . . x . X . . .]\nvoice two = son.rotate(4) + clave", "let son = [X . . x . . X . . . x . X . . .]\nvoice two = son.flip + clave", "let son = [X . . x . . X . . . x . X . . .]\nvoice two = son.rotate(8) + rim", "let son = [X . . x . . X . . . x . X . . .]\nvoice two = son.displace(1/16) + clave"],
+        check: (_s, n) => {
+          const t = firstBar(n, "two");
+          if (!t.length) return "There is no voice named two yet.";
+          if (t.some(x => Math.round(x.semi) !== 75)) return "Some of those hits are not on clave.";
+          const steps = t.map(x => x.bar * 16);
+          if (steps.some(s => Math.abs(s - Math.round(s)) > 0.001)) return "Some hits fall between the sixteen steps. Turn the rhythm by whole steps.";
+          const on = steps.map(Math.round);
+          if (same(on, [2, 4, 8, 11, 14])) return null;
+          if (same(on, [0, 3, 6, 10, 12])) return "That is still 3-2: three hits first. Turn the rhythm by half a bar.";
+          if (on.length !== 5) return `I hear ${on.length} hit${on.length === 1 ? "" : "s"}; a clave has 5.`;
+          const first = on.filter(s => s < 8).length;
+          return `Five hits, with ${first} in the first half. The 2-3 clave has hits on steps 3 and 5, then 9, 12 and 15. You heard them on ${on.map(s => s + 1).join(", ")}.`;
+        },
+      } },
+    ],
+  },
+  // ------------------------------------------------------------------
+  {
+    id: "micro", title: "16. Beyond twelve notes",
     parts: [
       { code: `voice micro = [c4 (c4 + 50c) c#4 (c4 + 5\\31) (c4 * 7/4) 432hz]` },
       `<p>The second note is not on any piano: it sits halfway between <code>c4</code> and <code>c#4</code>. A pitch is a number (lesson 1), and nothing says the number must be whole. There are four ways to write the notes between the keys:</p><ul><li><b>Cents.</b> A cent is a hundredth of a semitone, written with a <code>c</code> after a number. <code>c4 + 50c</code> is pitch 60.5.</li><li><b>Equal divisions.</b> A piano divides the octave into 12 equal steps. <code>5\\31</code> is 5 steps of an octave divided into 31.</li><li><b>Frequency ratios.</b> <code>c4 * 7/4</code> multiplies the frequency by 7/4.</li><li><b>Frequencies.</b> <code>432hz</code>.</li></ul><p>Change <code>50c</code> to <code>25c</code> and the second note moves closer to <code>c4</code>.</p>`,
@@ -547,13 +628,13 @@ export const LESSONS: Lesson[] = [
   },
   // ------------------------------------------------------------------
   {
-    id: "form", title: "15. Composing whole pieces",
+    id: "form", title: "17. Composing whole pieces",
     parts: [
       { code: `tempo 104\nkey a minor\n\nvoice drums = {[kick . snare .] [hat*8]}\n\nsection verse 4\n  voice bass = [^1 . ^1 ^5].octave(-2).inst(bass)\n\nsection chorus 4\n  tempo 112\n  voice bass = [^4 ^4 ^5 ^5].octave(-2).inst(bass)\n  voice lift = <^4@7 ^5@7>.inst(pad)\n\nform verse chorus verse`, bars: 12 },
       `<p>This piece has a beginning and an end (this page starts it over when it finishes). Top-level voices loop forever, which suits playing live. For a finished piece, group voices into <b>sections</b>, each an indented block with a length in bars, and list the order to play them on a <b>form</b> line. It is twelve bars: four of verse, four of chorus, four of verse. The names are yours. Verse and chorus are the usual words for a song's main part and the part it keeps returning to.</p>`,
       `<p>Voices outside any section play throughout, as the drums do here. A section can set its own tempo and key, as the chorus does with its tempo. At the start of each section every pattern starts from its beginning, so every verse opens the same way, though random choices still differ between repeats. Change the form line to <code>form verse*2 chorus verse</code>: <code>*2</code> plays a section twice, and the piece grows to sixteen bars.</p>`,
       `<p>Section names follow the rule from lesson 1: <code>a</code>, <code>b</code> or <code>b2</code> are notes, so they cannot name a section.</p>`,
-      `<p>From the command line, <code>tine render piece.tine</code> writes an audio file (WAV), <code>tine midi piece.tine</code> a file of notes that other music software can open (MIDI, lesson 17), and <code>tine pack piece.tine</code> a single HTML file that plays the piece anywhere.</p>`,
+      `<p>From the command line, <code>tine render piece.tine</code> writes an audio file (WAV), <code>tine midi piece.tine</code> a file of notes that other music software can open (MIDI, lesson 19), and <code>tine pack piece.tine</code> a single HTML file that plays the piece anywhere.</p>`,
       `<p>A long piece can be split across files. The line <code>use "drums.tine" as drums</code> runs that file in its own space. Its names read as <code>drums.groove</code>, and its voices and sections join the piece as <code>drums.kick</code> and <code>drums.verse</code>, so a form line can list <code>drums.verse</code>. The used file's own tempo, key and form are skipped, so it still plays on its own. This page has no files, so try it with <code>tine play</code>.</p>`,
       { exercise: {
         task: "Finish this piece. Add a second section that contains at least one voice, and make the form play at least three sections in total, using both.",
@@ -579,7 +660,7 @@ export const LESSONS: Lesson[] = [
   },
   // ------------------------------------------------------------------
   {
-    id: "paper", title: "16. Sheet music and chord charts",
+    id: "paper", title: "18. Sheet music and chord charts",
     parts: [
       { code: `tempo 100\nkey c major\n\nvoice keys = changes("Cmaj7 | A7 | Dm7 G7 | Cmaj7").inst(keys)\nvoice tune = [e5 . g5 _ a5 g5 e5 .].inst(pluck)`, bars: 4, sheet: "chart" },
       `<p>Under the code is a <b>chord chart</b>: the piece drawn as a grid of bars, four to a line, with the name of the chord that sounds in each bar (chord names are lesson 7). Bar 3 holds two chords, so it is split, Dm7 for its first half and G7 for its second. Change <code>A7</code> to <code>Am7</code> and play: the chart changes with the code. Musicians read charts like this to play along with a song they have not heard, which is what most jazz and pop players are handed at a gig.</p>`,
@@ -614,12 +695,12 @@ export const LESSONS: Lesson[] = [
   },
   // ------------------------------------------------------------------
   {
-    id: "live", title: "17. Performing live",
+    id: "live", title: "19. Performing live",
     parts: [
       { code: `voice drums = {[kick . snare .] [hat*8]}\nvoice lead  = [e5 . g5 a5].inst(pluck)  -- change a note while this plays` },
       `<p>Press play. While it runs, change <code>g5</code> to <code>b5</code> and press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Enter</kbd>. The new line takes over at the next bar line and the drums never stumble. (A line or the end of a line starting <code>--</code> is a comment.) Changing a program while it plays is <b>live coding</b>, and the rest of this lesson is about the program built for it.</p>`,
       `<p>Run <code>tine daw mypiece.tine</code>. The <b>DAW</b> (digital audio workstation, the usual name for a music-making program) opens in your browser with a larger editor and panels that list your voices, launch sections, connect MIDI gear and keep a history. It plays the file and reloads whenever the file changes, so you can work in its editor or in your own.</p>`,
-      `<p>What it adds to what you just did:</p><ul><li>If an edit has an error, the broken voice keeps its last good version and everything else carries on.</li><li>Write <code>active voice</code> in place of <code>voice</code> and that voice plays every edit as soon as it is valid, mid-bar, with no evaluating.</li><li>Name a block of lines with <code>-- @fill</code> above it and <code>-- @end</code> below. Bind it to a key under <b>Tracks → toggles</b> and you can switch those lines on and off as you play.</li><li>Sections (lesson 15) become scenes you can launch one at a time.</li><li>Every evaluation is saved with its seed under <b>Takes</b>, and <b>★ keep take</b> writes that seed into your code, so nothing you heard is lost.</li></ul>`,
+      `<p>What it adds to what you just did:</p><ul><li>If an edit has an error, the broken voice keeps its last good version and everything else carries on.</li><li>Write <code>active voice</code> in place of <code>voice</code> and that voice plays every edit as soon as it is valid, mid-bar, with no evaluating.</li><li>Name a block of lines with <code>-- @fill</code> above it and <code>-- @end</code> below. Bind it to a key under <b>Tracks → toggles</b> and you can switch those lines on and off as you play.</li><li>Sections (lesson 17) become scenes you can launch one at a time.</li><li>Every evaluation is saved with its seed under <b>Takes</b>, and <b>★ keep take</b> writes that seed into your code, so nothing you heard is lost.</li></ul>`,
       `<p>The rest needs hardware. <b>MIDI</b> is the standard that lets instruments, controllers and computers send each other notes and knob movements. It has 16 channels, so one cable can address 16 devices, and each knob movement is a numbered <b>control change</b>, or CC. Connect gear in the DAW's MIDI tab, then:</p><ul><li><code>.midi(2)</code> sends a voice out on channel 2 to a synthesizer or another program.</li><li><code>cc(74)</code> reads the knob that sends CC number 74 as a signal from 0 to 1: <code>.cutoff(cc(74).range(200, 4000))</code>.</li><li><code>held(8)</code> is whatever chord you are holding on a connected keyboard, checked eight times a bar, so <code>held(8).arp</code> arpeggiates it.</li><li><b>● capture</b> records what you play for a few bars and writes it into your code as a new voice.</li><li><code>.ctl(74, sine(4))</code> sweeps CC 74 on the receiving synthesizer up and down over four bars, and <code>.program(5)</code> changes its sound.</li><li>Send MIDI clock, a shared tempo pulse, and drum machines follow your tempo. Follow MIDI clock and you follow theirs.</li></ul>`,
       `<p>This one needs a keyboard, so it is here to read, not to play:</p><pre class="static">key c minor\nvoice hands = held(8).arp("updown").inst(pluck)\nvoice drums = {[kick . snare .] [hat*8]}</pre>`,
       { exercise: {
